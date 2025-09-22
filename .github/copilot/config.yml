@@ -1,0 +1,21 @@
+# GitHub Copilot configuration
+version: 1.0
+
+# Enable Copilot features
+enable:
+  - completions
+  - suggestions
+  - pull_requests
+
+# Configure PR suggestions
+pull_requests:
+  enable: true
+  auto_request_review: true
+
+# Configure file patterns for Copilot
+patterns:
+  - "**/*.py"
+  - "**/*.js"
+  - "**/*.ts"
+  - "**/*.yml"
+  - "**/*.yaml"
