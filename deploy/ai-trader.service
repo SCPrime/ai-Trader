@@ -1,0 +1,64 @@
+[Unit]
+Description=AI Trading Bot
+Documentation=https://github.com/user/ai-trader
+After=network.target network-online.target
+Wants=network-online.target
+Requires=network.target
+
+[Service]
+Type=exec
+User=ai-trader
+Group=ai-trader
+WorkingDirectory=/opt/ai-trader
+Environment=PYTHONPATH=/opt/ai-trader
+Environment=CONFIG_PATH=/opt/ai-trader/config/production.env
+Environment=LOG_LEVEL=INFO
+Environment=ENVIRONMENT=production
+
+# Main service command
+ExecStart=/opt/ai-trader/venv/bin/python /opt/ai-trader/main.py --live --config /opt/ai-trader/config/production.env
+
+# Pre-start checks
+ExecStartPre=/bin/bash -c 'test -f /opt/ai-trader/config/production.env'
+ExecStartPre=/bin/bash -c '/opt/ai-trader/venv/bin/python -c "import src.core.alpaca_client; print(\"Import check passed\")"'
+
+# Reload configuration on SIGHUP
+ExecReload=/bin/kill -HUP $MAINPID
+
+# Health check
+ExecStartPost=/bin/bash -c 'sleep 10 && curl -f http://localhost:8000/health || exit 1'
+
+# Stop gracefully
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+# Restart policies
+Restart=always
+RestartSec=10
+StartLimitInterval=60
+StartLimitBurst=3
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/ai-trader/logs /opt/ai-trader/data /var/log/ai-trader
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+MemoryMax=2G
+CPUQuota=200%
+
+# Standard output and error
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ai-trader
+
+# Monitoring
+WatchdogSec=60
+
+[Install]
+WantedBy=multi-user.target

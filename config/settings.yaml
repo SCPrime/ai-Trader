@@ -1,0 +1,53 @@
+# Default configuration for AI Trading Bot
+
+alpaca:
+  paper_trading: true
+  # API keys should be set via environment variables
+
+trading:
+  max_positions: 5
+  position_size: 0.02
+  stop_loss_pct: 0.02
+  take_profit_pct: 0.04
+  max_daily_trades: 10
+  trade_frequency: 60
+
+rsi:
+  period: 14
+  oversold: 30.0
+  overbought: 70.0
+  use_divergence: true
+  use_volume_filter: true
+  min_volume_ratio: 1.5
+
+risk:
+  max_daily_loss: 0.05
+  max_portfolio_risk: 0.10
+  max_single_position: 0.05
+  require_confirmation: true
+  emergency_stop: false
+
+ai:
+  model: "claude-3-sonnet-20240229"
+  max_tokens: 1000
+  temperature: 0.1
+  use_ai_analysis: true
+  # API key should be set via environment variable
+
+notifications:
+  notification_level: "INFO"
+  email_enabled: false
+  # Webhook URLs and tokens should be set via environment variables
+
+database:
+  url: "sqlite:///trading_bot.db"
+  echo: false
+  pool_size: 5
+  max_overflow: 10
+
+logging:
+  level: "INFO"
+  format: "{time:YYYY-MM-DD HH:mm:ss} | {level} | {name}:{line} | {message}"
+  rotation: "1 day"
+  retention: "30 days"
+  file_path: "logs/trading_bot.log"

@@ -1,0 +1,534 @@
+/* AI Trading Bot Dashboard Styles */
+
+:root {
+    --primary-color: #007bff;
+    --success-color: #28a745;
+    --danger-color: #dc3545;
+    --warning-color: #ffc107;
+    --info-color: #17a2b8;
+    --dark-color: #343a40;
+    --light-color: #f8f9fa;
+}
+
+body {
+    background-color: #f5f5f5;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Navigation */
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.5rem;
+}
+
+.form-check-label {
+    font-weight: 500;
+}
+
+/* Dashboard Cards */
+.card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.card-header {
+    background-color: transparent;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    font-weight: 600;
+}
+
+/* Chart Container */
+#chartContainer {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    background-color: white;
+}
+
+/* Trading Controls */
+.btn {
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    border: none;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #dc3545, #e74c3c);
+    border: none;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    border: none;
+}
+
+/* Tables */
+.table {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.table thead th {
+    background-color: var(--dark-color);
+    color: white;
+    border: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.table tbody tr {
+    transition: background-color 0.2s ease-in-out;
+}
+
+.table tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.1);
+}
+
+/* Technical Indicators */
+.indicator-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    margin: 4px 0;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    border-left: 4px solid var(--primary-color);
+}
+
+.indicator-name {
+    font-weight: 600;
+    color: var(--dark-color);
+}
+
+.indicator-value {
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+}
+
+.indicator-bullish {
+    border-left-color: var(--success-color);
+    background-color: rgba(40, 167, 69, 0.1);
+}
+
+.indicator-bearish {
+    border-left-color: var(--danger-color);
+    background-color: rgba(220, 53, 69, 0.1);
+}
+
+.indicator-neutral {
+    border-left-color: var(--warning-color);
+    background-color: rgba(255, 193, 7, 0.1);
+}
+
+/* AI Analysis */
+.ai-recommendation {
+    padding: 15px;
+    border-radius: 8px;
+    margin: 10px 0;
+}
+
+.ai-recommendation.buy {
+    background: linear-gradient(135deg, rgba(40, 167, 69, 0.1), rgba(32, 201, 151, 0.1));
+    border-left: 4px solid var(--success-color);
+}
+
+.ai-recommendation.sell {
+    background: linear-gradient(135deg, rgba(220, 53, 69, 0.1), rgba(231, 76, 60, 0.1));
+    border-left: 4px solid var(--danger-color);
+}
+
+.ai-recommendation.hold {
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.1), rgba(255, 235, 59, 0.1));
+    border-left: 4px solid var(--warning-color);
+}
+
+.confidence-bar {
+    width: 100%;
+    height: 8px;
+    background-color: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 8px 0;
+}
+
+.confidence-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--danger-color), var(--warning-color), var(--success-color));
+    transition: width 0.3s ease-in-out;
+}
+
+/* Status Indicators */
+.status-indicator {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+
+.status-healthy {
+    background-color: var(--success-color);
+    box-shadow: 0 0 8px rgba(40, 167, 69, 0.6);
+}
+
+.status-warning {
+    background-color: var(--warning-color);
+    box-shadow: 0 0 8px rgba(255, 193, 7, 0.6);
+}
+
+.status-critical {
+    background-color: var(--danger-color);
+    box-shadow: 0 0 8px rgba(220, 53, 69, 0.6);
+}
+
+/* Connection Status */
+#connectionStatus {
+    font-size: 0.9rem;
+    transition: all 0.3s ease-in-out;
+}
+
+#connectionStatus.connected {
+    background-color: var(--success-color) !important;
+}
+
+#connectionStatus.disconnected {
+    background-color: var(--danger-color) !important;
+}
+
+#connectionStatus.connecting {
+    background-color: var(--warning-color) !important;
+}
+
+/* Toggle Switches */
+.form-check-input:checked {
+    background-color: var(--success-color);
+    border-color: var(--success-color);
+}
+
+.form-check-input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Animations */
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.pulse {
+    animation: pulse 2s infinite;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+/* Loading States */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .card-body {
+        padding: 1rem 0.75rem;
+    }
+
+    .navbar-nav .nav-item {
+        margin: 0.25rem 0;
+    }
+
+    #chartContainer {
+        height: 400px !important;
+    }
+
+    .table-responsive {
+        font-size: 0.85rem;
+    }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    body {
+        background-color: #1a1a1a;
+        color: #e0e0e0;
+    }
+
+    .card {
+        background-color: #2d2d2d;
+        color: #e0e0e0;
+    }
+
+    .card-header {
+        border-bottom-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .table {
+        color: #e0e0e0;
+    }
+
+    .table tbody tr:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    #chartContainer {
+        background-color: #2d2d2d;
+        border-color: #444;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .navbar,
+    .btn,
+    #tradeForm {
+        display: none !important;
+    }
+
+    .card {
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+
+    #chartContainer {
+        height: 400px !important;
+    }
+}
+
+/* Enhanced Positions Table */
+#positionsTable {
+    font-size: 0.9rem;
+}
+
+#positionsTable th {
+    font-weight: 700;
+    font-size: 0.85rem;
+    padding: 12px 8px;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+#positionsTable td {
+    padding: 10px 8px;
+    vertical-align: middle;
+    font-weight: 500;
+}
+
+#positionsTable .table-dark th {
+    background-color: var(--dark-color);
+    border-color: var(--dark-color);
+}
+
+#positionsTable tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+    transform: scale(1.02);
+    transition: all 0.2s ease-in-out;
+}
+
+/* Portfolio Summary Cards */
+.portfolio-summary-card {
+    border: 1px solid #e3e6f0;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.portfolio-summary-card h4, .portfolio-summary-card h6 {
+    margin: 0;
+    font-weight: 700;
+}
+
+.portfolio-summary-card .text-muted {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+/* Position Action Buttons */
+.btn-group-vertical .btn {
+    border-radius: 4px !important;
+    margin-bottom: 2px;
+}
+
+.btn-group-vertical .btn:last-child {
+    margin-bottom: 0;
+}
+
+/* Strategy Management Styles */
+#strategyResultsTable {
+    font-size: 0.9rem;
+}
+
+#strategyResultsTable th, #strategyResultsTable td {
+    vertical-align: middle;
+    padding: 8px;
+}
+
+#strategyResultsTable tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+    transform: scale(1.01);
+    transition: all 0.2s ease-in-out;
+}
+
+.strategy-card {
+    border: 1px solid #e3e6f0;
+    border-radius: 8px;
+    transition: box-shadow 0.3s ease-in-out;
+}
+
+.strategy-card:hover {
+    box-shadow: 0 4px 15px rgba(0, 123, 255, 0.15);
+}
+
+#strategyPerformanceSummary .border {
+    border: 1px solid #dee2e6 !important;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    transition: transform 0.2s ease-in-out;
+}
+
+#strategyPerformanceSummary .border:hover {
+    transform: translateY(-2px);
+}
+
+/* Strategy Status Badges */
+.strategy-status {
+    font-size: 0.8rem;
+    padding: 4px 8px;
+}
+
+/* Active Strategies Table */
+#activeStrategiesTable {
+    font-size: 0.9rem;
+}
+
+#activeStrategiesTable th {
+    background-color: var(--dark-color);
+    color: white;
+    border-color: var(--dark-color);
+    font-weight: 600;
+}
+
+#activeStrategiesTable tbody tr:hover {
+    background-color: rgba(40, 167, 69, 0.05);
+}
+
+/* Strategy Action Buttons */
+.strategy-actions .btn {
+    margin: 0 2px;
+}
+
+/* Loading Animation for Strategy Testing */
+#strategyResultsLoading .spinner-border {
+    width: 2rem;
+    height: 2rem;
+}
+
+/* Signal Badges */
+.signal-badge {
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Confidence Indicators */
+.confidence-high {
+    font-weight: 700;
+    color: var(--success-color) !important;
+}
+
+.confidence-medium {
+    font-weight: 600;
+    color: var(--warning-color) !important;
+}
+
+.confidence-low {
+    font-weight: 500;
+    color: var(--danger-color) !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    #positionsTable {
+        font-size: 0.8rem;
+    }
+
+    #positionsTable th, #positionsTable td {
+        padding: 6px 4px;
+    }
+
+    .btn-group-vertical .btn {
+        font-size: 0.75rem;
+        padding: 4px 8px;
+    }
+
+    #strategyResultsTable {
+        font-size: 0.8rem;
+    }
+
+    #strategyResultsTable th, #strategyResultsTable td {
+        padding: 4px;
+    }
+
+    #strategyPerformanceSummary .col-3 {
+        margin-bottom: 10px;
+    }
+}
