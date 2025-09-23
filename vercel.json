@@ -2,31 +2,7 @@
   "version": 2,
   "builds": [
     {
-      "src": "api/index.py",
-      "use": "@vercel/python"
-    },
-    {
-      "src": "api/health.py",
-      "use": "@vercel/python"
-    },
-    {
-      "src": "api/strategy/test.py",
-      "use": "@vercel/python"
-    },
-    {
-      "src": "api/strategy/create.py",
-      "use": "@vercel/python"
-    },
-    {
-      "src": "api/strategy/analyze.py",
-      "use": "@vercel/python"
-    },
-    {
-      "src": "api/portfolio/positions.py",
-      "use": "@vercel/python"
-    },
-    {
-      "src": "api/trading/execute.py",
+      "src": "api/**/*.py",
       "use": "@vercel/python"
     }
   ],

@@ -1,0 +1,20 @@
+{
+  "name": "ai-trading-dashboard",
+  "version": "1.0.0",
+  "description": "AI-powered options trading dashboard",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo 'Building for Vercel deployment'",
+    "start": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "vercel": "latest"
+  },
+  "devDependencies": {
+    "@vercel/python": "latest"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
