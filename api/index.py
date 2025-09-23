@@ -51,13 +51,20 @@ class handler(BaseHTTPRequestHandler):
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Trading Bot Dashboard</title>
+    <title>🤖 AI Trading Bot Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
         .pulse { animation: pulse 2s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+        .bounce { animation: bounce 1s; }
+        @keyframes bounce { 0%, 20%, 53%, 80%, 100% { transform: translate3d(0,0,0); } 40%, 43% { transform: translate3d(0,-30px,0); } 70% { transform: translate3d(0,-15px,0); } 90% { transform: translate3d(0,-4px,0); } }
+        .btn-glow { box-shadow: 0 0 20px rgba(59, 130, 246, 0.3); transition: all 0.3s ease; }
+        .btn-glow:hover { box-shadow: 0 0 30px rgba(59, 130, 246, 0.6); transform: translateY(-2px); }
+        .loading { opacity: 0.6; pointer-events: none; }
+        .success-flash { animation: successFlash 0.5s ease-in-out; }
+        @keyframes successFlash { 0% { background-color: rgba(34, 197, 94, 0.3); } 100% { background-color: transparent; } }
     </style>
 </head>
 <body class="bg-gray-900 text-white">
@@ -88,9 +95,9 @@ class handler(BaseHTTPRequestHandler):
         <div class="p-6">
             <div class="bg-gradient-to-r from-green-600 to-blue-600 p-8 rounded-xl mb-8">
                 <div class="flex items-center space-x-4">
-                    <div class="text-4xl">✅</div>
+                    <div class="text-4xl bounce">✅</div>
                     <div>
-                        <h2 class="text-3xl font-bold mb-2">AI Trading Dashboard Live on Vercel!</h2>
+                        <h2 class="text-3xl font-bold mb-2">AI Trading Dashboard Successfully Deployed!</h2>
                         <p class="text-xl opacity-90">All systems operational and ready for comprehensive options trading</p>
                         <div class="mt-4 flex space-x-4">
                             <span class="bg-white bg-opacity-20 px-3 py-1 rounded">Multi-leg Options ✓</span>
@@ -103,74 +110,74 @@ class handler(BaseHTTPRequestHandler):
 
             <!-- Feature Grid -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                <div class="bg-gray-800 p-6 rounded-lg border border-gray-700">
+                <div class="bg-gray-800 p-6 rounded-lg border border-gray-700 hover:border-blue-500 transition-all duration-300">
                     <div class="flex items-center space-x-3 mb-4">
                         <i class="fas fa-chart-line text-blue-400 text-2xl"></i>
                         <h3 class="text-xl font-semibold">Portfolio Management</h3>
                     </div>
                     <p class="text-gray-300 mb-4">Real-time portfolio tracking with multi-leg options position support</p>
                     <div class="flex items-center space-x-2">
-                        <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                        <span class="w-2 h-2 bg-green-500 rounded-full pulse"></span>
                         <span class="text-green-400 text-sm">Operational</span>
                     </div>
                 </div>
 
-                <div class="bg-gray-800 p-6 rounded-lg border border-gray-700">
+                <div class="bg-gray-800 p-6 rounded-lg border border-gray-700 hover:border-purple-500 transition-all duration-300">
                     <div class="flex items-center space-x-3 mb-4">
                         <i class="fas fa-brain text-purple-400 text-2xl"></i>
                         <h3 class="text-xl font-semibold">AI Strategy Engine</h3>
                     </div>
                     <p class="text-gray-300 mb-4">Natural language strategy creation with intelligent parsing and validation</p>
                     <div class="flex items-center space-x-2">
-                        <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                        <span class="w-2 h-2 bg-green-500 rounded-full pulse"></span>
                         <span class="text-green-400 text-sm">Operational</span>
                     </div>
                 </div>
 
-                <div class="bg-gray-800 p-6 rounded-lg border border-gray-700">
+                <div class="bg-gray-800 p-6 rounded-lg border border-gray-700 hover:border-yellow-500 transition-all duration-300">
                     <div class="flex items-center space-x-3 mb-4">
                         <i class="fas fa-cogs text-yellow-400 text-2xl"></i>
                         <h3 class="text-xl font-semibold">Multi-leg Options</h3>
                     </div>
                     <p class="text-gray-300 mb-4">Iron Condor, Bull Call Spreads, and complex strategy execution</p>
                     <div class="flex items-center space-x-2">
-                        <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                        <span class="w-2 h-2 bg-green-500 rounded-full pulse"></span>
                         <span class="text-green-400 text-sm">Operational</span>
                     </div>
                 </div>
 
-                <div class="bg-gray-800 p-6 rounded-lg border border-gray-700">
+                <div class="bg-gray-800 p-6 rounded-lg border border-gray-700 hover:border-red-500 transition-all duration-300">
                     <div class="flex items-center space-x-3 mb-4">
                         <i class="fas fa-shield-alt text-red-400 text-2xl"></i>
                         <h3 class="text-xl font-semibold">Risk Management</h3>
                     </div>
                     <p class="text-gray-300 mb-4">Advanced position sizing, stop-loss, and exposure controls</p>
                     <div class="flex items-center space-x-2">
-                        <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                        <span class="w-2 h-2 bg-green-500 rounded-full pulse"></span>
                         <span class="text-green-400 text-sm">Operational</span>
                     </div>
                 </div>
 
-                <div class="bg-gray-800 p-6 rounded-lg border border-gray-700">
+                <div class="bg-gray-800 p-6 rounded-lg border border-gray-700 hover:border-cyan-500 transition-all duration-300">
                     <div class="flex items-center space-x-3 mb-4">
                         <i class="fas fa-robot text-cyan-400 text-2xl"></i>
                         <h3 class="text-xl font-semibold">AI Reasoning</h3>
                     </div>
                     <p class="text-gray-300 mb-4">Transparent trade explanations and decision logic transparency</p>
                     <div class="flex items-center space-x-2">
-                        <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                        <span class="w-2 h-2 bg-green-500 rounded-full pulse"></span>
                         <span class="text-green-400 text-sm">Operational</span>
                     </div>
                 </div>
 
-                <div class="bg-gray-800 p-6 rounded-lg border border-gray-700">
+                <div class="bg-gray-800 p-6 rounded-lg border border-gray-700 hover:border-green-500 transition-all duration-300">
                     <div class="flex items-center space-x-3 mb-4">
                         <i class="fas fa-mobile-alt text-green-400 text-2xl"></i>
                         <h3 class="text-xl font-semibold">Responsive Design</h3>
                     </div>
                     <p class="text-gray-300 mb-4">Optimized for desktop, tablet, and mobile trading on the go</p>
                     <div class="flex items-center space-x-2">
-                        <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                        <span class="w-2 h-2 bg-green-500 rounded-full pulse"></span>
                         <span class="text-green-400 text-sm">Operational</span>
                     </div>
                 </div>
@@ -183,54 +190,54 @@ class handler(BaseHTTPRequestHandler):
                     <span>API Endpoints Status</span>
                 </h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="bg-gray-700 p-4 rounded flex justify-between items-center">
+                    <div class="bg-gray-700 p-4 rounded flex justify-between items-center hover:bg-gray-600 transition-all duration-300">
                         <div>
                             <div class="font-mono text-blue-400">/api/health</div>
                             <div class="text-xs text-gray-400">System health monitoring</div>
                         </div>
-                        <button onclick="testEndpoint('/api/health')" class="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-xs">
+                        <button onclick="testEndpoint('/api/health')" class="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-xs transition-all duration-300 hover:scale-105">
                             Test
                         </button>
                     </div>
-                    <div class="bg-gray-700 p-4 rounded flex justify-between items-center">
+                    <div class="bg-gray-700 p-4 rounded flex justify-between items-center hover:bg-gray-600 transition-all duration-300">
                         <div>
                             <div class="font-mono text-blue-400">/api/portfolio/positions</div>
                             <div class="text-xs text-gray-400">Portfolio position data</div>
                         </div>
-                        <button onclick="testEndpoint('/api/portfolio/positions')" class="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-xs">
+                        <button onclick="testEndpoint('/api/portfolio/positions')" class="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-xs transition-all duration-300 hover:scale-105">
                             Test
                         </button>
                     </div>
-                    <div class="bg-gray-700 p-4 rounded flex justify-between items-center">
+                    <div class="bg-gray-700 p-4 rounded flex justify-between items-center hover:bg-gray-600 transition-all duration-300">
                         <div>
                             <div class="font-mono text-blue-400">/api/strategy/test</div>
                             <div class="text-xs text-gray-400">Strategy testing engine</div>
                         </div>
-                        <button onclick="testStrategy()" class="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-xs">
+                        <button onclick="testStrategy()" class="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-xs transition-all duration-300 hover:scale-105">
                             Test
                         </button>
                     </div>
-                    <div class="bg-gray-700 p-4 rounded flex justify-between items-center">
+                    <div class="bg-gray-700 p-4 rounded flex justify-between items-center hover:bg-gray-600 transition-all duration-300">
                         <div>
                             <div class="font-mono text-blue-400">/api/trading/execute</div>
                             <div class="text-xs text-gray-400">Trade execution engine</div>
                         </div>
-                        <button onclick="testTrade()" class="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-xs">
+                        <button onclick="testTrade()" class="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-xs transition-all duration-300 hover:scale-105">
                             Test
                         </button>
                     </div>
                 </div>
             </div>
 
-            <!-- Action Buttons -->
+            <!-- Enhanced Action Buttons -->
             <div class="text-center space-x-4">
-                <button onclick="testStrategy()" class="bg-blue-600 hover:bg-blue-700 px-8 py-3 rounded-lg font-semibold">
+                <button onclick="testStrategy()" class="bg-blue-600 hover:bg-blue-700 px-8 py-3 rounded-lg font-semibold btn-glow transition-all duration-300">
                     🧪 Test AI Strategy Engine
                 </button>
-                <button onclick="showPortfolio()" class="bg-purple-600 hover:bg-purple-700 px-8 py-3 rounded-lg font-semibold">
+                <button onclick="showPortfolio()" class="bg-purple-600 hover:bg-purple-700 px-8 py-3 rounded-lg font-semibold btn-glow transition-all duration-300">
                     📊 View Portfolio Data
                 </button>
-                <button onclick="testTrade()" class="bg-green-600 hover:bg-green-700 px-8 py-3 rounded-lg font-semibold">
+                <button onclick="testTrade()" class="bg-green-600 hover:bg-green-700 px-8 py-3 rounded-lg font-semibold btn-glow transition-all duration-300">
                     💹 Execute Demo Trade
                 </button>
             </div>
@@ -238,17 +245,50 @@ class handler(BaseHTTPRequestHandler):
     </div>
 
     <script>
+        // Enhanced feedback system
+        function showLoading(button) {
+            button.classList.add('loading');
+            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>' + button.textContent;
+        }
+
+        function hideLoading(button, originalText) {
+            button.classList.remove('loading');
+            button.innerHTML = originalText;
+        }
+
+        function flashSuccess(element) {
+            element.classList.add('success-flash');
+            setTimeout(() => element.classList.remove('success-flash'), 500);
+        }
+
         async function testEndpoint(endpoint) {
+            const button = event.target;
+            const originalText = button.innerHTML;
+            showLoading(button);
+
             try {
                 const response = await fetch(endpoint);
                 const data = await response.json();
-                alert(`✅ ${endpoint}\\n\\nResponse: ${JSON.stringify(data, null, 2)}`);
+
+                hideLoading(button, originalText);
+                flashSuccess(button.parentElement);
+
+                // Enhanced alert with better formatting
+                const formattedData = JSON.stringify(data, null, 2);
+                const alertMessage = `✅ ${endpoint} - SUCCESS\\n\\n${formattedData}`;
+                alert(alertMessage);
+
             } catch (error) {
+                hideLoading(button, originalText);
                 alert(`❌ Error testing ${endpoint}: ${error.message}`);
             }
         }
 
         async function testStrategy() {
+            const button = event.target;
+            const originalText = button.innerHTML;
+            showLoading(button);
+
             try {
                 const response = await fetch('/api/strategy/test', {
                     method: 'POST',
@@ -256,23 +296,41 @@ class handler(BaseHTTPRequestHandler):
                     body: JSON.stringify({ strategy_name: 'Demo AI Strategy' })
                 });
                 const data = await response.json();
+
+                hideLoading(button, originalText);
+                flashSuccess(button);
+
                 alert(`🎯 AI Strategy Test Results:\\n\\n✅ Strategy: ${data.strategy_name}\\n📊 Opportunities Found: ${data.results?.length || 0}\\n💰 Total Potential Profit: $${data.total_potential_profit || 0}\\n⏰ Generated: ${data.timestamp}`);
             } catch (error) {
+                hideLoading(button, originalText);
                 alert(`❌ Strategy test failed: ${error.message}`);
             }
         }
 
         async function showPortfolio() {
+            const button = event.target;
+            const originalText = button.innerHTML;
+            showLoading(button);
+
             try {
                 const response = await fetch('/api/portfolio/positions');
                 const data = await response.json();
+
+                hideLoading(button, originalText);
+                flashSuccess(button);
+
                 alert(`📊 Portfolio Summary:\\n\\n💼 Total Value: $${data.summary?.total_value?.toLocaleString() || '0'}\\n📈 Day P&L: $${data.summary?.day_pnl || '0'}\\n🎯 Active Positions: ${data.positions?.length || 0}\\n📊 Win Rate: ${data.summary?.win_rate || 0}%`);
             } catch (error) {
+                hideLoading(button, originalText);
                 alert(`❌ Portfolio fetch failed: ${error.message}`);
             }
         }
 
         async function testTrade() {
+            const button = event.target;
+            const originalText = button.innerHTML;
+            showLoading(button);
+
             try {
                 const response = await fetch('/api/trading/execute', {
                     method: 'POST',
@@ -285,8 +343,13 @@ class handler(BaseHTTPRequestHandler):
                     })
                 });
                 const data = await response.json();
+
+                hideLoading(button, originalText);
+                flashSuccess(button);
+
                 alert(`💹 Trade Execution Result:\\n\\n${data.message}\\n\\n📋 Order ID: ${data.trade?.order_id}\\n📊 Symbol: ${data.trade?.symbol}\\n💰 Total Value: $${data.trade?.total_value}\\n⏰ Executed: ${data.timestamp}`);
             } catch (error) {
+                hideLoading(button, originalText);
                 alert(`❌ Trade execution failed: ${error.message}`);
             }
         }
