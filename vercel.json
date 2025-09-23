@@ -4,9 +4,57 @@
     {
       "src": "api/index.py",
       "use": "@vercel/python"
+    },
+    {
+      "src": "api/health.py",
+      "use": "@vercel/python"
+    },
+    {
+      "src": "api/strategy/test.py",
+      "use": "@vercel/python"
+    },
+    {
+      "src": "api/strategy/create.py",
+      "use": "@vercel/python"
+    },
+    {
+      "src": "api/strategy/analyze.py",
+      "use": "@vercel/python"
+    },
+    {
+      "src": "api/portfolio/positions.py",
+      "use": "@vercel/python"
+    },
+    {
+      "src": "api/trading/execute.py",
+      "use": "@vercel/python"
     }
   ],
   "routes": [
+    {
+      "src": "/api/health",
+      "dest": "api/health.py"
+    },
+    {
+      "src": "/api/strategy/test",
+      "dest": "api/strategy/test.py"
+    },
+    {
+      "src": "/api/strategy/create",
+      "dest": "api/strategy/create.py"
+    },
+    {
+      "src": "/api/strategy/analyze",
+      "dest": "api/strategy/analyze.py"
+    },
+    {
+      "src": "/api/portfolio/positions",
+      "dest": "api/portfolio/positions.py"
+    },
+    {
+      "src": "/api/trading/execute",
+      "dest": "api/trading/execute.py"
+    },
     {
       "src": "/(.*)",
       "dest": "api/index.py"
