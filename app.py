@@ -16,6 +16,17 @@ from start_dashboard import create_simple_dashboard
 # Create the FastAPI app
 app = create_simple_dashboard()
 
+# Add supervisor route
+from fastapi import Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+
+templates = Jinja2Templates(directory="src/web/templates")
+
+@app.get("/supervisor", response_class=HTMLResponse)
+async def supervisor_page(request: Request):
+    return templates.TemplateResponse("supervisor.html", {"request": request})
+
 if __name__ == "__main__":
     import uvicorn
 
@@ -23,7 +34,7 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     host = os.environ.get("HOST", "0.0.0.0")
 
-    print(f"🚀 Starting AI Trading Bot Dashboard on {host}:{port}")
+    print(f"Starting AI Trading Bot Dashboard on {host}:{port}")
     uvicorn.run(app, host=host, port=port)
 
 

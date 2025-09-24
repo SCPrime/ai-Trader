@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Trading Supervisor</title>
+    <style>
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .mode-selector { display: flex; gap: 10px; margin: 20px 0; }
+        .mode-btn { padding: 10px 20px; cursor: pointer; }
+        .mode-btn.active { background: #4CAF50; color: white; }
+        .pending-trade { border: 1px solid #ddd; padding: 15px; margin: 10px 0; }
+        .trade-actions { display: flex; gap: 10px; margin-top: 10px; }
+        .approve { background: green; color: white; }
+        .reject { background: red; color: white; }
+        .emergency { background: darkred; color: white; padding: 15px; font-size: 18px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎛️ Trading Supervisor Dashboard</h1>
+
+        <!-- Mode Selector -->
+        <div class="mode-selector">
+            <button class="mode-btn" onclick="setMode('manual')">Manual Only</button>
+            <button class="mode-btn active" onclick="setMode('suggest')">AI Suggests</button>
+            <button class="mode-btn" onclick="setMode('auto')">AI Auto-Trade</button>
+        </div>
+
+        <!-- Status Display -->
+        <div id="status">
+            <h2>System Status</h2>
+            <p>Mode: <span id="current-mode">suggest</span></p>
+            <p>Pending Trades: <span id="pending-count">0</span></p>
+        </div>
+
+        <!-- Pending Trades -->
+        <div id="pending-trades">
+            <h2>Pending AI Recommendations</h2>
+            <div id="trades-list"></div>
+        </div>
+
+        <!-- Emergency Controls -->
+        <div style="margin-top: 50px; padding: 20px; background: #ffebee;">
+            <h2>Emergency Controls</h2>
+            <button class="emergency" onclick="emergencyStop()">🛑 EMERGENCY STOP ALL</button>
+        </div>
+    </div>
+
+    <script>
+        // Fetch and display status
+        async function updateStatus() {
+            const response = await fetch('/api/supervisor/status');
+            const data = await response.json();
+
+            document.getElementById('current-mode').textContent = data.mode;
+            document.getElementById('pending-count').textContent = data.pending_trades;
+
+            // Update pending trades list
+            const tradesHtml = data.pending_list.map(trade => `
+                <div class="pending-trade">
+                    <h3>${trade.symbol} - ${trade.action} ${trade.quantity}</h3>
+                    <p>Strategy: ${trade.strategy}</p>
+                    <p>Confidence: ${trade.ai_confidence}%</p>
+                    <p>Reasoning: ${trade.reasoning}</p>
+                    <div class="trade-actions">
+                        <button class="approve" onclick="approveTrade('${trade.id}')">Approve</button>
+                        <button class="reject" onclick="rejectTrade('${trade.id}')">Reject</button>
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('trades-list').innerHTML = tradesHtml || '<p>No pending trades</p>';
+        }
+
+        async function setMode(mode) {
+            await fetch('/api/supervisor/mode', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({mode: mode})
+            });
+            updateStatus();
+        }
+
+        async function approveTrade(tradeId) {
+            await fetch('/api/supervisor/approve', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({trade_id: tradeId})
+            });
+            updateStatus();
+        }
+
+        async function rejectTrade(tradeId) {
+            await fetch('/api/supervisor/reject', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({trade_id: tradeId, reason: 'Manual rejection'})
+            });
+            updateStatus();
+        }
+
+        async function emergencyStop() {
+            if (confirm('Are you sure? This will stop ALL trading!')) {
+                await fetch('/api/supervisor/emergency', {method: 'POST'});
+                alert('Emergency stop activated!');
+                updateStatus();
+            }
+        }
+
+        // Update every 5 seconds
+        updateStatus();
+        setInterval(updateStatus, 5000);
+    </script>
+</body>
+</html>
