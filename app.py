@@ -12,9 +12,13 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from start_dashboard import create_simple_dashboard
+from api.supervisor import router as supervisor_router
 
 # Create the FastAPI app
 app = create_simple_dashboard()
+
+# Include supervisor API routes
+app.include_router(supervisor_router)
 
 # Add supervisor route
 from fastapi import Request
