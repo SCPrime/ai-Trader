@@ -38,7 +38,8 @@
       "Bash(npm:*)",
       "Bash(uvicorn:*)",
       "Bash(PORT=8001 python app.py)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(tasklist:*)"
     ],
     "deny": [],
     "ask": []

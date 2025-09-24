@@ -13,11 +13,15 @@ from typing import Dict, Any
 import logging
 
 from core.supervisor import supervisor, SupervisorMode, TradeAction
+from core.trading_engine import TradingEngine
 
 logger = logging.getLogger(__name__)
 
 # Create API router
 router = APIRouter(prefix="/api/supervisor", tags=["supervisor"])
+
+# Create trading engine instance
+trading_engine = TradingEngine()
 
 
 class ModeChangeRequest(BaseModel):
@@ -34,6 +38,17 @@ class TradeRejectionRequest(BaseModel):
     """Request model for rejecting a trade."""
     trade_id: str
     reason: str = ""
+
+
+class TradeSubmissionRequest(BaseModel):
+    """Request model for submitting a trade recommendation."""
+    symbol: str
+    action: str
+    quantity: int
+    price: float
+    strategy: str
+    ai_confidence: float
+    reasoning: str
 
 
 @router.get("/status")
@@ -140,6 +155,41 @@ async def get_pending_trades() -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Error getting pending trades: {e}")
         raise HTTPException(status_code=500, detail="Failed to get pending trades")
+
+
+@router.post("/submit-trade")
+async def submit_trade_recommendation(request: TradeSubmissionRequest) -> Dict[str, Any]:
+    """Submit a trade recommendation directly to the trading engine."""
+    try:
+        # Validate action
+        if request.action not in [action.value for action in TradeAction]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid action. Must be one of: {[action.value for action in TradeAction]}"
+            )
+
+        # Generate trade ID
+        from datetime import datetime
+        trade_id = f"{request.symbol}_{request.action}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+        # Use the trading engine instead of direct supervisor
+        result = await trading_engine.execute_trade(
+            trade_id=trade_id,
+            symbol=request.symbol,
+            action=request.action,
+            quantity=request.quantity,
+            price=request.price,
+            strategy=request.strategy,
+            ai_confidence=request.ai_confidence
+        )
+
+        return result
+
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid trade action")
+    except Exception as e:
+        logger.error(f"Error submitting trade: {e}")
+        raise HTTPException(status_code=500, detail="Failed to submit trade")
 
 
 @router.get("/health")

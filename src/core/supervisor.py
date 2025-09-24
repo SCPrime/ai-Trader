@@ -10,6 +10,7 @@ from typing import Dict, List, Optional, Any
 from enum import Enum
 from dataclasses import dataclass
 import logging
+from .trading_engine import TradingEngine
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +54,7 @@ class TradingSupervisor:
         self.approved_trades: List[str] = []
         self.rejected_trades: List[str] = []
         self.emergency_stop = False
+        self.trading_engine = TradingEngine()
 
     async def set_mode(self, mode: SupervisorMode):
         """Set the supervisor mode."""
@@ -89,7 +91,7 @@ class TradingSupervisor:
         # In AUTO mode, execute immediately
         if self.mode == SupervisorMode.AUTO:
             logger.info(f"Auto-executing trade: {symbol} {action.value} {quantity}")
-            await self._execute_trade(trade_id, symbol, action, quantity, price)
+            await self._execute_trade(trade_id, symbol, action, quantity, price, strategy, ai_confidence)
             return None
 
         # In MANUAL or SUGGEST mode, queue for approval
@@ -127,7 +129,8 @@ class TradingSupervisor:
 
         # Execute the trade
         await self._execute_trade(
-            trade_id, trade.symbol, trade.action, trade.quantity, trade.price
+            trade_id, trade.symbol, trade.action, trade.quantity, trade.price,
+            trade.strategy, trade.ai_confidence
         )
 
         # Move to approved list
@@ -176,15 +179,36 @@ class TradingSupervisor:
         symbol: str,
         action: TradeAction,
         quantity: int,
-        price: float
+        price: float,
+        strategy: str = "unknown",
+        ai_confidence: float = 0.0
     ):
         """Execute an approved trade."""
-        # This would integrate with your trading client
-        # For now, just log the execution
         logger.info(f"EXECUTING TRADE: {trade_id} - {action.value.upper()} {quantity} {symbol} @ ${price:.2f}")
 
-        # TODO: Integrate with actual trading client
-        # await self.trading_client.place_order(symbol, action, quantity, price)
+        if not self.trading_engine.is_available():
+            logger.error(f"Trading engine not available, cannot execute trade {trade_id}")
+            return
+
+        try:
+            # Execute the trade through the trading engine
+            result = await self.trading_engine.execute_trade(
+                trade_id=trade_id,
+                symbol=symbol,
+                action=action.value,
+                quantity=quantity,
+                price=price,
+                strategy=strategy,
+                ai_confidence=ai_confidence
+            )
+
+            if result["success"]:
+                logger.info(f"Trade {trade_id} executed successfully: Order ID {result['order_id']}")
+            else:
+                logger.error(f"Trade {trade_id} execution failed: {result['error']}")
+
+        except Exception as e:
+            logger.error(f"Error executing trade {trade_id}: {e}")
 
     async def cleanup_expired_trades(self):
         """Remove expired trades from pending list."""
