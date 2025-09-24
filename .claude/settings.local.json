@@ -29,7 +29,16 @@
       "WebFetch(domain:ai-trader-f0f61lz3q-scprimes-projects.vercel.app)",
       "WebFetch(domain:ai-trader-pgfznznyn-scprimes-projects.vercel.app)",
       "WebFetch(domain:ai-trader-gwwxy6a3v-scprimes-projects.vercel.app)",
-      "WebFetch(domain:ai-trader-qc7rmpy1o-scprimes-projects.vercel.app)"
+      "WebFetch(domain:ai-trader-qc7rmpy1o-scprimes-projects.vercel.app)",
+      "WebFetch(domain:localhost)",
+      "WebFetch(domain:ai-trader-3nurs2l5k-scprimes-projects.vercel.app)",
+      "WebFetch(domain:ai-trader-17a6khd8e-scprimes-projects.vercel.app)",
+      "Bash(git pull:*)",
+      "Bash(git --version)",
+      "Bash(npm:*)",
+      "Bash(uvicorn:*)",
+      "Bash(PORT=8001 python app.py)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

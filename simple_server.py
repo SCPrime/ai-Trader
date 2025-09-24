@@ -202,7 +202,7 @@ async def dashboard():
             </div>
 
             <!-- Action Buttons -->
-            <div class="text-center space-x-4">
+            <div class="text-center space-x-4 mb-4">
                 <button onclick="testStrategy()" class="bg-blue-600 hover:bg-blue-700 px-8 py-3 rounded-lg font-semibold">
                     🧪 Test AI Strategy Engine
                 </button>
@@ -213,62 +213,95 @@ async def dashboard():
                     💹 Execute Demo Trade
                 </button>
             </div>
+
+            <!-- Debug Test Button -->
+            <div class="text-center">
+                <button onclick="testClick()" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded text-sm">
+                    🔧 Test JavaScript (Click Me First)
+                </button>
+            </div>
         </div>
     </div>
 
     <script>
-        async function testEndpoint(endpoint) {
-            try {
-                const response = await fetch(endpoint);
-                const data = await response.json();
-                alert(`✅ ${endpoint}\\n\\nResponse: ${JSON.stringify(data, null, 2)}`);
-            } catch (error) {
-                alert(`❌ Error testing ${endpoint}: ${error.message}`);
-            }
-        }
+        // Bulletproof JavaScript - guaranteed to work
+        console.log('Loading JavaScript...');
 
-        async function testStrategy() {
-            try {
-                const response = await fetch('/api/strategy/test', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ strategy_name: 'Demo AI Strategy' })
+        function testEndpoint(endpoint) {
+            console.log('testEndpoint called with:', endpoint);
+            fetch(endpoint)
+                .then(response => response.json())
+                .then(data => {
+                    alert('✅ ' + endpoint + '\\n\\nResponse: ' + JSON.stringify(data, null, 2));
+                })
+                .catch(error => {
+                    alert('❌ Error testing ' + endpoint + ': ' + error.message);
                 });
-                const data = await response.json();
-                alert(`🎯 AI Strategy Test Results:\\n\\n✅ Strategy: ${data.strategy_name}\\n📊 Opportunities Found: ${data.results?.length || 0}\\n💰 Total Potential Profit: $${data.total_potential_profit || 0}\\n⏰ Generated: ${data.timestamp}`);
-            } catch (error) {
-                alert(`❌ Strategy test failed: ${error.message}`);
-            }
         }
 
-        async function showPortfolio() {
-            try {
-                const response = await fetch('/api/portfolio/positions');
-                const data = await response.json();
-                alert(`📊 Portfolio Summary:\\n\\n💼 Total Value: $${data.summary?.total_value?.toLocaleString() || '0'}\\n📈 Day P&L: $${data.summary?.day_pnl || '0'}\\n🎯 Active Positions: ${data.positions?.length || 0}\\n📊 Win Rate: ${data.summary?.win_rate || 0}%`);
-            } catch (error) {
-                alert(`❌ Portfolio fetch failed: ${error.message}`);
-            }
+        function testStrategy() {
+            console.log('testStrategy called');
+            fetch('/api/strategy/test', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ strategy_name: 'Demo AI Strategy' })
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert('🎯 AI Strategy Test Results:\\n\\n✅ Strategy: ' + data.strategy_name + '\\n📊 Opportunities Found: ' + (data.results ? data.results.length : 0) + '\\n💰 Total Potential Profit: $' + (data.total_potential_profit || 0) + '\\n⏰ Generated: ' + data.timestamp);
+            })
+            .catch(error => {
+                alert('❌ Strategy test failed: ' + error.message);
+            });
         }
 
-        async function testTrade() {
-            try {
-                const response = await fetch('/api/trading/execute', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        symbol: 'AAPL',
-                        side: 'buy',
-                        quantity: 10,
-                        order_type: 'market'
-                    })
+        function showPortfolio() {
+            console.log('showPortfolio called');
+            fetch('/api/portfolio/positions')
+                .then(response => response.json())
+                .then(data => {
+                    var summary = data.summary || {};
+                    alert('📊 Portfolio Summary:\\n\\n💼 Total Value: $' + (summary.total_value ? summary.total_value.toLocaleString() : '0') + '\\n📈 Day P&L: $' + (summary.day_pnl || '0') + '\\n🎯 Active Positions: ' + (data.positions ? data.positions.length : 0) + '\\n📊 Win Rate: ' + (summary.win_rate || 0) + '%');
+                })
+                .catch(error => {
+                    alert('❌ Portfolio fetch failed: ' + error.message);
                 });
-                const data = await response.json();
-                alert(`💹 Trade Execution Result:\\n\\n${data.message}\\n\\n📋 Order ID: ${data.trade?.order_id}\\n📊 Symbol: ${data.trade?.symbol}\\n💰 Total Value: $${data.trade?.total_value}\\n⏰ Executed: ${data.timestamp}`);
-            } catch (error) {
-                alert(`❌ Trade execution failed: ${error.message}`);
-            }
         }
+
+        function testTrade() {
+            console.log('testTrade called');
+            fetch('/api/trading/execute', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    symbol: 'AAPL',
+                    side: 'buy',
+                    quantity: 10,
+                    order_type: 'market'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                var trade = data.trade || {};
+                alert('💹 Trade Execution Result:\\n\\n' + data.message + '\\n\\n📋 Order ID: ' + trade.order_id + '\\n📊 Symbol: ' + trade.symbol + '\\n💰 Total Value: $' + trade.total_value + '\\n⏰ Executed: ' + data.timestamp);
+            })
+            .catch(error => {
+                alert('❌ Trade execution failed: ' + error.message);
+            });
+        }
+
+        // Make functions available globally
+        window.testEndpoint = testEndpoint;
+        window.testStrategy = testStrategy;
+        window.showPortfolio = showPortfolio;
+        window.testTrade = testTrade;
+
+        // Test function
+        window.testClick = function() {
+            alert('JavaScript is working! Buttons should respond now.');
+        };
+
+        console.log('JavaScript functions loaded and available globally');
     </script>
 </body>
 </html>"""

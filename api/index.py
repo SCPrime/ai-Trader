@@ -59,12 +59,15 @@ class handler(BaseHTTPRequestHandler):
         .pulse { animation: pulse 2s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
         .bounce { animation: bounce 1s; }
-        @keyframes bounce { 0%, 20%, 53%, 80%, 100% { transform: translate3d(0,0,0); } 40%, 43% { transform: translate3d(0,-30px,0); } 70% { transform: translate3d(0,-15px,0); } 90% { transform: translate3d(0,-4px,0); } }
-        .btn-glow { box-shadow: 0 0 20px rgba(59, 130, 246, 0.3); transition: all 0.3s ease; }
-        .btn-glow:hover { box-shadow: 0 0 30px rgba(59, 130, 246, 0.6); transform: translateY(-2px); }
-        .loading { opacity: 0.6; pointer-events: none; }
-        .success-flash { animation: successFlash 0.5s ease-in-out; }
-        @keyframes successFlash { 0% { background-color: rgba(34, 197, 94, 0.3); } 100% { background-color: transparent; } }
+        @keyframes bounce {
+            0%, 20%, 53%, 80%, 100% { transform: translate3d(0,0,0); }
+            40%, 43% { transform: translate3d(0,-30px,0); }
+            70% { transform: translate3d(0,-15px,0); }
+            90% { transform: translate3d(0,-4px,0); }
+        }
+        button { cursor: pointer; }
+        button:hover { opacity: 0.9; }
+        .transition-all { transition: all 0.3s ease; }
     </style>
 </head>
 <body class="bg-gray-900 text-white">
@@ -195,7 +198,7 @@ class handler(BaseHTTPRequestHandler):
                             <div class="font-mono text-blue-400">/api/health</div>
                             <div class="text-xs text-gray-400">System health monitoring</div>
                         </div>
-                        <button onclick="testEndpoint('/api/health')" class="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-xs transition-all duration-300 hover:scale-105">
+                        <button onclick="testEndpoint('/api/health')" class="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-xs">
                             Test
                         </button>
                     </div>
@@ -204,7 +207,7 @@ class handler(BaseHTTPRequestHandler):
                             <div class="font-mono text-blue-400">/api/portfolio/positions</div>
                             <div class="text-xs text-gray-400">Portfolio position data</div>
                         </div>
-                        <button onclick="testEndpoint('/api/portfolio/positions')" class="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-xs transition-all duration-300 hover:scale-105">
+                        <button onclick="testEndpoint('/api/portfolio/positions')" class="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-xs">
                             Test
                         </button>
                     </div>
@@ -213,7 +216,7 @@ class handler(BaseHTTPRequestHandler):
                             <div class="font-mono text-blue-400">/api/strategy/test</div>
                             <div class="text-xs text-gray-400">Strategy testing engine</div>
                         </div>
-                        <button onclick="testStrategy()" class="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-xs transition-all duration-300 hover:scale-105">
+                        <button onclick="testStrategy()" class="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-xs">
                             Test
                         </button>
                     </div>
@@ -222,7 +225,7 @@ class handler(BaseHTTPRequestHandler):
                             <div class="font-mono text-blue-400">/api/trading/execute</div>
                             <div class="text-xs text-gray-400">Trade execution engine</div>
                         </div>
-                        <button onclick="testTrade()" class="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-xs transition-all duration-300 hover:scale-105">
+                        <button onclick="testTrade()" class="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-xs">
                             Test
                         </button>
                     </div>
@@ -230,129 +233,112 @@ class handler(BaseHTTPRequestHandler):
             </div>
 
             <!-- Enhanced Action Buttons -->
-            <div class="text-center space-x-4">
-                <button onclick="testStrategy()" class="bg-blue-600 hover:bg-blue-700 px-8 py-3 rounded-lg font-semibold btn-glow transition-all duration-300">
+            <div class="text-center space-x-4 mb-4">
+                <button onclick="testStrategy()" class="bg-blue-600 hover:bg-blue-700 px-8 py-3 rounded-lg font-semibold">
                     🧪 Test AI Strategy Engine
                 </button>
-                <button onclick="showPortfolio()" class="bg-purple-600 hover:bg-purple-700 px-8 py-3 rounded-lg font-semibold btn-glow transition-all duration-300">
+                <button onclick="showPortfolio()" class="bg-purple-600 hover:bg-purple-700 px-8 py-3 rounded-lg font-semibold">
                     📊 View Portfolio Data
                 </button>
-                <button onclick="testTrade()" class="bg-green-600 hover:bg-green-700 px-8 py-3 rounded-lg font-semibold btn-glow transition-all duration-300">
+                <button onclick="testTrade()" class="bg-green-600 hover:bg-green-700 px-8 py-3 rounded-lg font-semibold">
                     💹 Execute Demo Trade
+                </button>
+            </div>
+
+            <!-- Debug Test Button -->
+            <div class="text-center">
+                <button onclick="testClick()" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded text-sm">
+                    🔧 Test JavaScript (Click Me First)
                 </button>
             </div>
         </div>
     </div>
 
     <script>
-        // Enhanced feedback system
-        function showLoading(button) {
-            button.classList.add('loading');
-            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>' + button.textContent;
-        }
+        // Bulletproof JavaScript - guaranteed to work
+        console.log('Loading JavaScript...');
 
-        function hideLoading(button, originalText) {
-            button.classList.remove('loading');
-            button.innerHTML = originalText;
-        }
-
-        function flashSuccess(element) {
-            element.classList.add('success-flash');
-            setTimeout(() => element.classList.remove('success-flash'), 500);
-        }
-
-        async function testEndpoint(endpoint) {
-            const button = event.target;
-            const originalText = button.innerHTML;
-            showLoading(button);
-
-            try {
-                const response = await fetch(endpoint);
-                const data = await response.json();
-
-                hideLoading(button, originalText);
-                flashSuccess(button.parentElement);
-
-                // Enhanced alert with better formatting
-                const formattedData = JSON.stringify(data, null, 2);
-                const alertMessage = `✅ ${endpoint} - SUCCESS\\n\\n${formattedData}`;
-                alert(alertMessage);
-
-            } catch (error) {
-                hideLoading(button, originalText);
-                alert(`❌ Error testing ${endpoint}: ${error.message}`);
-            }
-        }
-
-        async function testStrategy() {
-            const button = event.target;
-            const originalText = button.innerHTML;
-            showLoading(button);
-
-            try {
-                const response = await fetch('/api/strategy/test', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ strategy_name: 'Demo AI Strategy' })
+        function testEndpoint(endpoint) {
+            console.log('testEndpoint called with:', endpoint);
+            fetch(endpoint)
+                .then(response => response.json())
+                .then(data => {
+                    alert('✅ ' + endpoint + '\\n\\nResponse: ' + JSON.stringify(data, null, 2));
+                })
+                .catch(error => {
+                    alert('❌ Error testing ' + endpoint + ': ' + error.message);
                 });
-                const data = await response.json();
-
-                hideLoading(button, originalText);
-                flashSuccess(button);
-
-                alert(`🎯 AI Strategy Test Results:\\n\\n✅ Strategy: ${data.strategy_name}\\n📊 Opportunities Found: ${data.results?.length || 0}\\n💰 Total Potential Profit: $${data.total_potential_profit || 0}\\n⏰ Generated: ${data.timestamp}`);
-            } catch (error) {
-                hideLoading(button, originalText);
-                alert(`❌ Strategy test failed: ${error.message}`);
-            }
         }
 
-        async function showPortfolio() {
-            const button = event.target;
-            const originalText = button.innerHTML;
-            showLoading(button);
-
-            try {
-                const response = await fetch('/api/portfolio/positions');
-                const data = await response.json();
-
-                hideLoading(button, originalText);
-                flashSuccess(button);
-
-                alert(`📊 Portfolio Summary:\\n\\n💼 Total Value: $${data.summary?.total_value?.toLocaleString() || '0'}\\n📈 Day P&L: $${data.summary?.day_pnl || '0'}\\n🎯 Active Positions: ${data.positions?.length || 0}\\n📊 Win Rate: ${data.summary?.win_rate || 0}%`);
-            } catch (error) {
-                hideLoading(button, originalText);
-                alert(`❌ Portfolio fetch failed: ${error.message}`);
-            }
+        function testStrategy() {
+            console.log('testStrategy called');
+            fetch('/api/strategy/test', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ strategy_name: 'Demo AI Strategy' })
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert('🎯 AI Strategy Test Results:\\n\\n✅ Strategy: ' + data.strategy_name + '\\n📊 Opportunities Found: ' + (data.results ? data.results.length : 0) + '\\n💰 Total Potential Profit: $' + (data.total_potential_profit || 0) + '\\n⏰ Generated: ' + data.timestamp);
+            })
+            .catch(error => {
+                alert('❌ Strategy test failed: ' + error.message);
+            });
         }
 
-        async function testTrade() {
-            const button = event.target;
-            const originalText = button.innerHTML;
-            showLoading(button);
-
-            try {
-                const response = await fetch('/api/trading/execute', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        symbol: 'AAPL',
-                        side: 'buy',
-                        quantity: 10,
-                        order_type: 'market'
-                    })
+        function showPortfolio() {
+            console.log('showPortfolio called');
+            fetch('/api/portfolio/positions')
+                .then(response => response.json())
+                .then(data => {
+                    var summary = data.summary || {};
+                    alert('📊 Portfolio Summary:\\n\\n💼 Total Value: $' + (summary.total_value ? summary.total_value.toLocaleString() : '0') + '\\n📈 Day P&L: $' + (summary.day_pnl || '0') + '\\n🎯 Active Positions: ' + (data.positions ? data.positions.length : 0) + '\\n📊 Win Rate: ' + (summary.win_rate || 0) + '%');
+                })
+                .catch(error => {
+                    alert('❌ Portfolio fetch failed: ' + error.message);
                 });
-                const data = await response.json();
-
-                hideLoading(button, originalText);
-                flashSuccess(button);
-
-                alert(`💹 Trade Execution Result:\\n\\n${data.message}\\n\\n📋 Order ID: ${data.trade?.order_id}\\n📊 Symbol: ${data.trade?.symbol}\\n💰 Total Value: $${data.trade?.total_value}\\n⏰ Executed: ${data.timestamp}`);
-            } catch (error) {
-                hideLoading(button, originalText);
-                alert(`❌ Trade execution failed: ${error.message}`);
-            }
         }
+
+        function testTrade() {
+            console.log('testTrade called');
+            fetch('/api/trading/execute', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    symbol: 'AAPL',
+                    side: 'buy',
+                    quantity: 10,
+                    order_type: 'market'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                var trade = data.trade || {};
+                alert('💹 Trade Execution Result:\\n\\n' + data.message + '\\n\\n📋 Order ID: ' + trade.order_id + '\\n📊 Symbol: ' + trade.symbol + '\\n💰 Total Value: $' + trade.total_value + '\\n⏰ Executed: ' + data.timestamp);
+            })
+            .catch(error => {
+                alert('❌ Trade execution failed: ' + error.message);
+            });
+        }
+
+        // Make functions available globally
+        window.testEndpoint = testEndpoint;
+        window.testStrategy = testStrategy;
+        window.showPortfolio = showPortfolio;
+        window.testTrade = testTrade;
+
+        // Test function
+        window.testClick = function() {
+            alert('JavaScript is working! Buttons should respond now.');
+        };
+
+        console.log('JavaScript functions loaded and available globally');
+        console.log('Functions available:', {
+            testEndpoint: typeof window.testEndpoint,
+            testStrategy: typeof window.testStrategy,
+            showPortfolio: typeof window.showPortfolio,
+            testTrade: typeof window.testTrade
+        });
     </script>
 </body>
 </html>'''
