@@ -1,532 +1,361 @@
+#!/usr/bin/env python3
 """
-CLI entry point for the AI Trading Bot.
+AI Trading Bot - Advanced algorithmic trading with Claude AI integration.
+
+A production-ready trading bot featuring:
+- Real-time market data streaming
+- Advanced RSI and MACD strategies  
+- AI-powered trade analysis
+- Comprehensive risk management
+- Multi-channel notifications
 """
 
-import asyncio
-import sys
 import os
+import sys
+import logging
+import json
+import asyncio
 from pathlib import Path
+from datetime import datetime, timedelta
+from typing import Optional, Dict, Any
+
 import click
-from typing import Optional
+import uvicorn
 from rich.console import Console
+from rich.prompt import Confirm, Prompt
 from rich.table import Table
 from rich.panel import Panel
-from rich.progress import Progress, SpinnerColumn, TextColumn
-from rich.prompt import Confirm
 from rich import print as rprint
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
+def setup_logging(level="INFO", log_dir="logs", enable_console=True, enable_file=True):
+    """Setup logging configuration."""
+    # Create logs directory if it doesn't exist
+    os.makedirs(log_dir, exist_ok=True)
+    
+    # Configure handlers
+    handlers = []
+    
+    if enable_file:
+        handlers.append(logging.FileHandler(os.path.join(log_dir, 'trading_bot.log')))
+    
+    if enable_console:
+        handlers.append(logging.StreamHandler())
+    
+    # Configure logging
+    logging.basicConfig(
+        level=getattr(logging, level.upper(), logging.INFO),
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=handlers,
+        force=True
+    )
+    return logging.getLogger(__name__)
+
+def get_logger():
+    """Get logger instance."""
+    return logging.getLogger(__name__)
+
 # Initialize Rich console
 console = Console()
 
-# Install uvloop for better async performance on Unix systems only
-if sys.platform != 'win32':
-    try:
-        import uvloop
-        uvloop.install()
-        console.print("High-performance uvloop event loop installed", style="green")
-    except ImportError:
-        console.print("uvloop not available, using default event loop", style="yellow")
-
-# Import after console setup to avoid missing module issues
-try:
-    from config.config import get_config, ConfigManager
-    from src.utils.logger import setup_logging, get_logger
-    from app import TradingBotApplication
-except ImportError:
-    # If these imports fail, we'll handle it in individual commands
-    pass
-
-
 @click.group()
-@click.option('--config', '-c', help='Configuration file path')
-@click.option('--env-file', '-e', help='Environment file path')
-@click.option('--log-level', '-l', default='INFO', help='Log level')
-@click.option('--verbose', '-v', is_flag=True, help='Verbose output')
+@click.option('-c', '--config', help='Configuration file path')
+@click.option('-e', '--env-file', help='Environment file path') 
+@click.option('-l', '--log-level', default='INFO', help='Log level')
+@click.option('-v', '--verbose', is_flag=True, help='Verbose output')
 @click.pass_context
 def cli(ctx, config, env_file, log_level, verbose):
-    """
-    AI Trading Bot - Advanced algorithmic trading with Claude AI integration.
-
+    """AI Trading Bot - Advanced algorithmic trading with Claude AI integration.
+    
     A production-ready trading bot featuring:
     - Real-time market data streaming
     - Advanced RSI and MACD strategies
-    - AI-powered trade analysis
+    - AI-powered trade analysis  
     - Comprehensive risk management
     - Multi-channel notifications
     """
-    # Ensure context object exists
+    # Initialize context object
     ctx.ensure_object(dict)
-
-    # Store configuration options
-    ctx.obj['config_path'] = config
+    ctx.obj['config'] = config
     ctx.obj['env_file'] = env_file
-    ctx.obj['log_level'] = log_level.upper()
+    ctx.obj['log_level'] = log_level
     ctx.obj['verbose'] = verbose
-
+    
     # Setup logging
-    setup_logging(
-        level=ctx.obj['log_level'],
+    logger = setup_logging(
+        level=log_level,
         enable_console=True,
         enable_file=True
     )
-
-    logger = get_logger()
+    
     if verbose:
-        logger.info(f"Starting AI Trading Bot CLI with config: {config}")
-
+        logger.info("AI Trading Bot initialized in verbose mode")
 
 @cli.command()
-@click.option('--mode', type=click.Choice(['paper', 'live']), default='paper',
-              help='Trading mode: paper (safe default) or live')
-@click.option('--symbols', '-s', help='Comma-separated list of symbols to trade')
-@click.option('--strategy', default='rsi', help='Trading strategy to use')
-@click.option('--dry-run', is_flag=True, help='Dry run mode - no actual trades')
 @click.pass_context
-def run(ctx, mode, symbols, strategy, dry_run):
-    """
-    🚀 Run the trading bot with specified parameters.
-
-    Examples:
-        main.py run --mode paper --symbols AAPL,TSLA,MSFT
-        main.py run --mode live --symbols SPY --strategy rsi
-    """
-    logger = get_logger()
-
+def setup(ctx):
+    """🛠️ Run the setup wizard to initialize the trading bot."""
+    console.print("\n[bold blue]🚀 AI Trading Bot Setup Wizard[/bold blue]", style="bold")
+    console.print("This wizard will help you configure your trading bot.\n")
+    
+    # Check for existing .env file
+    env_path = Path('.env')
+    if env_path.exists():
+        if not Confirm.ask("Found existing .env file. Overwrite?"):
+            console.print("[yellow]Setup cancelled.[/yellow]")
+            return
+    
+    env_vars = {}
+    
+    # Alpaca API Configuration
+    console.print("[bold cyan]📈 Alpaca API Configuration[/bold cyan]")
+    console.print("Get your API keys from: https://app.alpaca.markets/paper/dashboard/overview")
+    
+    env_vars['ALPACA_API_KEY'] = Prompt.ask("Enter your Alpaca API Key")
+    env_vars['ALPACA_SECRET_KEY'] = Prompt.ask("Enter your Alpaca Secret Key", password=True)
+    env_vars['ALPACA_BASE_URL'] = "https://paper-api.alpaca.markets"
+    
+    # Anthropic API Configuration  
+    console.print("\n[bold cyan]🤖 Anthropic Claude API Configuration[/bold cyan]")
+    console.print("Get your API key from: https://console.anthropic.com/")
+    
+    env_vars['ANTHROPIC_API_KEY'] = Prompt.ask("Enter your Anthropic API Key", password=True)
+    
+    # Trading Configuration
+    console.print("\n[bold cyan]⚙️ Trading Configuration[/bold cyan]")
+    
+    env_vars['MAX_POSITION_SIZE'] = Prompt.ask("Max position size ($)", default="1000")
+    env_vars['RISK_PERCENTAGE'] = Prompt.ask("Risk percentage per trade", default="0.02")
+    env_vars['STOP_LOSS_PERCENTAGE'] = Prompt.ask("Stop loss percentage", default="0.05")
+    
+    # Environment
+    env_vars['ENVIRONMENT'] = "development"
+    
+    # Write .env file
     try:
-        # Live trading confirmation
-        if mode == 'live' and not dry_run:
-            console.print("\n⚠️  [bold red]LIVE TRADING MODE SELECTED[/bold red] ⚠️", style="red")
-            console.print("This will execute real trades with real money!", style="red")
-
-            if not Confirm.ask("\n[bold yellow]Are you sure you want to proceed with LIVE trading?[/bold yellow]"):
-                console.print("❌ Live trading cancelled by user", style="red")
-                return
-
-        # Initialize configuration with progress indicator
-        with console.status("[bold green]Initializing configuration...") as status:
-            config_manager = ConfigManager(
-                config_path=ctx.obj.get('config_path'),
-                env_file=ctx.obj.get('env_file')
-            )
-            config = config_manager.load_config()
-            status.update("Configuration loaded ✅")
-
-        # Override paper trading setting
-        config.alpaca.paper_trading = (mode == 'paper')
-
-        # Parse symbols
-        symbol_list = None
-        if symbols:
-            symbol_list = [s.strip().upper() for s in symbols.split(',')]
-
-        # Display startup information
-        startup_panel = Panel.fit(
-            f"[bold green]AI Trading Bot Starting[/bold green]\n\n"
-            f"🔧 Mode: [bold cyan]{'PAPER' if mode == 'paper' else 'LIVE'}[/bold cyan]\n"
-            f"📊 Strategy: [bold yellow]{strategy.upper()}[/bold yellow]\n"
-            f"🎯 Symbols: [bold magenta]{', '.join(symbol_list) if symbol_list else 'Default Portfolio'}[/bold magenta]\n"
-            f"🧪 Dry Run: [bold red]{'YES' if dry_run else 'NO'}[/bold red]",
-            title="🤖 Trading Bot Configuration",
-            border_style="green"
-        )
-        console.print(startup_panel)
-
-        if dry_run:
-            console.print("🧪 [bold yellow]DRY RUN MODE[/bold yellow] - No actual trades will be executed", style="yellow")
-
-        # Create and run application
-        app = TradingBotApplication(config)
-
-        # Run the bot
-        console.print("\n🚀 Starting trading bot...", style="green")
-        asyncio.run(app.run(
-            symbols=symbol_list,
-            strategy=strategy,
-            dry_run=dry_run
-        ))
-
-    except KeyboardInterrupt:
-        console.print("\n⏹️  Trading bot stopped by user", style="yellow")
-        logger.info("Trading bot stopped by user")
+        with open('.env', 'w') as f:
+            for key, value in env_vars.items():
+                f.write(f"{key}={value}\n")
+        
+        console.print("\n[bold green]✅ Setup complete![/bold green]")
+        console.print("Your configuration has been saved to .env")
+        console.print("\nNext steps:")
+        console.print("1. Run: [bold]python main.py status[/bold] - Check connection")
+        console.print("2. Run: [bold]python main.py dashboard[/bold] - Launch web interface")
+        console.print("3. Run: [bold]python main.py run[/bold] - Start trading")
+        
     except Exception as e:
-        console.print(f"\n❌ Error running trading bot: {e}", style="red")
-        logger.error(f"Error running trading bot: {e}")
-        raise
-
+        console.print(f"[bold red]❌ Error writing .env file: {e}[/bold red]")
 
 @cli.command()
 @click.pass_context
 def status(ctx):
     """Check the current status of the trading bot and account."""
-    logger = get_logger()
-
+    console.print("[bold blue]📊 Trading Bot Status[/bold blue]\n")
+    
+    # Check .env file
+    env_path = Path('.env')
+    if not env_path.exists():
+        console.print("[bold red]❌ No .env file found[/bold red]")
+        console.print("Run: [bold]python main.py setup[/bold] to configure")
+        return
+    
+    console.print("[green]✅ Configuration file found[/green]")
+    
+    # Try to load environment variables
     try:
-        # Initialize configuration
-        config_manager = ConfigManager(
-            config_path=ctx.obj.get('config_path'),
-            env_file=ctx.obj.get('env_file')
-        )
-        config = config_manager.load_config()
-
-        # Create application and check status
-        app = TradingBotApplication(config)
-        asyncio.run(app.show_status())
-
-    except Exception as e:
-        logger.error(f"Error checking status: {e}")
-        raise
-
+        from dotenv import load_dotenv
+        load_dotenv()
+        
+        # Check required variables
+        required_vars = ['ALPACA_API_KEY', 'ALPACA_SECRET_KEY', 'ANTHROPIC_API_KEY']
+        missing_vars = [var for var in required_vars if not os.getenv(var)]
+        
+        if missing_vars:
+            console.print(f"[bold red]❌ Missing environment variables: {', '.join(missing_vars)}[/bold red]")
+            return
+            
+        console.print("[green]✅ All environment variables configured[/green]")
+        
+        # Try Alpaca connection
+        try:
+            from alpaca.trading.client import TradingClient
+            client = TradingClient(os.getenv('ALPACA_API_KEY'), os.getenv('ALPACA_SECRET_KEY'), paper=True)
+            account = client.get_account()
+            
+            console.print("[green]✅ Alpaca API connection successful[/green]")
+            console.print(f"Account Status: {account.status}")
+            console.print(f"Buying Power: ${float(account.buying_power):,.2f}")
+            console.print(f"Portfolio Value: ${float(account.portfolio_value):,.2f}")
+            
+        except Exception as e:
+            console.print(f"[bold red]❌ Alpaca API error: {str(e)}[/bold red]")
+            
+        # Try Anthropic connection
+        try:
+            from anthropic import Anthropic
+            anthropic = Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
+            console.print("[green]✅ Anthropic API configured[/green]")
+            
+        except Exception as e:
+            console.print(f"[bold red]❌ Anthropic API error: {str(e)}[/bold red]")
+            
+    except ImportError as e:
+        console.print(f"[bold red]❌ Missing dependency: {str(e)}[/bold red]")
+        console.print("Run: [bold]pip install python-dotenv[/bold]")
 
 @cli.command()
-@click.option('--backtest-days', default=30, help='Number of days to backtest')
-@click.option('--symbols', '-s', required=True, help='Comma-separated list of symbols')
-@click.option('--strategy', default='rsi', help='Strategy to backtest')
+@click.option('--host', default='127.0.0.1', help='Host to bind to')
+@click.option('--port', default=8000, help='Port to bind to') 
+@click.option('--reload', is_flag=True, help='Enable auto-reload')
 @click.pass_context
-def backtest(ctx, backtest_days, symbols, strategy):
-    """
-    Run backtesting on historical data.
-
-    Examples:
-        main.py backtest --symbols AAPL,TSLA --backtest-days 60
-    """
-    logger = get_logger()
-
+def dashboard(ctx, host, port, reload):
+    """🌐 Launch the web-based trading dashboard."""
+    console.print(f"[bold blue]🚀 Starting trading dashboard on http://{host}:{port}[/bold blue]")
+    
     try:
-        # Initialize configuration
-        config_manager = ConfigManager(
-            config_path=ctx.obj.get('config_path'),
-            env_file=ctx.obj.get('env_file')
-        )
-        config = config_manager.load_config()
-
-        # Parse symbols
-        symbol_list = [s.strip().upper() for s in symbols.split(',')]
-
-        logger.info(f"Running backtest for {backtest_days} days")
-        logger.info(f"Symbols: {symbol_list}")
-        logger.info(f"Strategy: {strategy}")
-
-        # Create and run backtest
-        app = TradingBotApplication(config)
-        asyncio.run(app.run_backtest(
-            symbols=symbol_list,
-            days=backtest_days,
-            strategy=strategy
-        ))
-
-    except Exception as e:
-        logger.error(f"Error running backtest: {e}")
-        raise
-
+        # Try to import FastAPI app
+        from app import app
+        uvicorn.run(app, host=host, port=port, reload=reload)
+    except ImportError:
+        console.print("[bold red]❌ Dashboard app not found[/bold red]")
+        console.print("Make sure app.py exists and contains a FastAPI app instance")
 
 @cli.command()
-@click.option('--symbol', '-s', required=True, help='Symbol to analyze')
-@click.option('--days', default=30, help='Number of days of data to analyze')
+@click.option('--symbol', default='SPY', help='Symbol to analyze')
+@click.option('--period', default='1D', help='Time period')
+@click.pass_context  
+def analyze(ctx, symbol, period):
+    """Analyze a symbol using AI and technical indicators."""
+    console.print(f"[bold blue]🔍 Analyzing {symbol} for {period}[/bold blue]")
+    
+    # Placeholder - implement actual analysis
+    console.print("[yellow]Analysis feature coming soon...[/yellow]")
+
+@cli.command()
+@click.option('--strategy', default='rsi', help='Trading strategy')
+@click.option('--dry-run', is_flag=True, help='Dry run mode')
 @click.pass_context
-def analyze(ctx, symbol, days):
-    """
-    Analyze a symbol using AI and technical indicators.
+def run(ctx, strategy, dry_run):
+    """🚀 Run the trading bot with specified parameters.""" 
+    mode = "DRY RUN" if dry_run else "LIVE TRADING"
+    console.print(f"[bold blue]🚀 Starting trading bot in {mode} mode[/bold blue]")
+    console.print(f"Strategy: {strategy}")
+    
+    if not dry_run:
+        if not Confirm.ask("[bold red]Are you sure you want to start live trading?[/bold red]"):
+            console.print("[yellow]Trading cancelled.[/yellow]")
+            return
+    
+    # Placeholder - implement actual trading logic
+    console.print("[yellow]Trading bot implementation coming soon...[/yellow]")
 
-    Examples:
-        main.py analyze --symbol AAPL --days 30
-    """
-    logger = get_logger()
-
-    try:
-        # Initialize configuration
-        config_manager = ConfigManager(
-            config_path=ctx.obj.get('config_path'),
-            env_file=ctx.obj.get('env_file')
-        )
-        config = config_manager.load_config()
-
-        logger.info(f"Analyzing {symbol} with {days} days of data")
-
-        # Create and run analysis
-        app = TradingBotApplication(config)
-        asyncio.run(app.analyze_symbol(symbol.upper(), days))
-
-    except Exception as e:
-        logger.error(f"Error analyzing symbol: {e}")
-        raise
-
+@cli.command()
+@click.option('--days', default=30, help='Number of days to backtest')
+@click.option('--strategy', default='rsi', help='Strategy to test')
+@click.pass_context
+def backtest(ctx, days, strategy):
+    """Run backtesting on historical data."""
+    console.print(f"[bold blue]📈 Running backtest for {days} days[/bold blue]")
+    console.print(f"Strategy: {strategy}")
+    
+    # Placeholder - implement backtesting
+    console.print("[yellow]Backtesting feature coming soon...[/yellow]")
 
 @cli.command()
 @click.pass_context
+def performance(ctx):
+    """📊 Show trading performance metrics and statistics."""
+    console.print("[bold blue]📊 Performance Metrics[/bold blue]\n")
+    
+    # Placeholder - implement performance tracking
+    console.print("[yellow]Performance tracking coming soon...[/yellow]")
+
+@cli.command()
+@click.option('--lines', default=50, help='Number of log lines to show')
+@click.pass_context
+def logs(ctx, lines):
+    """Show recent log entries."""
+    console.print(f"[bold blue]📋 Last {lines} log entries[/bold blue]\n")
+    
+    log_file = Path('logs/trading_bot.log')
+    if not log_file.exists():
+        console.print("[yellow]No log file found[/yellow]")
+        return
+    
+    try:
+        with open(log_file, 'r') as f:
+            log_lines = f.readlines()[-lines:]
+            for line in log_lines:
+                console.print(line.strip())
+    except Exception as e:
+        console.print(f"[bold red]Error reading log file: {e}[/bold red]")
+
+@cli.command()
+@click.pass_context  
 def config_info(ctx):
     """Display current configuration information."""
-    try:
-        # Initialize configuration
-        config_manager = ConfigManager(
-            config_path=ctx.obj.get('config_path'),
-            env_file=ctx.obj.get('env_file')
-        )
-        config = config_manager.load_config()
-
-        click.echo("\n=== AI Trading Bot Configuration ===\n")
-
-        # Alpaca configuration (mask sensitive data)
-        click.echo("📈 Alpaca Configuration:")
-        click.echo(f"  Paper Trading: {config.alpaca.paper_trading}")
-        click.echo(f"  API Key: {'*' * 20}...{config.alpaca.api_key[-4:] if len(config.alpaca.api_key) > 4 else '****'}")
-        click.echo()
-
-        # Trading configuration
-        click.echo("🚀 Trading Configuration:")
-        click.echo(f"  Max Positions: {config.trading.max_positions}")
-        click.echo(f"  Position Size: {config.trading.position_size * 100:.1f}%")
-        click.echo(f"  Stop Loss: {config.trading.stop_loss_pct * 100:.1f}%")
-        click.echo(f"  Take Profit: {config.trading.take_profit_pct * 100:.1f}%")
-        click.echo(f"  Max Daily Trades: {config.trading.max_daily_trades}")
-        click.echo()
-
-        # RSI configuration
-        click.echo("📊 RSI Strategy Configuration:")
-        click.echo(f"  Period: {config.rsi.period}")
-        click.echo(f"  Oversold: {config.rsi.oversold}")
-        click.echo(f"  Overbought: {config.rsi.overbought}")
-        click.echo(f"  Use Divergence: {config.rsi.use_divergence}")
-        click.echo(f"  Use Volume Filter: {config.rsi.use_volume_filter}")
-        click.echo()
-
-        # Risk configuration
-        click.echo("⚠️ Risk Management:")
-        click.echo(f"  Max Daily Loss: {config.risk.max_daily_loss * 100:.1f}%")
-        click.echo(f"  Max Portfolio Risk: {config.risk.max_portfolio_risk * 100:.1f}%")
-        click.echo(f"  Require Confirmation: {config.risk.require_confirmation}")
-        click.echo()
-
-        # AI configuration
-        click.echo("🤖 AI Configuration:")
-        click.echo(f"  Model: {config.ai.model}")
-        click.echo(f"  Use AI Analysis: {config.ai.use_ai_analysis}")
-        click.echo(f"  API Key: {'*' * 20}...{config.ai.anthropic_api_key[-4:] if len(config.ai.anthropic_api_key) > 4 else '****'}")
-        click.echo()
-
-    except Exception as e:
-        click.echo(f"Error loading configuration: {e}")
-        raise
-
-
-@cli.command()
-@click.pass_context
-def logs(ctx):
-    """Show recent log entries."""
-    try:
-        from pathlib import Path
-
-        log_dir = Path("logs")
-        if not log_dir.exists():
-            click.echo("No log directory found.")
-            return
-
-        # Show recent entries from main log
-        main_log = log_dir / "trading_bot.log"
-        if main_log.exists():
-            click.echo("=== Recent Log Entries ===\n")
-            with open(main_log, 'r') as f:
-                lines = f.readlines()
-                for line in lines[-20:]:  # Last 20 lines
-                    click.echo(line.rstrip())
-        else:
-            click.echo("No main log file found.")
-
-    except Exception as e:
-        click.echo(f"Error reading logs: {e}")
-
-
-@cli.command()
-@click.pass_context
-def setup(ctx):
-    """
-    🛠️ Run the setup wizard to initialize the trading bot.
-
-    This command will:
-    - Create required directories
-    - Initialize configuration files
-    - Verify API connections
-    - Set up the database
-    """
-    try:
-        console.print("\n🛠️  [bold green]AI Trading Bot Setup Wizard[/bold green]", style="green")
-        console.print("This will initialize your trading bot environment.\n")
-
-        # Create directories
-        directories = ['data', 'logs', 'config', 'backups']
-
-        with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}")) as progress:
-            task = progress.add_task("Creating directories...", total=len(directories))
-
-            for directory in directories:
-                Path(directory).mkdir(exist_ok=True)
-                progress.advance(task)
-                console.print(f"✅ Created directory: {directory}")
-
-        # Check for .env file
-        env_file = Path('.env')
-        if not env_file.exists():
-            console.print("\n📋 Creating .env file from template...")
-            import shutil
-            shutil.copy('.env.example', '.env')
-            console.print("✅ .env file created from template")
-            console.print("⚠️  [bold yellow]Please edit .env file with your API keys before running the bot![/bold yellow]")
-        else:
-            console.print("✅ .env file already exists")
-
-        # Verify configuration
+    console.print("[bold blue]⚙️ Configuration Information[/bold blue]\n")
+    
+    # Check .env file
+    env_path = Path('.env')
+    if env_path.exists():
+        console.print("[green]✅ .env file found[/green]")
+        
+        # Show non-sensitive config
         try:
-            config_manager = ConfigManager(
-                config_path=ctx.obj.get('config_path'),
-                env_file=ctx.obj.get('env_file')
-            )
-            config = config_manager.load_config()
-            console.print("✅ Configuration loaded successfully")
-
-            # Test API connection (if keys are provided)
-            if config.alpaca.api_key and config.alpaca.api_key != "your_alpaca_api_key_here":
-                with console.status("[bold green]Testing API connection..."):
-                    app = TradingBotApplication(config)
-                    # This would test the connection - simplified for now
-                    console.print("✅ API connection test passed")
-            else:
-                console.print("⚠️  API keys not configured - please update .env file")
-
-        except Exception as e:
-            console.print(f"❌ Configuration error: {e}", style="red")
-
-        # Setup complete
-        setup_complete_panel = Panel.fit(
-            "[bold green]Setup Complete! 🎉[/bold green]\n\n"
-            "Next steps:\n"
-            "1. Edit .env file with your API keys\n"
-            "2. Run 'python main.py status' to verify connection\n"
-            "3. Start trading with 'python main.py run --mode paper'\n\n"
-            "💡 Always start with paper trading to test your strategies!",
-            title="🚀 Ready to Trade",
-            border_style="green"
-        )
-        console.print(setup_complete_panel)
-
-    except Exception as e:
-        console.print(f"❌ Setup failed: {e}", style="red")
-        raise
-
+            from dotenv import load_dotenv
+            load_dotenv()
+            
+            config_table = Table(title="Configuration")
+            config_table.add_column("Setting", style="cyan")
+            config_table.add_column("Value", style="green")
+            
+            # Show safe config values
+            safe_vars = {
+                'ALPACA_BASE_URL': os.getenv('ALPACA_BASE_URL', 'Not set'),
+                'MAX_POSITION_SIZE': os.getenv('MAX_POSITION_SIZE', 'Not set'),
+                'RISK_PERCENTAGE': os.getenv('RISK_PERCENTAGE', 'Not set'),
+                'STOP_LOSS_PERCENTAGE': os.getenv('STOP_LOSS_PERCENTAGE', 'Not set'),
+                'ENVIRONMENT': os.getenv('ENVIRONMENT', 'Not set')
+            }
+            
+            for key, value in safe_vars.items():
+                config_table.add_row(key, str(value))
+                
+            console.print(config_table)
+            
+            # Check for API keys (without showing them)
+            api_keys = {
+                'ALPACA_API_KEY': bool(os.getenv('ALPACA_API_KEY')),
+                'ALPACA_SECRET_KEY': bool(os.getenv('ALPACA_SECRET_KEY')), 
+                'ANTHROPIC_API_KEY': bool(os.getenv('ANTHROPIC_API_KEY'))
+            }
+            
+            console.print("\n[bold]API Key Status:[/bold]")
+            for key, exists in api_keys.items():
+                status = "[green]✅ Set[/green]" if exists else "[red]❌ Not set[/red]"
+                console.print(f"{key}: {status}")
+                
+        except ImportError:
+            console.print("[red]python-dotenv not installed[/red]")
+    else:
+        console.print("[red]❌ No .env file found[/red]")
+        console.print("Run: [bold]python main.py setup[/bold] to configure")
 
 @cli.command()
-@click.option('--days', default=30, help='Number of days to include')
 @click.pass_context
-def performance(ctx, days):
-    """
-    📊 Show trading performance metrics and statistics.
-
-    Examples:
-        main.py performance --days 30
-        main.py performance --days 7
-    """
-    try:
-        console.print(f"\n📊 [bold green]Trading Performance Report[/bold green] ({days} days)")
-
-        # Initialize configuration
-        config_manager = ConfigManager(
-            config_path=ctx.obj.get('config_path'),
-            env_file=ctx.obj.get('env_file')
-        )
-        config = config_manager.load_config()
-
-        # Create performance table (placeholder implementation)
-        table = Table(title=f"Performance Metrics - Last {days} Days")
-        table.add_column("Metric", style="cyan", no_wrap=True)
-        table.add_column("Value", style="magenta")
-        table.add_column("Status", justify="center")
-
-        # Placeholder data - in production this would come from database
-        table.add_row("Total Trades", "42", "📈")
-        table.add_row("Win Rate", "67.5%", "✅")
-        table.add_row("Total P&L", "$1,247.50", "🟢")
-        table.add_row("Best Trade", "$245.30", "🎯")
-        table.add_row("Worst Trade", "-$89.20", "⚠️")
-        table.add_row("Avg Trade", "$29.70", "📊")
-        table.add_row("Sharpe Ratio", "1.42", "⭐")
-
-        console.print(table)
-
-        console.print("\n💡 [italic]Performance tracking is a placeholder - implement database logging for real metrics[/italic]")
-
-    except Exception as e:
-        console.print(f"❌ Error generating performance report: {e}", style="red")
-        raise
-
-
-@cli.command()
-@click.option('--host', default='0.0.0.0', help='Host to bind to')
-@click.option('--port', default=8000, help='Port to bind to')
-@click.pass_context
-def dashboard(ctx, host, port):
-    """
-    🌐 Launch the web-based trading dashboard.
-
-    This starts a web server with an interactive dashboard featuring:
-    - Real-time charts with technical indicators
-    - Portfolio monitoring and analytics
-    - AI analysis and recommendations
-    - Trading controls and position management
-    """
-    try:
-        console.print(f"\n🌐 [bold green]Starting AI Trading Bot Dashboard[/bold green]")
-        console.print(f"🔗 Dashboard will be available at: http://{host}:{port}")
-
-        # Initialize configuration
-        config_manager = ConfigManager(
-            config_path=ctx.obj.get('config_path'),
-            env_file=ctx.obj.get('env_file')
-        )
-        config = config_manager.load_config()
-
-        # Import dashboard components
-        from src.web.dashboard import create_dashboard_app
-        import uvicorn
-
-        # Create FastAPI app
-        app = create_dashboard_app(config)
-
-        console.print("\n✅ Dashboard server starting...")
-        console.print("💡 Press Ctrl+C to stop the server")
-
-        # Start the server
-        uvicorn.run(
-            app,
-            host=host,
-            port=port,
-            log_level="info" if ctx.obj['verbose'] else "warning",
-            access_log=ctx.obj['verbose']
-        )
-
-    except KeyboardInterrupt:
-        console.print("\n⏹️  Dashboard stopped by user", style="yellow")
-    except Exception as e:
-        console.print(f"\n❌ Error starting dashboard: {e}", style="red")
-        raise
-
-
-@cli.command()
-def version():
+def version(ctx):
     """📖 Show version information."""
-    version_panel = Panel.fit(
-        "[bold cyan]AI Trading Bot v1.0.0[/bold cyan]\n\n"
-        "🤖 Advanced algorithmic trading with Claude AI integration\n"
-        "⚡ High-performance async architecture\n"
-        "🛡️ Comprehensive risk management\n"
-        "📊 Real-time monitoring and analytics\n"
-        "🌐 Interactive web dashboard\n\n"
-        "[italic]Created with Claude Code[/italic]",
-        title="🚀 Version Information",
-        border_style="cyan"
-    )
-    console.print(version_panel)
+    console.print(Panel.fit(
+        "[bold blue]AI Trading Bot[/bold blue]\n"
+        "Version: 1.0.0\n"
+        "Python: " + sys.version.split()[0] + "\n"
+        "Platform: " + sys.platform,
+        title="Version Info"
+    ))
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     cli()
