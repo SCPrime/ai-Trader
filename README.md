@@ -1,8 +1,117 @@
-# 🤖 AI Trading Bot with Options Income Dashboard
+# 🤖 AI Trading Bot - Complete Suite
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Dashboard-green.svg)](https://fastapi.tiangolo.com/)
-[![Docker](https://img.shields.io/badge/docker-supported-brightgreen.svg)](https://www.docker.com/)
+[![Claude AI](https://img.shields.io/badge/Claude-AI%20Powered-orange.svg)](https://www.anthropic.com/)
+[![Paper Trading](https://img.shields.io/badge/Trading-Paper%20Only-green.svg)](#)
+
+A production-ready AI trading bot with multiple interfaces, Claude AI integration, and comprehensive safety features.
+
+## 🚀 Quick Start
+
+### **Windows (Recommended)**
+```bash
+# Full AI suite with all interfaces
+launch_ai_suite.bat
+
+# Simple dashboard only
+run_local.bat
+```
+
+### **Linux/Mac**
+```bash
+# Full AI suite
+./launch_ai_suite.sh
+
+# Simple dashboard
+./run_local.sh
+```
+
+## 🌐 Available Interfaces
+
+| Interface | URL | Features |
+|-----------|-----|----------|
+| **🤖 Enhanced AI Chat** | `localhost:8000/ai-chat-enhanced` | Claude AI, GitHub-style UI, interactive charts |
+| **📊 Unified Dashboard** | `localhost:8501` | Streamlit with Chat/Analytics/Charts tabs |
+| **💬 Standalone Chat** | `localhost:8502` | Dedicated AI chat with metrics |
+| **🔧 Main Dashboard** | `localhost:8002` | Core FastAPI with supervisor features |
+| **🔌 REST API** | `localhost:8000/api/ai-query` | Direct API access |
+
+## 🧠 AI Features
+
+- **🎯 Multi-Provider**: Claude (primary) → OpenAI (fallback) → Local responses
+- **📊 Smart Analysis**: Portfolio insights, strategy recommendations, market analysis
+- **💡 Interactive**: Suggestions, quick actions, chart generation
+- **🔄 Real-time**: WebSocket connections for live chat
+
+## 🔐 Safety Features
+
+- ✅ **Paper Trading Only**: Enforced across all environments
+- ✅ **Environment Validation**: Automatic API key checks
+- ✅ **Risk Management**: Configurable limits per environment
+- ✅ **Production Security**: Vercel deployment with safety overrides
+
+## 📖 Documentation
+
+- **[LAUNCH_GUIDE.md](LAUNCH_GUIDE.md)** - How to start the application
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - How to deploy to Vercel
+- **[AI_INTERFACE_README.md](AI_INTERFACE_README.md)** - AI features and usage
+- **[PROJECT_STATUS.md](PROJECT_STATUS.md)** - Complete project overview
+
+## 🚀 Deployment
+
+### **Local Development**
+Ready to run locally with full features.
+
+### **Vercel Production**
+```bash
+# Automated deployment with safety checks
+./deploy_vercel.sh          # Linux/Mac
+powershell deploy_vercel.ps1 # Windows
+```
+
+## 🎯 Example Queries
+
+- "What are my current positions?"
+- "How is my AAPL position performing?"
+- "Analyze SPY trends"
+- "What's my risk exposure?"
+- "Should I adjust my strategy?"
+
+## 🔧 Technology Stack
+
+- **Backend**: FastAPI, Python
+- **AI**: Anthropic Claude, OpenAI GPT-4
+- **Frontend**: Streamlit, HTML/CSS/JavaScript
+- **Trading**: Alpaca API (paper trading)
+- **Deployment**: Vercel, Environment-based configs
+- **Data**: yfinance, pandas, plotly
+
+## 📊 Project Structure
+
+```
+ai-Trader/
+├── 🚀 Launchers (launch_ai_suite.*, run_local.*)
+├── 🧠 AI Engine (src/unified_ai_engine.py)
+├── 🌐 Interfaces (streamlit_*.py, templates/)
+├── ⚙️ Config (vercel.json, config/environments/)
+├── 🔧 Core (main.py, app.py, src/core/)
+└── 📖 Docs (README.md, *.md guides)
+```
+
+## 🎉 What You Get
+
+1. **🤖 Intelligent Trading Assistant**: Chat with Claude AI about your trades
+2. **📊 Beautiful Dashboards**: Multiple interface options for different needs
+3. **🔒 Production Security**: Safe deployment with paper trading enforcement
+4. **🌐 Global Deployment**: Ready for Vercel with automatic scaling
+5. **📈 Analytics**: Portfolio tracking, backtesting, performance analysis
+
+---
+
+**🎯 Ready to start intelligent trading? Choose your launcher and begin!**
+
+**Recommended**: `launch_ai_suite.bat` for full experience
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Alpaca](https://img.shields.io/badge/Alpaca-API-orange.svg)](https://alpaca.markets/)
 [![Claude AI](https://img.shields.io/badge/Claude-AI-purple.svg)](https://www.anthropic.com/)
