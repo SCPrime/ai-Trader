@@ -2,38 +2,42 @@
   "version": 2,
   "builds": [
     {
-      "src": "api/**/*.py",
+      "src": "app.py",
       "use": "@vercel/python"
     }
   ],
   "routes": [
     {
-      "src": "/api/health",
-      "dest": "api/health.py"
+      "src": "/api/ai-query",
+      "dest": "app.py"
     },
     {
-      "src": "/api/strategy/test",
-      "dest": "api/strategy/test.py"
+      "src": "/ai-chat-enhanced",
+      "dest": "app.py"
     },
     {
-      "src": "/api/strategy/create",
-      "dest": "api/strategy/create.py"
+      "src": "/ws/ai-enhanced",
+      "dest": "app.py"
     },
     {
-      "src": "/api/strategy/analyze",
-      "dest": "api/strategy/analyze.py"
+      "src": "/dashboard",
+      "dest": "app.py"
     },
     {
-      "src": "/api/portfolio/positions",
-      "dest": "api/portfolio/positions.py"
+      "src": "/supervisor",
+      "dest": "app.py"
     },
     {
-      "src": "/api/trading/execute",
-      "dest": "api/trading/execute.py"
+      "src": "/api/(.*)",
+      "dest": "app.py"
     },
     {
       "src": "/(.*)",
-      "dest": "api/index.py"
+      "dest": "app.py"
     }
-  ]
+  ],
+  "env": {
+    "ENVIRONMENT": "production",
+    "FORCE_PAPER_TRADING": "true"
+  }
 }
