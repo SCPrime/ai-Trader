@@ -42,7 +42,7 @@ def execute_trade(symbol, quantity, action="BUY", order_type="MARKET", limit_pri
             total_cost = current_price * quantity
             
             if total_cost > buying_power:
-                print(f"❌ Insufficient funds! Need ${total_cost:.2f}")
+                print(f"ERROR: Insufficient funds! Need ${total_cost:.2f}")
                 return None
             
             if total_cost > 1000:  # Safety limit
@@ -68,7 +68,7 @@ def execute_trade(symbol, quantity, action="BUY", order_type="MARKET", limit_pri
             )
         
         order = client.submit_order(order_request)
-        print(f"✅ Order submitted!")
+        print(f"SUCCESS: Order submitted!")
         print(f"Order ID: {order.id}")
         
         # Save to log
@@ -86,7 +86,7 @@ def execute_trade(symbol, quantity, action="BUY", order_type="MARKET", limit_pri
         return order
         
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"ERROR: {e}")
         return None
 
 # Test with small safe trade

@@ -19,13 +19,13 @@ orders = client.get_orders()
 # Get all positions
 positions = client.get_all_positions()
 
-print("📊 TRADING SUMMARY")
+print("TRADING SUMMARY")
 print("=" * 60)
 print(f"Account Value: ${float(account.portfolio_value):,.2f}")
 print(f"Cash: ${float(account.cash):,.2f}")
 print(f"Buying Power: ${float(account.buying_power):,.2f}")
 
-print("\n📈 POSITIONS:")
+print("\nPOSITIONS:")
 print("-" * 60)
 if positions:
     for pos in positions:
@@ -35,7 +35,7 @@ if positions:
 else:
     print("No positions yet")
 
-print("\n📝 RECENT ORDERS:")
+print("\nRECENT ORDERS:")
 print("-" * 60)
 for order in orders[:5]:
     print(f"{order.symbol}: {order.side} {order.qty} - Status: {order.status}")

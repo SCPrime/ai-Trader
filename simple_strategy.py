@@ -41,7 +41,7 @@ def check_price_drop(symbol, drop_percent=2):
             print(f"{symbol} Change: {change_pct:.2f}%")
             
             if change_pct < -drop_percent:
-                print(f"📉 BUY SIGNAL! {symbol} dropped {abs(change_pct):.2f}%")
+                print(f"BUY SIGNAL! {symbol} dropped {abs(change_pct):.2f}%")
                 return True
     
     return False
@@ -53,6 +53,6 @@ print("=" * 50)
 
 for stock in stocks:
     if check_price_drop(stock, drop_percent=1):
-        print(f"→ Consider buying {stock}")
+        print(f"* Consider buying {stock}")
     else:
-        print(f"→ {stock}: No action")
+        print(f"* {stock}: No action")

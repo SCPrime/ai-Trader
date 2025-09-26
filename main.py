@@ -113,8 +113,8 @@ def setup(ctx):
     console.print("[bold cyan]📈 Alpaca API Configuration[/bold cyan]")
     console.print("Get your API keys from: https://app.alpaca.markets/paper/dashboard/overview")
     
-    env_vars['ALPACA_API_KEY'] = Prompt.ask("Enter your Alpaca API Key")
-    env_vars['ALPACA_SECRET_KEY'] = Prompt.ask("Enter your Alpaca Secret Key", password=True)
+    env_vars['ALPACA_PAPER_API_KEY'] = Prompt.ask("Enter your Alpaca Paper API Key")
+    env_vars['ALPACA_PAPER_SECRET_KEY'] = Prompt.ask("Enter your Alpaca Paper Secret Key", password=True)
     env_vars['ALPACA_BASE_URL'] = "https://paper-api.alpaca.markets"
     
     # Anthropic API Configuration  
@@ -170,7 +170,7 @@ def status(ctx):
         load_dotenv()
         
         # Check required variables
-        required_vars = ['ALPACA_API_KEY', 'ALPACA_SECRET_KEY', 'ANTHROPIC_API_KEY']
+        required_vars = ['ALPACA_PAPER_API_KEY', 'ALPACA_PAPER_SECRET_KEY', 'ANTHROPIC_API_KEY']
         missing_vars = [var for var in required_vars if not os.getenv(var)]
         
         if missing_vars:
@@ -182,7 +182,7 @@ def status(ctx):
         # Try Alpaca connection
         try:
             from alpaca.trading.client import TradingClient
-            client = TradingClient(os.getenv('ALPACA_API_KEY'), os.getenv('ALPACA_SECRET_KEY'), paper=True)
+            client = TradingClient(os.getenv('ALPACA_PAPER_API_KEY'), os.getenv('ALPACA_PAPER_SECRET_KEY'), paper=True)
             account = client.get_account()
             
             console.print("[green]✅ Alpaca API connection successful[/green]")
@@ -329,8 +329,8 @@ def config_info(ctx):
             
             # Check for API keys (without showing them)
             api_keys = {
-                'ALPACA_API_KEY': bool(os.getenv('ALPACA_API_KEY')),
-                'ALPACA_SECRET_KEY': bool(os.getenv('ALPACA_SECRET_KEY')), 
+                'ALPACA_PAPER_API_KEY': bool(os.getenv('ALPACA_PAPER_API_KEY')),
+                'ALPACA_PAPER_SECRET_KEY': bool(os.getenv('ALPACA_PAPER_SECRET_KEY')), 
                 'ANTHROPIC_API_KEY': bool(os.getenv('ANTHROPIC_API_KEY'))
             }
             

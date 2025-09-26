@@ -26,8 +26,8 @@ class TradingEngine:
         try:
             # Use environment variables directly
             self.alpaca_client = AlpacaClient(
-                os.getenv('ALPACA_API_KEY', ''),
-                os.getenv('ALPACA_SECRET_KEY', ''),
+                os.getenv('ALPACA_PAPER_API_KEY', ''),
+                os.getenv('ALPACA_PAPER_SECRET_KEY', ''),
                 os.getenv('ALPACA_PAPER_TRADING', 'true').lower() == 'true'
             )
             logger.info("Alpaca client initialized with environment variables")

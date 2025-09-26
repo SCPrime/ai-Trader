@@ -4,3 +4,24 @@ __pycache__/
 *.pyc
 .env
 *.log
+
+# Trading Bot Specific
+logs/
+*.log
+data/historical/
+backups/
+.env
+.env.*
+config/production.yml
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Testing
+.coverage
+.pytest_cache/
+test_results/
