@@ -6,6 +6,7 @@ A sophisticated trading dashboard with options income strategy analysis.
 
 import os
 import sys
+import json
 from pathlib import Path
 
 # Add src directory to path
@@ -21,7 +22,7 @@ app = create_simple_dashboard()
 app.include_router(supervisor_router)
 
 # Add supervisor route
-from fastapi import Request
+from fastapi import Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
@@ -480,3 +481,44 @@ if __name__ == "__main__":
         except Exception as e:
             logger.error(f"Error analyzing {symbol}: {e}")
             raise
+
+# Import the unified AI engine
+from src.unified_ai_engine import ai_engine
+
+@app.get("/ai-chat-enhanced")
+async def enhanced_chat():
+    """Enhanced AI chat with multiple providers"""
+    return HTMLResponse(open('templates/enhanced_chat.html').read())
+
+@app.websocket("/ws/ai-enhanced")
+async def enhanced_websocket(websocket: WebSocket):
+    await websocket.accept()
+
+    try:
+        while True:
+            data = await websocket.receive_text()
+            message = json.loads(data)
+
+            # Get response from unified AI engine
+            response = await ai_engine.process_query(
+                query=message['text'],
+                interface='dashboard'
+            )
+
+            # Send structured response
+            await websocket.send_text(json.dumps({
+                "text": response['text'],
+                "type": response['type'],
+                "provider": response['provider'],
+                "suggestions": response.get('suggestions', []),
+                "charts": response.get('charts', [])
+            }))
+
+    except WebSocketDisconnect:
+        pass
+
+@app.get("/api/ai-query")
+async def api_query(query: str):
+    """REST API endpoint for AI queries"""
+    response = await ai_engine.process_query(query, interface='api')
+    return response

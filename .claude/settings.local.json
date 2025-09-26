@@ -39,7 +39,9 @@
       "Bash(uvicorn:*)",
       "Bash(PORT=8001 python app.py)",
       "Bash(find:*)",
-      "Bash(tasklist:*)"
+      "Bash(tasklist:*)",
+      "Bash(chmod:*)",
+      "Bash(./final_cleanup.sh)"
     ],
     "deny": [],
     "ask": []

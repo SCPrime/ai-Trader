@@ -1,0 +1,8 @@
+{
+  "name": "production",
+  "trading_mode": "paper_only",
+  "api_base": "https://your-app.vercel.app",
+  "debug": false,
+  "max_risk": 500,
+  "force_paper": true
+}

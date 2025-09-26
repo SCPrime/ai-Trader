@@ -346,6 +346,31 @@ def config_info(ctx):
         console.print("Run: [bold]python main.py setup[/bold] to configure")
 
 @cli.command()
+@click.option('--port', default=8002, help='Port for dashboard')
+@click.pass_context
+def dashboard(ctx, port):
+    """🖥️ Launch integrated dashboard with chat."""
+    console = Console()
+
+    try:
+        console.print(f"[green]Starting integrated dashboard on port {port}...[/green]")
+
+        # Import and start FastAPI app with chat integration
+        from src.ai_chat_interface import app
+
+        console.print(f"[blue]Dashboard: http://localhost:{port}[/blue]")
+        console.print(f"[blue]Chat: http://localhost:{port}/chat[/blue]")
+        console.print("[yellow]Press Ctrl+C to stop[/yellow]")
+
+        uvicorn.run(app, host="127.0.0.1", port=port, log_level="info")
+
+    except ImportError as e:
+        console.print(f"[red]Import error: {e}[/red]")
+        console.print("[yellow]Try: pip install fastapi uvicorn[/yellow]")
+    except Exception as e:
+        console.print(f"[red]Error starting dashboard: {e}[/red]")
+
+@cli.command()
 @click.pass_context
 def version(ctx):
     """📖 Show version information."""

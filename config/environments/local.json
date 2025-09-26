@@ -1,0 +1,7 @@
+{
+  "name": "local",
+  "trading_mode": "paper",
+  "api_base": "http://localhost:8002",
+  "debug": true,
+  "max_risk": 1000
+}
