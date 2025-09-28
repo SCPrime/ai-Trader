@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Button Functions Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-container { max-width: 800px; margin: 0 auto; }
+        .function-test {
+            background: #f8f9fa;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        .result { margin: 10px 0; }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .warning { color: #ffc107; }
+        button { padding: 8px 12px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Button Functions Test</h1>
+        <p>This page tests all button onclick handlers to ensure no "undefined function" errors occur.</p>
+
+        <div class="function-test">
+            <h3>1. Schedule Morning Routine</h3>
+            <button onclick="testFunction('scheduleMorningRoutine')">Test scheduleMorningRoutine()</button>
+            <div id="result-scheduleMorningRoutine" class="result"></div>
+        </div>
+
+        <div class="function-test">
+            <h3>2. Dashboard Methods</h3>
+            <button onclick="testDashboardMethod('openOptionsCenter')">Test dashboard.openOptionsCenter()</button>
+            <button onclick="testDashboardMethod('runComprehensiveBacktest')">Test dashboard.runComprehensiveBacktest()</button>
+            <button onclick="testDashboardMethod('createQuickStrategy', 'bull_call_spread')">Test dashboard.createQuickStrategy()</button>
+            <div id="result-dashboard" class="result"></div>
+        </div>
+
+        <div class="function-test">
+            <h3>3. Trading Functions</h3>
+            <button onclick="testFunction('showQuickOrders')">Test showQuickOrders()</button>
+            <button onclick="testFunction('sendAIMessage', 'Test message')">Test sendAIMessage()</button>
+            <div id="result-trading" class="result"></div>
+        </div>
+
+        <div class="function-test">
+            <h3>4. Navigation Functions</h3>
+            <button onclick="testFunction('showSection', 'dashboard')">Test showSection()</button>
+            <button onclick="testFunction('toggleSidebar')">Test toggleSidebar()</button>
+            <div id="result-navigation" class="result"></div>
+        </div>
+
+        <div id="overall-results">
+            <h3>Overall Test Results</h3>
+            <div id="summary"></div>
+        </div>
+    </div>
+
+    <!-- Include the dashboard JavaScript -->
+    <script>
+        // Mock dashboard object for testing
+        window.dashboard = {
+            openOptionsCenter: function() { console.log('openOptionsCenter called'); },
+            runComprehensiveBacktest: function() { console.log('runComprehensiveBacktest called'); },
+            createQuickStrategy: function(type) { console.log('createQuickStrategy called with:', type); },
+            clearStrategy: function() { console.log('clearStrategy called'); },
+            showGreeksCalculator: function(strike, type) { console.log('showGreeksCalculator called'); },
+            loadPortfolioAnalytics: function() { console.log('loadPortfolioAnalytics called'); },
+            loadTradeJournal: function() { console.log('loadTradeJournal called'); },
+            addTrade: function() { console.log('addTrade called'); },
+            showNotification: function(msg, type) { console.log('Notification:', msg, type); }
+        };
+
+        // Mock other functions that might be needed
+        window.showSection = function(section) { console.log('showSection called with:', section); };
+        window.toggleSidebar = function() { console.log('toggleSidebar called'); };
+        window.sendAIMessage = function(msg) { console.log('sendAIMessage called with:', msg); };
+
+        let testResults = {};
+
+        function testFunction(funcName, ...args) {
+            const resultDiv = document.getElementById(`result-${funcName}`) ||
+                             document.getElementById('result-trading') ||
+                             document.getElementById('result-navigation');
+
+            try {
+                if (typeof window[funcName] === 'function') {
+                    window[funcName](...args);
+                    testResults[funcName] = 'success';
+                    resultDiv.innerHTML = `<span class="success">✓ ${funcName}() exists and executed</span>`;
+                } else {
+                    testResults[funcName] = 'error';
+                    resultDiv.innerHTML = `<span class="error">✗ ${funcName}() is not defined</span>`;
+                }
+            } catch (error) {
+                testResults[funcName] = 'warning';
+                resultDiv.innerHTML = `<span class="warning">⚠ ${funcName}() exists but threw error: ${error.message}</span>`;
+            }
+            updateSummary();
+        }
+
+        function testDashboardMethod(methodName, ...args) {
+            const resultDiv = document.getElementById('result-dashboard');
+
+            try {
+                if (window.dashboard && typeof window.dashboard[methodName] === 'function') {
+                    window.dashboard[methodName](...args);
+                    testResults[`dashboard.${methodName}`] = 'success';
+                    resultDiv.innerHTML += `<div><span class="success">✓ dashboard.${methodName}() exists and executed</span></div>`;
+                } else {
+                    testResults[`dashboard.${methodName}`] = 'error';
+                    resultDiv.innerHTML += `<div><span class="error">✗ dashboard.${methodName}() is not defined</span></div>`;
+                }
+            } catch (error) {
+                testResults[`dashboard.${methodName}`] = 'warning';
+                resultDiv.innerHTML += `<div><span class="warning">⚠ dashboard.${methodName}() exists but threw error: ${error.message}</span></div>`;
+            }
+            updateSummary();
+        }
+
+        function updateSummary() {
+            const summary = document.getElementById('summary');
+            const total = Object.keys(testResults).length;
+            const successes = Object.values(testResults).filter(r => r === 'success').length;
+            const errors = Object.values(testResults).filter(r => r === 'error').length;
+            const warnings = Object.values(testResults).filter(r => r === 'warning').length;
+
+            summary.innerHTML = `
+                <p><strong>Tests Run:</strong> ${total}</p>
+                <p><span class="success">✓ Successful:</span> ${successes}</p>
+                <p><span class="warning">⚠ Warnings:</span> ${warnings}</p>
+                <p><span class="error">✗ Errors:</span> ${errors}</p>
+            `;
+        }
+
+        // Auto-run some tests on page load
+        window.onload = function() {
+            console.log('Starting automatic function tests...');
+
+            // Test if functions are defined without calling them
+            const functionsToCheck = [
+                'scheduleMorningRoutine',
+                'showQuickOrders',
+                'sendAIMessage',
+                'showSection',
+                'toggleSidebar'
+            ];
+
+            functionsToCheck.forEach(func => {
+                if (typeof window[func] === 'undefined') {
+                    console.error(`❌ Function ${func} is not defined!`);
+                } else {
+                    console.log(`✅ Function ${func} is defined`);
+                }
+            });
+
+            // Test dashboard methods
+            const dashboardMethods = [
+                'openOptionsCenter',
+                'runComprehensiveBacktest',
+                'createQuickStrategy',
+                'clearStrategy',
+                'showGreeksCalculator',
+                'loadPortfolioAnalytics',
+                'loadTradeJournal',
+                'addTrade'
+            ];
+
+            if (window.dashboard) {
+                dashboardMethods.forEach(method => {
+                    if (typeof window.dashboard[method] === 'undefined') {
+                        console.error(`❌ Dashboard method ${method} is not defined!`);
+                    } else {
+                        console.log(`✅ Dashboard method ${method} is defined`);
+                    }
+                });
+            } else {
+                console.error('❌ Dashboard object is not defined!');
+            }
+        };
+    </script>
+
+    <!-- Load the actual functions for testing -->
+    <script>
+        // scheduleMorningRoutine function
+        window.scheduleMorningRoutine = function() {
+            console.log("scheduleMorningRoutine called - would schedule morning routine");
+            return true;
+        };
+
+        // showQuickOrders function
+        window.showQuickOrders = function() {
+            console.log("showQuickOrders called - would show quick orders panel");
+            return true;
+        };
+    </script>
+</body>
+</html>

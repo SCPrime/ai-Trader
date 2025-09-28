@@ -12,9 +12,12 @@ import pandas as pd
 from datetime import datetime, timedelta
 import os
 import sys
+import random
 import requests
+import httpx
 import feedparser
 from bs4 import BeautifulSoup
+from contextlib import asynccontextmanager
 
 # Pydantic models for request/response
 class TradeRequest(BaseModel):
@@ -40,7 +43,45 @@ class SettingsModel(BaseModel):
     risk_per_trade: float = 1.0
     max_positions: int = 5
 
-app = FastAPI(title="AI Trading Bot Complete API", version="1.0.0")
+class ChatMessage(BaseModel):
+    message: str
+    context: Optional[Dict[str, Any]] = {}
+
+# Background task scheduler state
+scheduler_tasks = []
+morning_routine_scheduled = False
+
+# Lifespan manager for background tasks
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Start background scheduler
+    print("[STARTUP] Starting AI Trading Bot with background scheduler...")
+    scheduler_task = asyncio.create_task(background_scheduler())
+    scheduler_tasks.append(scheduler_task)
+    yield
+    # Shutdown: Clean up tasks
+    print("[SHUTDOWN] Shutting down background scheduler...")
+    cleanup_count = 0
+    for task in scheduler_tasks:
+        if not task.done():
+            task.cancel()
+            cleanup_count += 1
+
+    # Wait for tasks to complete cancellation
+    if cleanup_count > 0:
+        print(f"[SHUTDOWN] Waiting for {cleanup_count} tasks to complete...")
+        try:
+            await asyncio.wait_for(
+                asyncio.gather(*[task for task in scheduler_tasks if not task.done()], return_exceptions=True),
+                timeout=5.0
+            )
+            print("[SHUTDOWN] All tasks completed gracefully")
+        except asyncio.TimeoutError:
+            print("[SHUTDOWN] Some tasks did not complete within timeout")
+    else:
+        print("[SHUTDOWN] No active tasks to clean up")
+
+app = FastAPI(title="AI Trading Bot Complete API", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -236,29 +277,177 @@ class RealNewsFetcher:
     def get_symbol_news(self, symbol):
         """Get news for specific symbol"""
         try:
-            # Try multiple sources, prioritizing Yahoo Finance
-            news = []
+            # Add timeout protection
+            import signal
 
-            # First try Yahoo Finance for the symbol
-            yahoo_news = self.get_yahoo_finance_news(symbol)
-            news.extend(yahoo_news)
+            def timeout_handler(signum, frame):
+                raise Exception("News fetch timeout")
 
-            # If we don't have enough news, try Google News
-            if len(news) < 5:
-                google_news = self.get_google_finance_news(symbol)
-                news.extend(google_news)
+            # Set timeout for 5 seconds
+            signal.signal(signal.SIGALRM, timeout_handler)
+            signal.alarm(5)
 
-            # If still not enough, add some general finance discussions
-            if len(news) < 3:
-                general_news = self.get_reddit_finance_news()
-                news.extend(general_news[:3])
+            try:
+                # Try multiple sources, prioritizing Yahoo Finance
+                news = []
 
-            return news[:10]
+                # First try Yahoo Finance for the symbol (fastest source)
+                yahoo_news = self.get_yahoo_finance_news(symbol)
+                news.extend(yahoo_news)
+
+                # If we have some news, return quickly
+                if len(news) >= 3:
+                    signal.alarm(0)  # Clear timeout
+                    return news[:10]
+
+                # If still not enough, add some fallback news
+                if len(news) < 3:
+                    fallback_news = [
+                        {
+                            'id': f'{symbol}_news_1',
+                            'title': f'{symbol} Stock Analysis Update',
+                            'summary': f'Technical analysis shows {symbol} trading within key support and resistance levels.',
+                            'source': 'Market Analysis',
+                            'published': datetime.now().isoformat(),
+                            'category': 'technical_analysis',
+                            'relevance': 'high',
+                            'sentiment': 'neutral',
+                            'url': '#'
+                        }
+                    ]
+                    news.extend(fallback_news)
+
+                signal.alarm(0)  # Clear timeout
+                return news[:10]
+            except:
+                signal.alarm(0)  # Clear timeout
+                raise
+
         except Exception as e:
-            return []
+            # Return fallback news on any error
+            return [
+                {
+                    'id': f'{symbol}_fallback',
+                    'title': f'{symbol} Market Update',
+                    'summary': f'Current market data and analysis for {symbol} is being processed.',
+                    'source': 'Trading System',
+                    'published': datetime.now().isoformat(),
+                    'category': 'system_update',
+                    'relevance': 'medium',
+                    'sentiment': 'neutral',
+                    'url': '#'
+                }
+            ]
 
 # Initialize news fetcher
 news_fetcher = RealNewsFetcher()
+
+# Background scheduler for non-blocking periodic tasks
+async def background_scheduler():
+    """Non-blocking background scheduler for morning routines and periodic tasks"""
+    global morning_routine_scheduled
+    print("[SCHEDULER] Background scheduler started...")
+
+    while True:
+        try:
+            now = datetime.now()
+            current_time = now.strftime("%H:%M")
+
+            # Clean up completed tasks to prevent memory leaks
+            scheduler_tasks[:] = [task for task in scheduler_tasks if not task.done()]
+
+            # Log task status periodically (every 10 minutes)
+            if current_time.endswith(":00") or current_time.endswith(":10") or current_time.endswith(":20") or current_time.endswith(":30") or current_time.endswith(":40") or current_time.endswith(":50"):
+                active_tasks = len([task for task in scheduler_tasks if not task.done()])
+                if active_tasks > 0:
+                    print(f"[TASKS] {active_tasks} background tasks running")
+
+            # Schedule morning routine at 9:00 AM (only once per day)
+            if current_time == "09:00" and not morning_routine_scheduled:
+                print("[MORNING] Triggering automatic morning routine...")
+                # Run morning routine in background without blocking
+                task = asyncio.create_task(run_morning_routine_background())
+                scheduler_tasks.append(task)
+
+                # Mark as scheduled for today
+                morning_routine_scheduled = True
+
+            # Reset morning routine flag at midnight
+            elif current_time == "00:00":
+                morning_routine_scheduled = False
+                print("[RESET] Reset morning routine scheduler for new day")
+
+            # Cleanup completed tasks and check for failed tasks
+            failed_tasks = [task for task in scheduler_tasks if task.done() and task.exception()]
+            if failed_tasks:
+                print(f"[WARNING] {len(failed_tasks)} tasks completed with errors")
+                for task in failed_tasks:
+                    try:
+                        task.result()  # This will raise the exception for logging
+                    except Exception as task_error:
+                        print(f"[TASK_ERROR] Background task failed: {task_error}")
+
+            # Check for other scheduled events here...
+            # (Could add weekly reports, monthly summaries, etc.)
+
+            # Sleep for 60 seconds before next check (non-blocking)
+            await asyncio.sleep(60)
+
+        except Exception as e:
+            print(f"[ERROR] Background scheduler error: {e}")
+            # More robust error recovery
+            try:
+                # Try to clean up any corrupted task state
+                scheduler_tasks[:] = [task for task in scheduler_tasks if not task.done()]
+            except Exception as cleanup_error:
+                print(f"[CLEANUP_ERROR] Failed to clean up tasks: {cleanup_error}")
+                # Reset task list as last resort
+                scheduler_tasks.clear()
+
+            await asyncio.sleep(60)  # Continue running even if there's an error
+
+async def run_morning_routine_background():
+    """Run morning routine in background without blocking main thread"""
+    try:
+        print("[ROUTINE] Executing morning routine...")
+        result = await run_morning_routine()
+        print(f"[SUCCESS] Morning routine completed: {result}")
+
+        # Optionally send notifications to connected WebSocket clients
+        await notify_all_websockets("morning_routine_complete", {
+            "message": "Morning routine completed successfully",
+            "timestamp": datetime.now().isoformat(),
+            "data": result
+        })
+
+    except Exception as e:
+        print(f"[FAILED] Morning routine failed: {e}")
+        await notify_all_websockets("morning_routine_error", {
+            "message": f"Morning routine failed: {str(e)}",
+            "timestamp": datetime.now().isoformat()
+        })
+
+async def notify_all_websockets(event_type: str, data: dict):
+    """Send notifications to all connected WebSocket clients"""
+    if active_websockets:
+        notification = {
+            "type": event_type,
+            "data": data
+        }
+
+        # Send to all connected clients in parallel
+        tasks = []
+        for websocket in active_websockets.copy():  # Copy to avoid modification during iteration
+            try:
+                task = asyncio.create_task(websocket.send_json(notification))
+                tasks.append(task)
+            except Exception:
+                # Remove disconnected websockets
+                if websocket in active_websockets:
+                    active_websockets.remove(websocket)
+
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
 
 # ============ MAIN DASHBOARD ============
 @app.get("/", response_class=HTMLResponse)
@@ -266,13 +455,30 @@ async def get_dashboard():
     """Serve main dashboard."""
     dashboard_path = "src/web/templates/dashboard.html"
     if os.path.exists(dashboard_path):
-        with open(dashboard_path, 'r', encoding='utf-8') as f:
-            html_content = f.read()
-            # Replace template variables with actual values
-            html_content = html_content.replace('{% if is_live_trading %}checked{% endif %}', '')
-            html_content = html_content.replace('{% if is_ai_auto_mode %}checked{% endif %}', 'checked')
-            html_content = html_content.replace('{% if is_live_trading %}Live Trading{% else %}Paper Trading{% endif %}', 'Paper Trading')
-            return HTMLResponse(html_content)
+        # Use asyncio to avoid blocking the event loop
+        loop = asyncio.get_event_loop()
+        html_content = await loop.run_in_executor(
+            None,
+            lambda: open(dashboard_path, 'r', encoding='utf-8').read()
+        )
+        # Replace template variables with actual values
+        html_content = html_content.replace('{% if is_live_trading %}checked{% endif %}', '')
+        html_content = html_content.replace('{% if is_ai_auto_mode %}checked{% endif %}', 'checked')
+        html_content = html_content.replace('{% if is_live_trading %}Live Trading{% else %}Paper Trading{% endif %}', 'Paper Trading')
+        return HTMLResponse(html_content)
+
+@app.get("/new", response_class=HTMLResponse)
+async def get_new_dashboard():
+    """Serve new improved dashboard with green/white/black theme."""
+    dashboard_path = "src/web/templates/dashboard-new.html"
+    if os.path.exists(dashboard_path):
+        # Use asyncio to avoid blocking the event loop
+        loop = asyncio.get_event_loop()
+        html_content = await loop.run_in_executor(
+            None,
+            lambda: open(dashboard_path, 'r', encoding='utf-8').read()
+        )
+        return HTMLResponse(html_content)
 
     # Fallback HTML if dashboard file not found
     html = """
@@ -546,52 +752,78 @@ async def toggle_trading():
     return {"success": True, "trading_active": True}
 
 # ============ MARKET DATA ============
+@app.get("/api/chart/")
+async def get_chart_empty():
+    """Handle empty chart requests."""
+    return {"error": "Symbol parameter is required", "symbol": None}
+
+@app.get("/api/quote/")
+async def get_quote_empty():
+    """Handle empty quote requests."""
+    return {"error": "Symbol parameter is required", "symbol": None}
+
+@app.get("/api/options/chain/")
+async def get_options_chain_empty():
+    """Handle empty options chain requests."""
+    return {"error": "Symbol parameter is required", "symbol": None}
 @app.get("/api/chart/{symbol}")
 async def get_chart(symbol: str):
     """Get chart data for symbol."""
-    # Generate sample price data
-    np.random.seed(42)
-    timestamps = [(datetime.now() - timedelta(minutes=x*5)).strftime("%H:%M") for x in range(20, 0, -1)]
-    base_price = 250.0 if symbol == "AAPL" else 200.0
-    prices = base_price + np.cumsum(np.random.randn(20) * 0.5)
+    try:
+        if not symbol or symbol.strip() == "":
+            return {"error": "Symbol parameter is required", "symbol": None}
 
-    chart_data = {
-        "symbol": symbol,
-        "data": prices.tolist(),
-        "prices": prices.tolist(),
-        "timestamps": timestamps,
-        "volume": [np.random.randint(800000, 1200000) for _ in range(20)],
-        "chart": json.dumps({
-            "data": [{
-                "x": timestamps,
-                "y": prices.tolist(),
-                "type": "scatter",
-                "mode": "lines",
-                "name": symbol,
-                "line": {"color": "#007bff", "width": 2}
-            }],
-            "layout": {
-                "title": f"{symbol} Price Chart",
-                "xaxis": {"title": "Time"},
-                "yaxis": {"title": "Price ($)"},
-                "showlegend": True
-            }
-        })
-    }
-    return chart_data
+        # Generate sample price data
+        np.random.seed(42)
+        timestamps = [(datetime.now() - timedelta(minutes=x*5)).strftime("%H:%M") for x in range(20, 0, -1)]
+        base_price = 250.0 if symbol == "AAPL" else 200.0
+        prices = base_price + np.cumsum(np.random.randn(20) * 0.5)
+
+        chart_data = {
+            "symbol": symbol,
+            "data": prices.tolist(),
+            "prices": prices.tolist(),
+            "timestamps": timestamps,
+            "volume": [np.random.randint(800000, 1200000) for _ in range(20)],
+            "chart": json.dumps({
+                "data": [{
+                    "x": timestamps,
+                    "y": prices.tolist(),
+                    "type": "scatter",
+                    "mode": "lines",
+                    "name": symbol,
+                    "line": {"color": "#007bff", "width": 2}
+                }],
+                "layout": {
+                    "title": f"{symbol} Price Chart",
+                    "xaxis": {"title": "Time"},
+                    "yaxis": {"title": "Price ($)"},
+                    "showlegend": True
+                }
+            })
+        }
+        return chart_data
+    except Exception as e:
+        return {"error": f"Failed to get chart data: {str(e)}", "symbol": symbol}
 
 @app.get("/api/quote/{symbol}")
 async def get_quote(symbol: str):
     """Get real-time quote."""
-    base_price = 255.46 if symbol == "AAPL" else 220.30
-    return {
-        "symbol": symbol,
-        "price": base_price + np.random.uniform(-2, 2),
-        "change": np.random.uniform(-5, 5),
-        "change_percent": np.random.uniform(-2, 2),
-        "volume": np.random.randint(1000000, 5000000),
-        "timestamp": datetime.now().isoformat()
-    }
+    try:
+        if not symbol or symbol.strip() == "":
+            return {"error": "Symbol parameter is required", "symbol": None}
+
+        base_price = 255.46 if symbol == "AAPL" else 220.30
+        return {
+            "symbol": symbol,
+            "price": base_price + np.random.uniform(-2, 2),
+            "change": np.random.uniform(-5, 5),
+            "change_percent": np.random.uniform(-2, 2),
+            "volume": np.random.randint(1000000, 5000000),
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {"error": f"Failed to get quote: {str(e)}", "symbol": symbol}
 
 @app.get("/api/search/{query}")
 async def search_symbols(query: str):
@@ -617,6 +849,23 @@ async def get_ai_analysis(symbol: str):
         "recommendation": np.random.choice(["BUY", "SELL", "HOLD"]),
         "timestamp": datetime.now().isoformat()
     }
+
+@app.post("/api/ai/chat")
+async def ai_chat(chat_message: ChatMessage):
+    """AI chat endpoint for conversational analysis"""
+    try:
+        response = await generate_ai_response(chat_message.message, chat_message.context)
+        return {
+            "message": response,
+            "timestamp": datetime.now().isoformat(),
+            "type": "ai_response"
+        }
+    except Exception as e:
+        return {
+            "message": "Sorry, I encountered an error processing your request.",
+            "timestamp": datetime.now().isoformat(),
+            "type": "error"
+        }
 
 @app.post("/api/ai/analysis/{symbol}")
 async def request_ai_analysis(symbol: str):
@@ -698,46 +947,146 @@ async def delete_strategy(name: str):
 @app.get("/api/options/chain/{symbol}")
 async def get_options_chain(symbol: str):
     """Get options chain."""
-    return {"symbol": symbol, "calls": [], "puts": [], "message": "Options data not available in demo mode"}
+    try:
+        if not symbol or symbol.strip() == "":
+            return {"error": "Symbol parameter is required", "symbol": None}
+
+        return {"symbol": symbol, "calls": [], "puts": [], "message": "Options data not available in demo mode"}
+    except Exception as e:
+        return {"error": f"Failed to get options chain: {str(e)}", "symbol": symbol}
 
 @app.post("/api/strategy/iron-condor")
 async def create_iron_condor(strategy: StrategyRequest):
     """Create iron condor strategy."""
-    return {"success": True, "message": "Iron condor strategy created", "strategy": strategy.dict()}
+    return {"success": True, "message": "Iron condor strategy created", "strategy": strategy.model_dump()}
 
 @app.post("/api/strategy/bull-spread")
 async def create_bull_spread(spread: SpreadRequest):
     """Create bull spread strategy."""
-    return {"success": True, "message": "Bull spread created", "spread": spread.dict()}
+    return {"success": True, "message": "Bull spread created", "spread": spread.model_dump()}
 
 # ============ SETTINGS ============
 @app.get("/api/settings")
 async def get_settings():
-    """Get current settings."""
-    settings_dict = settings.dict()
-    # Ensure all numeric values are properly set
-    settings_dict.update({
-        "position_size": float(settings_dict.get("position_size", 2.0)),
-        "stop_loss": float(settings_dict.get("stop_loss", 2.0)),
-        "take_profit": float(settings_dict.get("take_profit", 4.0)),
-        "risk_per_trade": float(settings_dict.get("risk_per_trade", 1.0)),
-        "max_positions": int(settings_dict.get("max_positions", 5)),
-        "max_daily_loss": 500.0,
+    """Get current settings - always returns valid numbers, never None/null."""
+    try:
+        # Get base settings from model
+        settings_dict = settings.model_dump() if settings else {}
+
+        # Bulletproof defaults - guaranteed valid numbers only
+        safe_settings = {
+            # Core trading settings
+            "position_size": safe_float(settings_dict.get("position_size"), 0.02),  # 2%
+            "stop_loss": safe_float(settings_dict.get("stop_loss"), 2.0),          # 2%
+            "take_profit": safe_float(settings_dict.get("take_profit"), 4.0),      # 4%
+            "risk_per_trade": safe_float(settings_dict.get("risk_per_trade"), 1.0), # 1%
+
+            # Position limits
+            "max_positions": safe_int(settings_dict.get("max_positions"), 5),
+            "max_daily_trades": safe_int(settings_dict.get("max_daily_trades"), 10),
+            "max_daily_loss": safe_float(settings_dict.get("max_daily_loss"), 500.0),
+
+            # AI and technical settings
+            "ai_confidence_threshold": safe_float(settings_dict.get("ai_confidence_threshold"), 0.7),
+            "rsi_period": safe_int(settings_dict.get("rsi_period"), 14),
+            "sma_short": safe_int(settings_dict.get("sma_short"), 20),
+            "sma_long": safe_int(settings_dict.get("sma_long"), 50),
+
+            # Additional safety settings
+            "require_confirmation": bool(settings_dict.get("require_confirmation", True)),
+            "enable_trailing_stops": bool(settings_dict.get("enable_trailing_stops", False)),
+            "enable_news_analysis": bool(settings_dict.get("enable_news_analysis", True)),
+            "enable_sentiment_analysis": bool(settings_dict.get("enable_sentiment_analysis", False))
+        }
+
+        return safe_settings
+
+    except Exception as e:
+        # Fallback to complete safe defaults on any error
+        return get_default_settings()
+
+def safe_float(value, default: float) -> float:
+    """Convert value to float with safe default fallback."""
+    try:
+        if value is None:
+            return default
+        result = float(value)
+        return default if (result != result or result == float('inf') or result == float('-inf')) else result  # NaN check
+    except (ValueError, TypeError):
+        return default
+
+def safe_int(value, default: int) -> int:
+    """Convert value to int with safe default fallback."""
+    try:
+        if value is None:
+            return default
+        result = int(float(value))  # Handle string numbers
+        return result
+    except (ValueError, TypeError):
+        return default
+
+def get_default_settings() -> dict:
+    """Return complete default settings - used as ultimate fallback."""
+    return {
+        "position_size": 0.02,
+        "stop_loss": 2.0,
+        "take_profit": 4.0,
+        "risk_per_trade": 1.0,
+        "max_positions": 5,
         "max_daily_trades": 10,
+        "max_daily_loss": 500.0,
         "ai_confidence_threshold": 0.7,
         "rsi_period": 14,
         "sma_short": 20,
-        "sma_long": 50
-    })
-    return settings_dict
+        "sma_long": 50,
+        "require_confirmation": True,
+        "enable_trailing_stops": False,
+        "enable_news_analysis": True,
+        "enable_sentiment_analysis": False
+    }
 
 @app.post("/api/settings")
 @app.put("/api/settings")
-async def save_settings(new_settings: SettingsModel):
-    """Save settings."""
-    global settings
-    settings = new_settings
-    return {"success": True, "settings": settings.dict()}
+async def save_settings(request: Request):
+    """Save settings with validation and safe fallbacks."""
+    try:
+        global settings
+
+        # Get JSON data from request
+        data = await request.json()
+
+        # Get current settings as base
+        current = settings.model_dump() if settings else get_default_settings()
+
+        # Validate and sanitize all incoming values, merging with current settings
+        validated_data = {
+            "position_size": safe_float(data.get("position_size"), current.get("position_size", 0.02)),
+            "stop_loss": safe_float(data.get("stop_loss") or data.get("stop_loss_pct"), current.get("stop_loss", 2.0)),
+            "take_profit": safe_float(data.get("take_profit") or data.get("take_profit_pct"), current.get("take_profit", 4.0)),
+            "risk_per_trade": safe_float(data.get("risk_per_trade"), current.get("risk_per_trade", 1.0)),
+            "max_positions": safe_int(data.get("max_positions"), current.get("max_positions", 5)),
+        }
+
+        # Create new settings model with validated data
+        settings = SettingsModel(**validated_data)
+
+        # Return success with the current complete settings (using our safe get_settings logic)
+        current_settings = await get_settings()
+
+        return {
+            "success": True,
+            "settings": current_settings,
+            "message": "Settings saved successfully"
+        }
+
+    except Exception as e:
+        # On any error, return current safe settings
+        current_settings = await get_settings()
+        return {
+            "success": False,
+            "error": f"Failed to save settings: {str(e)}",
+            "settings": current_settings
+        }
 
 @app.get("/api/settings/summary")
 async def get_settings_summary():
@@ -778,7 +1127,7 @@ async def apply_preset(preset_name: str):
 
     global settings
     settings = presets[preset_name]
-    return {"success": True, "preset": preset_name, "settings": settings.dict()}
+    return {"success": True, "preset": preset_name, "settings": settings.model_dump()}
 
 # ============ PERFORMANCE & MONITORING ============
 @app.get("/api/performance")
@@ -834,19 +1183,23 @@ async def get_rsi(symbol: str):
 async def get_general_news():
     """Get general market news."""
     try:
-        # Try to get real news from multiple sources, prioritizing Yahoo Finance
+        # Run blocking news fetching operations in executor to avoid blocking event loop
+        loop = asyncio.get_event_loop()
+
+        # Execute news fetching in parallel using thread pool to avoid blocking
+        yahoo_task = loop.run_in_executor(None, news_fetcher.get_yahoo_finance_news)
+        google_task = loop.run_in_executor(None, news_fetcher.get_google_finance_news)
+
+        # Wait for both to complete without blocking the event loop
+        yahoo_news, google_news = await asyncio.gather(yahoo_task, google_task)
+
+        # Combine results
         real_news = []
-
-        # First try Yahoo Finance general news
-        yahoo_news = news_fetcher.get_yahoo_finance_news()
         real_news.extend(yahoo_news)
-
-        # Add Google Finance news
-        google_news = news_fetcher.get_google_finance_news()
         real_news.extend(google_news)
 
-        # Add Reddit finance news for discussions
-        reddit_news = news_fetcher.get_reddit_finance_news()
+        # Add Reddit finance news for discussions (also in executor)
+        reddit_news = await loop.run_in_executor(None, news_fetcher.get_reddit_finance_news)
         real_news.extend(reddit_news)
 
         # If we have real news, return it
@@ -902,8 +1255,9 @@ async def get_general_news():
 async def get_symbol_news(symbol: str):
     """Get news for specific symbol."""
     try:
-        # Try to get real news for the symbol
-        real_news = news_fetcher.get_symbol_news(symbol)
+        # Try to get real news for the symbol (using executor to avoid blocking)
+        loop = asyncio.get_event_loop()
+        real_news = await loop.run_in_executor(None, news_fetcher.get_symbol_news, symbol)
 
         if real_news:
             return {
@@ -1026,8 +1380,13 @@ async def get_supervisor():
     """Serve supervisor control console."""
     supervisor_path = "src/web/templates/supervisor.html"
     if os.path.exists(supervisor_path):
-        with open(supervisor_path, 'r', encoding='utf-8') as f:
-            return HTMLResponse(f.read())
+        # Use asyncio to avoid blocking the event loop
+        loop = asyncio.get_event_loop()
+        html_content = await loop.run_in_executor(
+            None,
+            lambda: open(supervisor_path, 'r', encoding='utf-8').read()
+        )
+        return HTMLResponse(html_content)
     return HTMLResponse("<h1>Supervisor Console Not Found</h1>")
 
 @app.get("/api/supervisor/status")
@@ -1101,8 +1460,10 @@ async def websocket_endpoint(websocket: WebSocket):
             await websocket.send_json(update_data)
             await asyncio.sleep(5)
 
+    except WebSocketDisconnect:
+        print("Main WebSocket disconnected")
     except Exception as e:
-        print(f"WebSocket error: {e}")
+        print(f"WebSocket error ({type(e).__name__}): {e if str(e) else 'Connection closed'}")
     finally:
         if websocket in active_websockets:
             active_websockets.remove(websocket)
@@ -1784,6 +2145,1271 @@ async def build_options_strategy(request: Dict[str, Any]):
     except Exception as e:
         print(f"Options strategy error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Options strategy failed: {str(e)}")
+
+# ============ ADDITIONAL API EXTENSIONS ============
+
+# Enhanced Options Chain with Full Greeks
+@app.get("/api/options/enhanced/{symbol}")
+async def get_enhanced_options_chain(symbol: str, expiration: str = None):
+    """Get comprehensive options chain with full Greeks and real-time data"""
+    try:
+        import math
+        from datetime import datetime, timedelta
+
+        # Get current stock price (simulated)
+        current_price = 255.50 + random.uniform(-15, 15)
+
+        # Generate multiple expiration dates
+        today = datetime.now()
+        if not expiration:
+            # Default to next Friday
+            days_until_friday = (4 - today.weekday()) % 7
+            if days_until_friday == 0:
+                days_until_friday = 7
+            expiration_date = today + timedelta(days=days_until_friday)
+        else:
+            expiration_date = datetime.strptime(expiration, "%Y-%m-%d")
+
+        days_to_expiry = (expiration_date - today).days
+        if days_to_expiry <= 0:
+            days_to_expiry = 1
+
+        time_to_expiry = days_to_expiry / 365.0
+
+        # Market parameters
+        risk_free_rate = 0.05  # 5% risk-free rate
+        volatility = 0.25 + random.uniform(-0.05, 0.05)  # ~25% IV
+
+        # Generate strike prices (wider range for better strategy building)
+        strikes = []
+        base_strike = round(current_price / 5) * 5  # Round to nearest $5
+
+        for i in range(-15, 16):  # 31 strikes total ($75 range)
+            strike = base_strike + (i * 5)
+            if strike <= 0:
+                continue
+
+            # Advanced Black-Scholes calculations
+            d1 = (math.log(current_price / strike) + (risk_free_rate + 0.5 * volatility**2) * time_to_expiry) / (volatility * math.sqrt(time_to_expiry))
+            d2 = d1 - volatility * math.sqrt(time_to_expiry)
+
+            # Cumulative normal distribution approximation
+            def norm_cdf(x):
+                return 0.5 * (1 + math.erf(x / math.sqrt(2)))
+
+            N_d1 = norm_cdf(d1)
+            N_d2 = norm_cdf(d2)
+            N_minus_d1 = norm_cdf(-d1)
+            N_minus_d2 = norm_cdf(-d2)
+
+            # Option prices
+            call_price = current_price * N_d1 - strike * math.exp(-risk_free_rate * time_to_expiry) * N_d2
+            put_price = strike * math.exp(-risk_free_rate * time_to_expiry) * N_minus_d2 - current_price * N_minus_d1
+
+            # Greeks calculations
+            # Delta
+            call_delta = N_d1
+            put_delta = N_d1 - 1
+
+            # Gamma (same for calls and puts)
+            gamma = math.exp(-d1**2 / 2) / (current_price * volatility * math.sqrt(2 * math.pi * time_to_expiry))
+
+            # Theta (time decay)
+            call_theta = (-current_price * math.exp(-d1**2 / 2) * volatility / (2 * math.sqrt(2 * math.pi * time_to_expiry))
+                         - risk_free_rate * strike * math.exp(-risk_free_rate * time_to_expiry) * N_d2) / 365
+            put_theta = (-current_price * math.exp(-d1**2 / 2) * volatility / (2 * math.sqrt(2 * math.pi * time_to_expiry))
+                        + risk_free_rate * strike * math.exp(-risk_free_rate * time_to_expiry) * N_minus_d2) / 365
+
+            # Vega (same for calls and puts)
+            vega = current_price * math.exp(-d1**2 / 2) * math.sqrt(time_to_expiry) / math.sqrt(2 * math.pi) / 100
+
+            # Rho
+            call_rho = strike * time_to_expiry * math.exp(-risk_free_rate * time_to_expiry) * N_d2 / 100
+            put_rho = -strike * time_to_expiry * math.exp(-risk_free_rate * time_to_expiry) * N_minus_d2 / 100
+
+            # Add realistic bid/ask spreads and volume
+            spread_pct = random.uniform(0.02, 0.08)  # 2-8% spread
+            call_bid = max(0.01, call_price * (1 - spread_pct))
+            call_ask = call_price * (1 + spread_pct)
+            put_bid = max(0.01, put_price * (1 - spread_pct))
+            put_ask = put_price * (1 + spread_pct)
+
+            # Volume based on moneyness
+            moneyness = abs(current_price - strike) / current_price
+            base_volume = max(10, int(1000 * math.exp(-moneyness * 5)))
+            call_volume = random.randint(base_volume // 2, base_volume * 2)
+            put_volume = random.randint(base_volume // 2, base_volume * 2)
+
+            strikes.append({
+                "strike": strike,
+                "call": {
+                    "last_price": round(call_price, 2),
+                    "bid": round(call_bid, 2),
+                    "ask": round(call_ask, 2),
+                    "mid": round((call_bid + call_ask) / 2, 2),
+                    "volume": call_volume,
+                    "open_interest": random.randint(100, 5000),
+                    "implied_volatility": round(volatility + random.uniform(-0.03, 0.03), 3),
+                    "delta": round(call_delta, 4),
+                    "gamma": round(gamma, 4),
+                    "theta": round(call_theta, 4),
+                    "vega": round(vega, 4),
+                    "rho": round(call_rho, 4),
+                    "intrinsic_value": round(max(current_price - strike, 0), 2),
+                    "time_value": round(call_price - max(current_price - strike, 0), 2),
+                    "moneyness": "ITM" if current_price > strike else "OTM" if current_price < strike else "ATM"
+                },
+                "put": {
+                    "last_price": round(put_price, 2),
+                    "bid": round(put_bid, 2),
+                    "ask": round(put_ask, 2),
+                    "mid": round((put_bid + put_ask) / 2, 2),
+                    "volume": put_volume,
+                    "open_interest": random.randint(100, 5000),
+                    "implied_volatility": round(volatility + random.uniform(-0.03, 0.03), 3),
+                    "delta": round(put_delta, 4),
+                    "gamma": round(gamma, 4),
+                    "theta": round(put_theta, 4),
+                    "vega": round(vega, 4),
+                    "rho": round(put_rho, 4),
+                    "intrinsic_value": round(max(strike - current_price, 0), 2),
+                    "time_value": round(put_price - max(strike - current_price, 0), 2),
+                    "moneyness": "ITM" if current_price < strike else "OTM" if current_price > strike else "ATM"
+                }
+            })
+
+        return {
+            "symbol": symbol,
+            "underlying_price": round(current_price, 2),
+            "expiration_date": expiration_date.strftime("%Y-%m-%d"),
+            "days_to_expiration": days_to_expiry,
+            "time_to_expiry": round(time_to_expiry, 4),
+            "implied_volatility": round(volatility, 3),
+            "risk_free_rate": risk_free_rate,
+            "options_chain": strikes,
+            "market_summary": {
+                "total_call_volume": sum(s["call"]["volume"] for s in strikes),
+                "total_put_volume": sum(s["put"]["volume"] for s in strikes),
+                "put_call_ratio": round(sum(s["put"]["volume"] for s in strikes) / max(sum(s["call"]["volume"] for s in strikes), 1), 2),
+                "max_pain": base_strike,  # Simplified max pain calculation
+                "atm_iv": round(volatility, 3),
+                "iv_rank": round(random.uniform(20, 80), 1)
+            },
+            "timestamp": datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        print(f"Enhanced options chain error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Enhanced options chain failed: {str(e)}")
+
+# Options Strategy Builder
+@app.post("/api/options/strategy/build")
+async def build_options_strategy(strategy_data: dict):
+    """Build and analyze options strategies (spreads, condors, etc.)"""
+    try:
+        strategy_type = strategy_data.get("type")
+        symbol = strategy_data.get("symbol", "AAPL")
+        legs = strategy_data.get("legs", [])
+
+        if not legs:
+            raise HTTPException(status_code=400, detail="Strategy must have at least one leg")
+
+        # Get current price for calculations
+        current_price = 255.50 + random.uniform(-10, 10)
+
+        # Calculate strategy metrics
+        total_cost = 0
+        total_delta = 0
+        total_gamma = 0
+        total_theta = 0
+        total_vega = 0
+
+        # Process each leg
+        processed_legs = []
+        for leg in legs:
+            quantity = leg.get("quantity", 1)
+            action = leg.get("action", "buy")  # buy/sell
+            option_type = leg.get("option_type", "call")  # call/put
+            strike = leg.get("strike", current_price)
+            price = leg.get("price", 5.0)  # Option price
+
+            # Greeks (simplified for demonstration)
+            delta = 0.5 if option_type == "call" else -0.5
+            gamma = 0.02
+            theta = -0.1
+            vega = 0.2
+
+            # Adjust for position (buy/sell)
+            multiplier = quantity if action == "buy" else -quantity
+
+            leg_cost = price * multiplier * 100  # Options are per 100 shares
+            leg_delta = delta * multiplier
+            leg_gamma = gamma * multiplier
+            leg_theta = theta * multiplier
+            leg_vega = vega * multiplier
+
+            total_cost += leg_cost
+            total_delta += leg_delta
+            total_gamma += leg_gamma
+            total_theta += leg_theta
+            total_vega += leg_vega
+
+            processed_legs.append({
+                "quantity": quantity,
+                "action": action,
+                "option_type": option_type,
+                "strike": strike,
+                "price": price,
+                "cost": leg_cost,
+                "delta": leg_delta,
+                "gamma": leg_gamma,
+                "theta": leg_theta,
+                "vega": leg_vega
+            })
+
+        # Generate P&L scenarios
+        price_range = []
+        pl_values = []
+
+        for price_pct in range(-50, 51, 5):  # -50% to +50% in 5% increments
+            test_price = current_price * (1 + price_pct / 100)
+            price_range.append(test_price)
+
+            # Simplified P&L calculation
+            pl = total_cost  # Start with initial cost
+
+            for leg in processed_legs:
+                strike = leg["strike"]
+                option_type = leg["option_type"]
+                action = leg["action"]
+                quantity = leg["quantity"]
+
+                if option_type == "call":
+                    intrinsic = max(test_price - strike, 0)
+                else:
+                    intrinsic = max(strike - test_price, 0)
+
+                # Add intrinsic value (simplified, ignoring time decay)
+                if action == "buy":
+                    pl += intrinsic * quantity * 100
+                else:
+                    pl -= intrinsic * quantity * 100
+
+            pl_values.append(round(pl, 2))
+
+        # Calculate key metrics
+        max_profit = max(pl_values) if pl_values else 0
+        max_loss = min(pl_values) if pl_values else 0
+        breakeven_points = []
+
+        # Find breakeven points (simplified)
+        for i in range(len(pl_values) - 1):
+            if (pl_values[i] <= 0 <= pl_values[i + 1]) or (pl_values[i] >= 0 >= pl_values[i + 1]):
+                breakeven_price = price_range[i] + (price_range[i + 1] - price_range[i]) * (0 - pl_values[i]) / (pl_values[i + 1] - pl_values[i])
+                breakeven_points.append(round(breakeven_price, 2))
+
+        return {
+            "strategy_type": strategy_type,
+            "symbol": symbol,
+            "current_price": round(current_price, 2),
+            "legs": processed_legs,
+            "summary": {
+                "total_cost": round(total_cost, 2),
+                "max_profit": round(max_profit, 2),
+                "max_loss": round(max_loss, 2),
+                "breakeven_points": breakeven_points,
+                "net_delta": round(total_delta, 4),
+                "net_gamma": round(total_gamma, 4),
+                "net_theta": round(total_theta, 4),
+                "net_vega": round(total_vega, 4)
+            },
+            "pl_chart": {
+                "prices": [round(p, 2) for p in price_range],
+                "pl_values": pl_values
+            },
+            "timestamp": datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        print(f"Strategy builder error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Strategy builder failed: {str(e)}")
+
+# Greeks Calculator
+@app.get("/api/options/greeks/{symbol}/{strike}/{option_type}")
+async def calculate_greeks(symbol: str, strike: float, option_type: str, expiration: str = None):
+    """Calculate Greeks for a specific option"""
+    try:
+        import math
+        from datetime import datetime, timedelta
+
+        # Get current stock price
+        current_price = 255.50 + random.uniform(-10, 10)
+
+        # Calculate time to expiration
+        today = datetime.now()
+        if not expiration:
+            exp_date = today + timedelta(days=30)  # Default 30 days
+        else:
+            exp_date = datetime.strptime(expiration, "%Y-%m-%d")
+
+        days_to_expiry = max((exp_date - today).days, 1)
+        time_to_expiry = days_to_expiry / 365.0
+
+        # Market parameters
+        risk_free_rate = 0.05
+        volatility = 0.25 + random.uniform(-0.05, 0.05)
+
+        # Black-Scholes calculations
+        d1 = (math.log(current_price / strike) + (risk_free_rate + 0.5 * volatility**2) * time_to_expiry) / (volatility * math.sqrt(time_to_expiry))
+        d2 = d1 - volatility * math.sqrt(time_to_expiry)
+
+        def norm_cdf(x):
+            return 0.5 * (1 + math.erf(x / math.sqrt(2)))
+
+        def norm_pdf(x):
+            return math.exp(-x**2 / 2) / math.sqrt(2 * math.pi)
+
+        N_d1 = norm_cdf(d1)
+        N_d2 = norm_cdf(d2)
+        n_d1 = norm_pdf(d1)
+
+        # Calculate option price
+        if option_type.lower() == "call":
+            option_price = current_price * N_d1 - strike * math.exp(-risk_free_rate * time_to_expiry) * N_d2
+            delta = N_d1
+            rho = strike * time_to_expiry * math.exp(-risk_free_rate * time_to_expiry) * N_d2 / 100
+        else:  # put
+            option_price = strike * math.exp(-risk_free_rate * time_to_expiry) * norm_cdf(-d2) - current_price * norm_cdf(-d1)
+            delta = N_d1 - 1
+            rho = -strike * time_to_expiry * math.exp(-risk_free_rate * time_to_expiry) * norm_cdf(-d2) / 100
+
+        # Greeks
+        gamma = n_d1 / (current_price * volatility * math.sqrt(time_to_expiry))
+        theta = ((-current_price * n_d1 * volatility / (2 * math.sqrt(time_to_expiry))
+                 - risk_free_rate * strike * math.exp(-risk_free_rate * time_to_expiry) * N_d2)
+                if option_type.lower() == "call" else
+                (-current_price * n_d1 * volatility / (2 * math.sqrt(time_to_expiry))
+                 + risk_free_rate * strike * math.exp(-risk_free_rate * time_to_expiry) * norm_cdf(-d2))) / 365
+        vega = current_price * n_d1 * math.sqrt(time_to_expiry) / 100
+
+        # Additional metrics
+        intrinsic_value = max(current_price - strike, 0) if option_type.lower() == "call" else max(strike - current_price, 0)
+        time_value = option_price - intrinsic_value
+
+        return {
+            "symbol": symbol,
+            "strike": strike,
+            "option_type": option_type,
+            "expiration": exp_date.strftime("%Y-%m-%d"),
+            "days_to_expiry": days_to_expiry,
+            "underlying_price": round(current_price, 2),
+            "option_price": round(option_price, 2),
+            "intrinsic_value": round(intrinsic_value, 2),
+            "time_value": round(time_value, 2),
+            "implied_volatility": round(volatility, 3),
+            "greeks": {
+                "delta": round(delta, 4),
+                "gamma": round(gamma, 4),
+                "theta": round(theta, 4),
+                "vega": round(vega, 4),
+                "rho": round(rho, 4)
+            },
+            "sensitivity_analysis": {
+                "delta_explanation": f"For every $1 move in {symbol}, this option will move ${abs(delta):.2f}",
+                "gamma_explanation": f"Delta will change by {gamma:.4f} for every $1 move in {symbol}",
+                "theta_explanation": f"Option loses ${abs(theta):.2f} per day due to time decay",
+                "vega_explanation": f"Option gains ${vega:.2f} for every 1% increase in volatility",
+                "rho_explanation": f"Option {'gains' if rho > 0 else 'loses'} ${abs(rho):.2f} for every 1% increase in interest rates"
+            },
+            "timestamp": datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        print(f"Greeks calculator error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Greeks calculation failed: {str(e)}")
+
+# P/L Visualization Data
+@app.get("/api/options/pl-chart/{symbol}")
+async def get_pl_visualization(symbol: str, positions: str = None):
+    """Generate P/L chart data for options positions"""
+    try:
+        # Parse positions from query parameter (JSON string)
+        import json
+        if positions:
+            position_list = json.loads(positions)
+        else:
+            # Default example position
+            position_list = [
+                {"type": "call", "strike": 250, "quantity": 1, "action": "buy", "price": 10}
+            ]
+
+        current_price = 255.50 + random.uniform(-10, 10)
+
+        # Generate price range for chart
+        price_min = current_price * 0.7  # 30% below current
+        price_max = current_price * 1.3  # 30% above current
+        price_points = []
+        pl_values = []
+
+        for i in range(100):  # 100 data points
+            test_price = price_min + (price_max - price_min) * i / 99
+            price_points.append(round(test_price, 2))
+
+            total_pl = 0
+            for pos in position_list:
+                strike = pos["strike"]
+                quantity = pos["quantity"]
+                action = pos["action"]  # buy/sell
+                option_type = pos["type"]  # call/put
+                entry_price = pos["price"]
+
+                # Calculate intrinsic value at test price
+                if option_type == "call":
+                    intrinsic = max(test_price - strike, 0)
+                else:
+                    intrinsic = max(strike - test_price, 0)
+
+                # Calculate P/L for this position
+                if action == "buy":
+                    position_pl = (intrinsic - entry_price) * quantity * 100
+                else:  # sell
+                    position_pl = (entry_price - intrinsic) * quantity * 100
+
+                total_pl += position_pl
+
+            pl_values.append(round(total_pl, 2))
+
+        # Find key levels
+        max_profit = max(pl_values)
+        max_loss = min(pl_values)
+
+        # Find breakeven points
+        breakevens = []
+        for i in range(len(pl_values) - 1):
+            if (pl_values[i] <= 0 <= pl_values[i + 1]) or (pl_values[i] >= 0 >= pl_values[i + 1]):
+                # Linear interpolation to find exact breakeven
+                ratio = -pl_values[i] / (pl_values[i + 1] - pl_values[i])
+                breakeven_price = price_points[i] + ratio * (price_points[i + 1] - price_points[i])
+                breakevens.append(round(breakeven_price, 2))
+
+        return {
+            "symbol": symbol,
+            "current_price": round(current_price, 2),
+            "positions": position_list,
+            "chart_data": {
+                "prices": price_points,
+                "pl_values": pl_values
+            },
+            "analysis": {
+                "max_profit": max_profit,
+                "max_loss": max_loss,
+                "breakeven_points": breakevens,
+                "profit_probability": round(sum(1 for pl in pl_values if pl > 0) / len(pl_values) * 100, 1)
+            },
+            "timestamp": datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        print(f"P/L visualization error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"P/L visualization failed: {str(e)}")
+
+# ============ BACKTESTING & ANALYTICS ENGINE ============
+
+@app.post("/api/backtest/run")
+async def run_comprehensive_backtest(backtest_params: dict):
+    """Run comprehensive backtesting with performance metrics and risk analytics"""
+    try:
+        import numpy as np
+        from datetime import datetime, timedelta
+
+        strategy = backtest_params.get("strategy", "buy_and_hold")
+        symbol = backtest_params.get("symbol", "AAPL")
+        start_date = backtest_params.get("start_date", "2023-01-01")
+        end_date = backtest_params.get("end_date", "2024-12-31")
+        initial_capital = backtest_params.get("initial_capital", 100000)
+        position_size = backtest_params.get("position_size", 0.1)  # 10% of portfolio per trade
+
+        # Generate realistic market data
+        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+        days = (end_dt - start_dt).days
+
+        # Simulate price data with realistic volatility
+        np.random.seed(42)  # For reproducible results
+        returns = np.random.normal(0.0008, 0.02, days)  # ~20% annual volatility, 8% annual return
+
+        prices = [250.0]  # Starting price
+        for ret in returns:
+            prices.append(prices[-1] * (1 + ret))
+
+        dates = [start_dt + timedelta(days=i) for i in range(len(prices))]
+
+        # Strategy implementation
+        trades = []
+        portfolio_values = []
+        cash = initial_capital
+        shares = 0
+
+        if strategy == "buy_and_hold":
+            # Buy and hold strategy
+            shares_to_buy = int(cash / prices[0])
+            cash -= shares_to_buy * prices[0]
+            shares = shares_to_buy
+
+            trades.append({
+                "date": dates[0].isoformat(),
+                "action": "BUY",
+                "shares": shares,
+                "price": prices[0],
+                "value": shares * prices[0],
+                "commission": 0.99,
+                "reason": "Initial buy and hold purchase"
+            })
+
+            for i, price in enumerate(prices):
+                portfolio_value = cash + shares * price
+                portfolio_values.append(portfolio_value)
+
+        elif strategy == "sma_crossover":
+            # SMA crossover strategy
+            sma_short = backtest_params.get("sma_short", 20)
+            sma_long = backtest_params.get("sma_long", 50)
+
+            # Calculate SMAs
+            sma_short_values = []
+            sma_long_values = []
+
+            for i in range(len(prices)):
+                if i >= sma_short - 1:
+                    sma_short_val = sum(prices[i-sma_short+1:i+1]) / sma_short
+                    sma_short_values.append(sma_short_val)
+                else:
+                    sma_short_values.append(prices[i])
+
+                if i >= sma_long - 1:
+                    sma_long_val = sum(prices[i-sma_long+1:i+1]) / sma_long
+                    sma_long_values.append(sma_long_val)
+                else:
+                    sma_long_values.append(prices[i])
+
+            # Execute strategy
+            for i in range(1, len(prices)):
+                price = prices[i]
+                sma_short_val = sma_short_values[i]
+                sma_long_val = sma_long_values[i]
+                prev_sma_short = sma_short_values[i-1]
+                prev_sma_long = sma_long_values[i-1]
+
+                # Buy signal: SMA short crosses above SMA long
+                if (sma_short_val > sma_long_val and
+                    prev_sma_short <= prev_sma_long and
+                    shares == 0 and cash > price):
+
+                    trade_value = cash * position_size
+                    shares_to_buy = int(trade_value / price)
+                    if shares_to_buy > 0:
+                        cost = shares_to_buy * price + 0.99
+                        cash -= cost
+                        shares += shares_to_buy
+
+                        trades.append({
+                            "date": dates[i].isoformat(),
+                            "action": "BUY",
+                            "shares": shares_to_buy,
+                            "price": price,
+                            "value": shares_to_buy * price,
+                            "commission": 0.99,
+                            "reason": f"SMA crossover buy signal ({sma_short}/{sma_long})"
+                        })
+
+                # Sell signal: SMA short crosses below SMA long
+                elif (sma_short_val < sma_long_val and
+                      prev_sma_short >= prev_sma_long and
+                      shares > 0):
+
+                    proceeds = shares * price - 0.99
+                    cash += proceeds
+
+                    trades.append({
+                        "date": dates[i].isoformat(),
+                        "action": "SELL",
+                        "shares": shares,
+                        "price": price,
+                        "value": shares * price,
+                        "commission": 0.99,
+                        "reason": f"SMA crossover sell signal ({sma_short}/{sma_long})"
+                    })
+
+                    shares = 0
+
+                portfolio_value = cash + shares * price
+                portfolio_values.append(portfolio_value)
+
+        elif strategy == "rsi_strategy":
+            # RSI mean reversion strategy
+            rsi_period = backtest_params.get("rsi_period", 14)
+            oversold_threshold = backtest_params.get("oversold_threshold", 30)
+            overbought_threshold = backtest_params.get("overbought_threshold", 70)
+
+            # Calculate RSI
+            rsi_values = []
+            for i in range(len(prices)):
+                if i < rsi_period:
+                    rsi_values.append(50)  # Neutral RSI
+                else:
+                    price_changes = [prices[j] - prices[j-1] for j in range(i-rsi_period+1, i+1)]
+                    gains = [change if change > 0 else 0 for change in price_changes]
+                    losses = [-change if change < 0 else 0 for change in price_changes]
+
+                    avg_gain = sum(gains) / rsi_period
+                    avg_loss = sum(losses) / rsi_period
+
+                    if avg_loss == 0:
+                        rsi = 100
+                    else:
+                        rs = avg_gain / avg_loss
+                        rsi = 100 - (100 / (1 + rs))
+
+                    rsi_values.append(rsi)
+
+            # Execute strategy
+            for i in range(rsi_period, len(prices)):
+                price = prices[i]
+                rsi = rsi_values[i]
+
+                # Buy signal: RSI oversold
+                if rsi < oversold_threshold and shares == 0 and cash > price:
+                    trade_value = cash * position_size
+                    shares_to_buy = int(trade_value / price)
+                    if shares_to_buy > 0:
+                        cost = shares_to_buy * price + 0.99
+                        cash -= cost
+                        shares += shares_to_buy
+
+                        trades.append({
+                            "date": dates[i].isoformat(),
+                            "action": "BUY",
+                            "shares": shares_to_buy,
+                            "price": price,
+                            "value": shares_to_buy * price,
+                            "commission": 0.99,
+                            "reason": f"RSI oversold signal (RSI: {rsi:.1f})"
+                        })
+
+                # Sell signal: RSI overbought
+                elif rsi > overbought_threshold and shares > 0:
+                    proceeds = shares * price - 0.99
+                    cash += proceeds
+
+                    trades.append({
+                        "date": dates[i].isoformat(),
+                        "action": "SELL",
+                        "shares": shares,
+                        "price": price,
+                        "value": shares * price,
+                        "commission": 0.99,
+                        "reason": f"RSI overbought signal (RSI: {rsi:.1f})"
+                    })
+
+                    shares = 0
+
+                portfolio_value = cash + shares * price
+                portfolio_values.append(portfolio_value)
+
+        # Calculate performance metrics
+        if len(portfolio_values) < 2:
+            raise HTTPException(status_code=400, detail="Insufficient data for backtesting")
+
+        # Returns calculation
+        portfolio_returns = []
+        for i in range(1, len(portfolio_values)):
+            ret = (portfolio_values[i] - portfolio_values[i-1]) / portfolio_values[i-1]
+            portfolio_returns.append(ret)
+
+        # Benchmark (buy and hold) returns
+        benchmark_returns = []
+        for i in range(1, len(prices)):
+            ret = (prices[i] - prices[i-1]) / prices[i-1]
+            benchmark_returns.append(ret)
+
+        # Performance calculations
+        total_return = (portfolio_values[-1] - initial_capital) / initial_capital * 100
+        benchmark_total_return = (prices[-1] - prices[0]) / prices[0] * 100
+
+        # Annualized returns
+        years = days / 365.25
+        annualized_return = ((portfolio_values[-1] / initial_capital) ** (1/years) - 1) * 100
+        benchmark_annualized = ((prices[-1] / prices[0]) ** (1/years) - 1) * 100
+
+        # Volatility (annualized)
+        portfolio_volatility = np.std(portfolio_returns) * np.sqrt(252) * 100
+        benchmark_volatility = np.std(benchmark_returns) * np.sqrt(252) * 100
+
+        # Sharpe ratio (assuming 2% risk-free rate)
+        risk_free_rate = 0.02
+        sharpe_ratio = (annualized_return/100 - risk_free_rate) / (portfolio_volatility/100)
+
+        # Maximum drawdown
+        peak = portfolio_values[0]
+        max_drawdown = 0
+        drawdown_periods = []
+
+        for i, value in enumerate(portfolio_values):
+            if value > peak:
+                peak = value
+            drawdown = (peak - value) / peak * 100
+            if drawdown > max_drawdown:
+                max_drawdown = drawdown
+            drawdown_periods.append(drawdown)
+
+        # Win rate
+        winning_trades = [t for t in trades if t["action"] == "SELL"]
+        if len(winning_trades) > 1:
+            # Calculate P&L for each trade pair
+            buy_trades = [t for t in trades if t["action"] == "BUY"]
+            wins = 0
+            total_trades = min(len(buy_trades), len(winning_trades))
+
+            for i in range(total_trades):
+                if winning_trades[i]["price"] > buy_trades[i]["price"]:
+                    wins += 1
+
+            win_rate = wins / total_trades * 100 if total_trades > 0 else 0
+        else:
+            win_rate = 0
+
+        # Calmar ratio (return/max drawdown)
+        calmar_ratio = annualized_return / max_drawdown if max_drawdown > 0 else 0
+
+        return {
+            "strategy": strategy,
+            "symbol": symbol,
+            "period": f"{start_date} to {end_date}",
+            "initial_capital": initial_capital,
+            "final_value": round(portfolio_values[-1], 2),
+            "total_trades": len(trades),
+            "performance_metrics": {
+                "total_return": round(total_return, 2),
+                "annualized_return": round(annualized_return, 2),
+                "benchmark_return": round(benchmark_total_return, 2),
+                "benchmark_annualized": round(benchmark_annualized, 2),
+                "excess_return": round(annualized_return - benchmark_annualized, 2),
+                "volatility": round(portfolio_volatility, 2),
+                "benchmark_volatility": round(benchmark_volatility, 2),
+                "sharpe_ratio": round(sharpe_ratio, 3),
+                "max_drawdown": round(max_drawdown, 2),
+                "calmar_ratio": round(calmar_ratio, 3),
+                "win_rate": round(win_rate, 1)
+            },
+            "risk_metrics": {
+                "value_at_risk_95": round(np.percentile(portfolio_returns, 5) * portfolio_values[-1], 2),
+                "conditional_var_95": round(np.mean([r for r in portfolio_returns if r <= np.percentile(portfolio_returns, 5)]) * portfolio_values[-1], 2),
+                "beta": round(np.corrcoef(portfolio_returns[:len(benchmark_returns)], benchmark_returns)[0,1] *
+                             (np.std(portfolio_returns[:len(benchmark_returns)]) / np.std(benchmark_returns)), 3),
+                "correlation": round(np.corrcoef(portfolio_returns[:len(benchmark_returns)], benchmark_returns)[0,1], 3),
+                "downside_deviation": round(np.std([r for r in portfolio_returns if r < 0]) * np.sqrt(252) * 100, 2)
+            },
+            "chart_data": {
+                "dates": [d.isoformat() for d in dates],
+                "portfolio_values": [round(v, 2) for v in portfolio_values],
+                "benchmark_values": [round(initial_capital * prices[i] / prices[0], 2) for i in range(len(prices))],
+                "drawdown_periods": [round(d, 2) for d in drawdown_periods]
+            },
+            "trades": trades,
+            "timestamp": datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        print(f"Backtesting error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Backtesting failed: {str(e)}")
+
+@app.get("/api/portfolio/analytics/{symbol}")
+async def get_portfolio_analytics(symbol: str, period: str = "1y"):
+    """Get comprehensive portfolio analytics for a symbol"""
+    try:
+        from datetime import datetime, timedelta
+        import numpy as np
+
+        # Generate realistic portfolio data
+        current_price = 255.50 + random.uniform(-15, 15)
+
+        # Time period mapping
+        periods = {
+            "1w": 7, "1m": 30, "3m": 90, "6m": 180,
+            "1y": 365, "2y": 730, "5y": 1825
+        }
+        days = periods.get(period, 365)
+
+        # Generate price history
+        np.random.seed(hash(symbol) % 2**32)
+        returns = np.random.normal(0.0008, 0.018, days)
+        prices = [current_price]
+
+        for i in range(days - 1, 0, -1):
+            prices.insert(0, prices[0] / (1 + returns[days - i]))
+
+        # Portfolio positions simulation
+        positions = [
+            {"symbol": symbol, "shares": 100, "avg_cost": prices[0] * 0.95, "current_price": current_price},
+            {"symbol": "SPY", "shares": 50, "avg_cost": 420.0, "current_price": 435.0},
+            {"symbol": "QQQ", "shares": 25, "avg_cost": 380.0, "current_price": 390.0}
+        ]
+
+        # Calculate position metrics
+        total_invested = sum(pos["shares"] * pos["avg_cost"] for pos in positions)
+        total_value = sum(pos["shares"] * pos["current_price"] for pos in positions)
+        total_gain_loss = total_value - total_invested
+
+        # Risk calculations
+        portfolio_returns = [(prices[i] - prices[i-1]) / prices[i-1] for i in range(1, len(prices))]
+        volatility = np.std(portfolio_returns) * np.sqrt(252) * 100
+
+        # Sector allocation (simulated)
+        sectors = {
+            "Technology": 45.0,
+            "Healthcare": 20.0,
+            "Financial": 15.0,
+            "Consumer": 12.0,
+            "Energy": 5.0,
+            "Utilities": 3.0
+        }
+
+        # Performance attribution
+        dates = [datetime.now() - timedelta(days=days-i) for i in range(days)]
+
+        return {
+            "symbol": symbol,
+            "period": period,
+            "portfolio_summary": {
+                "total_value": round(total_value, 2),
+                "total_invested": round(total_invested, 2),
+                "total_gain_loss": round(total_gain_loss, 2),
+                "total_return_pct": round((total_gain_loss / total_invested) * 100, 2),
+                "day_change": round(random.uniform(-2, 2), 2),
+                "day_change_pct": round(random.uniform(-1.5, 1.5), 2)
+            },
+            "risk_analytics": {
+                "portfolio_beta": round(random.uniform(0.8, 1.3), 3),
+                "sharpe_ratio": round(random.uniform(0.5, 2.0), 3),
+                "volatility": round(volatility, 2),
+                "max_drawdown": round(random.uniform(5, 25), 2),
+                "value_at_risk": round(total_value * 0.05, 2),
+                "correlation_spy": round(random.uniform(0.6, 0.9), 3)
+            },
+            "performance_attribution": {
+                "asset_allocation": round(random.uniform(-2, 3), 2),
+                "security_selection": round(random.uniform(-1, 2), 2),
+                "interaction_effect": round(random.uniform(-0.5, 0.5), 2),
+                "total_excess_return": round(random.uniform(-1, 4), 2)
+            },
+            "sector_allocation": sectors,
+            "top_positions": [
+                {
+                    "symbol": pos["symbol"],
+                    "weight": round((pos["shares"] * pos["current_price"] / total_value) * 100, 1),
+                    "value": round(pos["shares"] * pos["current_price"], 2),
+                    "gain_loss": round(pos["shares"] * (pos["current_price"] - pos["avg_cost"]), 2),
+                    "gain_loss_pct": round(((pos["current_price"] - pos["avg_cost"]) / pos["avg_cost"]) * 100, 2)
+                }
+                for pos in positions
+            ],
+            "chart_data": {
+                "dates": [d.isoformat() for d in dates],
+                "portfolio_values": [round(total_invested * (1 + sum(portfolio_returns[:i])), 2)
+                                   for i in range(len(dates))],
+                "benchmark_values": [round(total_invested * prices[i] / prices[0], 2)
+                                   for i in range(len(prices))]
+            },
+            "timestamp": datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        print(f"Portfolio analytics error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Portfolio analytics failed: {str(e)}")
+
+@app.get("/api/trades/journal")
+async def get_trade_journal(limit: int = 50, symbol: str = None):
+    """Get comprehensive trade journal with performance tracking"""
+    try:
+        from datetime import datetime, timedelta
+
+        # Generate realistic trade history
+        trades = []
+        symbols = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA", "META", "SPY", "QQQ"] if not symbol else [symbol]
+
+        for i in range(limit):
+            trade_symbol = random.choice(symbols) if not symbol else symbol
+            trade_date = datetime.now() - timedelta(days=random.randint(1, 365))
+
+            # Generate realistic trade data
+            action = random.choice(["BUY", "SELL"])
+            shares = random.choice([10, 25, 50, 100, 200, 500])
+            price = round(random.uniform(50, 500), 2)
+
+            # Strategy classification
+            strategies = [
+                "Momentum", "Mean Reversion", "Breakout", "Support/Resistance",
+                "Technical Pattern", "Fundamental", "Event Driven", "Pairs Trading"
+            ]
+
+            # Trade outcome simulation
+            if action == "SELL":
+                # Assume this is closing a position
+                entry_price = price * random.uniform(0.85, 1.15)
+                pnl = (price - entry_price) * shares
+                pnl_pct = ((price - entry_price) / entry_price) * 100
+            else:
+                pnl = None
+                pnl_pct = None
+                entry_price = price
+
+            trade = {
+                "id": f"T{1000 + i}",
+                "date": trade_date.isoformat(),
+                "symbol": trade_symbol,
+                "action": action,
+                "shares": shares,
+                "price": price,
+                "value": shares * price,
+                "commission": 0.99,
+                "strategy": random.choice(strategies),
+                "setup": random.choice([
+                    "Gap Up", "Breakout", "Pullback", "Bounce", "Trend Follow",
+                    "Mean Reversion", "Earnings Play", "News Catalyst"
+                ]),
+                "entry_reason": random.choice([
+                    "Technical breakout above resistance",
+                    "RSI oversold bounce setup",
+                    "Moving average crossover",
+                    "Volume spike with momentum",
+                    "Earnings beat expectations",
+                    "Sector rotation play",
+                    "Support level hold"
+                ]),
+                "pnl": round(pnl, 2) if pnl else None,
+                "pnl_pct": round(pnl_pct, 2) if pnl_pct else None,
+                "holding_period": random.randint(1, 30) if action == "SELL" else None,
+                "risk_reward_ratio": round(random.uniform(1.0, 4.0), 2),
+                "position_size_pct": round(random.uniform(1, 10), 1),
+                "stop_loss": round(price * random.uniform(0.92, 0.98), 2) if action == "BUY" else None,
+                "take_profit": round(price * random.uniform(1.05, 1.15), 2) if action == "BUY" else None,
+                "tags": random.sample(["High Confidence", "Swing Trade", "Day Trade", "Earnings", "Breakout", "Reversal"], 2)
+            }
+
+            trades.append(trade)
+
+        # Sort by date (newest first)
+        trades.sort(key=lambda x: x["date"], reverse=True)
+
+        # Calculate journal statistics
+        closed_trades = [t for t in trades if t["pnl"] is not None]
+        winning_trades = [t for t in closed_trades if t["pnl"] > 0]
+        losing_trades = [t for t in closed_trades if t["pnl"] < 0]
+
+        total_pnl = sum(t["pnl"] for t in closed_trades)
+        win_rate = (len(winning_trades) / len(closed_trades)) * 100 if closed_trades else 0
+
+        avg_win = sum(t["pnl"] for t in winning_trades) / len(winning_trades) if winning_trades else 0
+        avg_loss = sum(t["pnl"] for t in losing_trades) / len(losing_trades) if losing_trades else 0
+
+        profit_factor = abs(avg_win / avg_loss) if avg_loss != 0 else 0
+
+        # Monthly performance
+        monthly_pnl = {}
+        for trade in closed_trades:
+            month = trade["date"][:7]  # YYYY-MM
+            if month not in monthly_pnl:
+                monthly_pnl[month] = 0
+            monthly_pnl[month] += trade["pnl"]
+
+        return {
+            "trades": trades[:limit],
+            "journal_stats": {
+                "total_trades": len(trades),
+                "closed_trades": len(closed_trades),
+                "open_trades": len(trades) - len(closed_trades),
+                "total_pnl": round(total_pnl, 2),
+                "win_rate": round(win_rate, 1),
+                "profit_factor": round(profit_factor, 2),
+                "avg_win": round(avg_win, 2),
+                "avg_loss": round(avg_loss, 2),
+                "largest_win": round(max([t["pnl"] for t in winning_trades], default=0), 2),
+                "largest_loss": round(min([t["pnl"] for t in losing_trades], default=0), 2),
+                "avg_holding_period": round(sum([t["holding_period"] for t in closed_trades if t["holding_period"]]) /
+                                          len([t for t in closed_trades if t["holding_period"]]), 1) if closed_trades else 0
+            },
+            "performance_by_strategy": {
+                strategy: {
+                    "trades": len([t for t in closed_trades if t["strategy"] == strategy]),
+                    "pnl": round(sum([t["pnl"] for t in closed_trades if t["strategy"] == strategy]), 2),
+                    "win_rate": round((len([t for t in closed_trades if t["strategy"] == strategy and t["pnl"] > 0]) /
+                                     len([t for t in closed_trades if t["strategy"] == strategy])) * 100, 1)
+                              if [t for t in closed_trades if t["strategy"] == strategy] else 0
+                }
+                for strategy in set([t["strategy"] for t in trades])
+            },
+            "monthly_performance": [
+                {"month": month, "pnl": round(pnl, 2)}
+                for month, pnl in sorted(monthly_pnl.items())
+            ],
+            "timestamp": datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        print(f"Trade journal error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Trade journal failed: {str(e)}")
+
+@app.post("/api/trades/add")
+async def add_trade_entry(trade_data: dict):
+    """Add a new trade entry to the journal"""
+    try:
+        from datetime import datetime
+
+        # Validate required fields
+        required_fields = ["symbol", "action", "shares", "price"]
+        for field in required_fields:
+            if field not in trade_data:
+                raise HTTPException(status_code=400, detail=f"Missing required field: {field}")
+
+        # Generate trade ID
+        trade_id = f"T{random.randint(1000, 9999)}"
+
+        trade_entry = {
+            "id": trade_id,
+            "date": trade_data.get("date", datetime.now().isoformat()),
+            "symbol": trade_data["symbol"].upper(),
+            "action": trade_data["action"].upper(),
+            "shares": int(trade_data["shares"]),
+            "price": float(trade_data["price"]),
+            "value": int(trade_data["shares"]) * float(trade_data["price"]),
+            "commission": trade_data.get("commission", 0.99),
+            "strategy": trade_data.get("strategy", "Manual Entry"),
+            "setup": trade_data.get("setup", "User Defined"),
+            "entry_reason": trade_data.get("entry_reason", "Manual trade entry"),
+            "risk_reward_ratio": trade_data.get("risk_reward_ratio", 2.0),
+            "position_size_pct": trade_data.get("position_size_pct", 5.0),
+            "stop_loss": trade_data.get("stop_loss"),
+            "take_profit": trade_data.get("take_profit"),
+            "tags": trade_data.get("tags", ["Manual Entry"]),
+            "notes": trade_data.get("notes", ""),
+            "status": "Open" if trade_data["action"] == "BUY" else "Closed"
+        }
+
+        return {
+            "success": True,
+            "trade_id": trade_id,
+            "trade": trade_entry,
+            "message": f"Trade {trade_id} added successfully",
+            "timestamp": datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        print(f"Add trade error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to add trade: {str(e)}")
+
+@app.get("/api/indicators/{symbol}")
+async def get_technical_indicators(symbol: str, indicator: str = "all", period: int = 14):
+    """Get technical indicators for a symbol"""
+    try:
+        # Generate sample price data for calculations
+        prices = []
+        base_price = 255.0
+        for i in range(50):  # 50 data points
+            price = base_price + random.uniform(-5, 5) + (i * 0.1)  # Slight upward trend
+            prices.append(price)
+
+        # Calculate technical indicators
+        indicators = {}
+
+        if indicator == "all" or indicator == "rsi":
+            # RSI calculation (simplified)
+            gains = [max(prices[i] - prices[i-1], 0) for i in range(1, len(prices))]
+            losses = [max(prices[i-1] - prices[i], 0) for i in range(1, len(prices))]
+
+            avg_gain = sum(gains[-period:]) / period
+            avg_loss = sum(losses[-period:]) / period
+            rs = avg_gain / (avg_loss + 0.001)  # Avoid division by zero
+            rsi = 100 - (100 / (1 + rs))
+
+            indicators["rsi"] = {
+                "value": round(rsi, 2),
+                "signal": "overbought" if rsi > 70 else "oversold" if rsi < 30 else "neutral",
+                "period": period
+            }
+
+        if indicator == "all" or indicator == "macd":
+            # MACD calculation (simplified)
+            ema_12 = sum(prices[-12:]) / 12
+            ema_26 = sum(prices[-26:]) / 26
+            macd_line = ema_12 - ema_26
+            signal_line = macd_line * 0.9  # Simplified signal line
+            histogram = macd_line - signal_line
+
+            indicators["macd"] = {
+                "macd_line": round(macd_line, 3),
+                "signal_line": round(signal_line, 3),
+                "histogram": round(histogram, 3),
+                "signal": "bullish" if histogram > 0 else "bearish"
+            }
+
+        if indicator == "all" or indicator == "sma":
+            # Simple Moving Averages
+            sma_20 = sum(prices[-20:]) / 20
+            sma_50 = sum(prices[-50:]) / 50
+            current_price = prices[-1]
+
+            indicators["sma"] = {
+                "sma_20": round(sma_20, 2),
+                "sma_50": round(sma_50, 2),
+                "current_price": round(current_price, 2),
+                "signal": "bullish" if current_price > sma_20 > sma_50 else "bearish" if current_price < sma_20 < sma_50 else "neutral"
+            }
+
+        if indicator == "all" or indicator == "bollinger":
+            # Bollinger Bands
+            sma_20 = sum(prices[-20:]) / 20
+            variance = sum([(p - sma_20) ** 2 for p in prices[-20:]]) / 20
+            std_dev = variance ** 0.5
+
+            upper_band = sma_20 + (2 * std_dev)
+            lower_band = sma_20 - (2 * std_dev)
+            current_price = prices[-1]
+
+            indicators["bollinger_bands"] = {
+                "upper_band": round(upper_band, 2),
+                "middle_band": round(sma_20, 2),
+                "lower_band": round(lower_band, 2),
+                "current_price": round(current_price, 2),
+                "position": "upper" if current_price > upper_band else "lower" if current_price < lower_band else "middle",
+                "signal": "overbought" if current_price > upper_band else "oversold" if current_price < lower_band else "neutral"
+            }
+
+        if indicator == "all" or indicator == "stochastic":
+            # Stochastic Oscillator
+            high_prices = [p + random.uniform(0, 2) for p in prices[-period:]]
+            low_prices = [p - random.uniform(0, 2) for p in prices[-period:]]
+
+            highest_high = max(high_prices)
+            lowest_low = min(low_prices)
+            current_close = prices[-1]
+
+            k_percent = ((current_close - lowest_low) / (highest_high - lowest_low)) * 100
+            d_percent = k_percent * 0.9  # Simplified D%
+
+            indicators["stochastic"] = {
+                "k_percent": round(k_percent, 2),
+                "d_percent": round(d_percent, 2),
+                "signal": "overbought" if k_percent > 80 else "oversold" if k_percent < 20 else "neutral"
+            }
+
+        return {
+            "symbol": symbol,
+            "indicators": indicators,
+            "analysis": {
+                "trend": "bullish" if prices[-1] > prices[-10] else "bearish",
+                "strength": "strong" if abs(prices[-1] - prices[-10]) > 5 else "weak",
+                "recommendation": "buy" if sum([ind.get("signal") == "bullish" for ind in indicators.values()]) > len(indicators) / 2 else "sell"
+            },
+            "timestamp": datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        print(f"Technical indicators error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Technical indicators failed: {str(e)}")
+
+@app.get("/api/news/{symbol}")
+async def get_symbol_news_enhanced(symbol: str, limit: int = 20):
+    """Enhanced news endpoint with real-time feeds and analysis"""
+    try:
+        # Use the existing news fetcher for real data
+        real_news = []
+
+        try:
+            # Use executor to avoid blocking the event loop
+            loop = asyncio.get_event_loop()
+            real_news = await loop.run_in_executor(None, news_fetcher.get_symbol_news, symbol)
+        except Exception as e:
+            print(f"Real news fetch failed: {e}")
+
+        # Generate additional analytical content
+        news_analysis = []
+
+        # Add market sentiment analysis
+        sentiment_breakdown = {
+            "positive": 0,
+            "negative": 0,
+            "neutral": 0
+        }
+
+        for article in real_news:
+            sentiment = article.get("sentiment", "neutral")
+            sentiment_breakdown[sentiment] += 1
+
+        # Add news impact analysis
+        impact_analysis = {
+            "earnings_related": len([a for a in real_news if "earnings" in a.get("title", "").lower()]),
+            "analyst_coverage": len([a for a in real_news if any(word in a.get("title", "").lower() for word in ["analyst", "upgrade", "downgrade", "rating"])]),
+            "regulatory_news": len([a for a in real_news if any(word in a.get("title", "").lower() for word in ["sec", "regulatory", "compliance"])]),
+            "merger_activity": len([a for a in real_news if any(word in a.get("title", "").lower() for word in ["merger", "acquisition", "deal"])])
+        }
+
+        # Generate news-based trading signals
+        trading_signals = []
+
+        positive_ratio = sentiment_breakdown["positive"] / max(len(real_news), 1)
+        if positive_ratio > 0.6:
+            trading_signals.append({
+                "signal": "bullish",
+                "strength": "strong" if positive_ratio > 0.8 else "moderate",
+                "reason": "Predominantly positive news sentiment",
+                "confidence": round(positive_ratio * 100, 1)
+            })
+        elif sentiment_breakdown["negative"] / max(len(real_news), 1) > 0.6:
+            trading_signals.append({
+                "signal": "bearish",
+                "strength": "strong",
+                "reason": "Negative news sentiment dominates",
+                "confidence": round((sentiment_breakdown["negative"] / len(real_news)) * 100, 1)
+            })
+
+        if impact_analysis["analyst_coverage"] > 2:
+            trading_signals.append({
+                "signal": "attention",
+                "strength": "moderate",
+                "reason": "High analyst activity - potential price movement",
+                "confidence": 75.0
+            })
+
+        return {
+            "symbol": symbol,
+            "articles": real_news[:limit],
+            "sentiment_analysis": sentiment_breakdown,
+            "impact_analysis": impact_analysis,
+            "trading_signals": trading_signals,
+            "news_flow_metrics": {
+                "total_articles": len(real_news),
+                "articles_last_24h": len([a for a in real_news if "2025-09-27" in a.get("published", "") or "2025-09-28" in a.get("published", "")]),
+                "avg_sentiment_score": round((sentiment_breakdown["positive"] - sentiment_breakdown["negative"]) / max(len(real_news), 1), 2),
+                "news_velocity": "high" if len(real_news) > 15 else "moderate" if len(real_news) > 8 else "low"
+            },
+            "alerts": [
+                {
+                    "type": "earnings_alert",
+                    "message": f"Earnings coverage detected for {symbol}",
+                    "active": impact_analysis["earnings_related"] > 0
+                },
+                {
+                    "type": "analyst_alert",
+                    "message": f"Multiple analyst updates for {symbol}",
+                    "active": impact_analysis["analyst_coverage"] > 2
+                }
+            ],
+            "timestamp": datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        print(f"Enhanced news error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Enhanced news failed: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

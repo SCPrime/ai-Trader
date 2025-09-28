@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Feedback Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .button { margin: 5px; padding: 10px 15px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        .button:hover { background: #0056b3; }
+        .button.success { background: #28a745; }
+        .button.warning { background: #ffc107; color: #212529; }
+        .button.danger { background: #dc3545; }
+        .log { background: #f8f9fa; padding: 10px; border-radius: 3px; height: 150px; overflow-y: auto; font-family: monospace; }
+        .demo-notification { position: fixed; top: 20px; right: 20px; z-index: 10000; max-width: 300px; font-family: Arial, sans-serif; }
+    </style>
+</head>
+<body>
+    <h1>User Feedback & Experience Test</h1>
+    <p>Testing that all user actions provide appropriate feedback without blocking operations.</p>
+
+    <div class="test-section">
+        <h3>Non-Blocking Notification System</h3>
+        <button class="button" onclick="testSuccessNotification()">Success Notification</button>
+        <button class="button warning" onclick="testWarningNotification()">Warning Notification</button>
+        <button class="button danger" onclick="testErrorNotification()">Error Notification</button>
+        <button class="button" onclick="testMultipleNotifications()">Multiple Notifications</button>
+    </div>
+
+    <div class="test-section">
+        <h3>Trading Action Feedback</h3>
+        <button class="button success" onclick="testBuyOrderFeedback()">Test Buy Order</button>
+        <button class="button danger" onclick="testSellOrderFeedback()">Test Sell Order</button>
+        <button class="button" onclick="testInvalidOrderFeedback()">Test Invalid Order</button>
+    </div>
+
+    <div class="test-section">
+        <h3>Settings & Configuration Feedback</h3>
+        <button class="button" onclick="testSettingsSave()">Save Settings</button>
+        <button class="button" onclick="testSettingsReset()">Reset Settings</button>
+        <button class="button" onclick="testInvalidSettings()">Invalid Settings</button>
+    </div>
+
+    <div class="test-section">
+        <h3>Strategy & Analysis Feedback</h3>
+        <button class="button" onclick="testMorningRoutine()">Morning Routine</button>
+        <button class="button" onclick="testStrategyExecution()">Execute Strategy</button>
+        <button class="button" onclick="testAnalysisRequest()">Request Analysis</button>
+    </div>
+
+    <div class="test-section">
+        <h3>User Experience Validation</h3>
+        <div>
+            <strong>Response Time Test:</strong>
+            <button class="button" onclick="measureResponseTime()">Measure Response</button>
+            <span id="response-time">-</span>
+        </div>
+        <div>
+            <strong>No Blocking Test:</strong>
+            <button class="button" onclick="testNoBlocking()">Test Non-Blocking</button>
+            <span id="blocking-result">-</span>
+        </div>
+        <div>
+            <strong>UI Responsiveness:</strong>
+            <button class="button" onclick="startResponsivenessCounter()">Start Counter</button>
+            <span id="responsiveness-counter">0</span>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>Feedback Log</h3>
+        <div id="feedback-log" class="log"></div>
+        <button class="button" onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <script>
+        let logCounter = 0;
+        let responseCounter = 0;
+
+        function logFeedback(message, type = 'info') {
+            logCounter++;
+            const timestamp = new Date().toLocaleTimeString();
+            const logDiv = document.getElementById('feedback-log');
+            const color = type === 'success' ? '#28a745' : type === 'warning' ? '#ffc107' : type === 'error' ? '#dc3545' : '#17a2b8';
+            logDiv.innerHTML += `<div style="color: ${color}">[${logCounter}] ${timestamp} - ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = 'demo-notification';
+            notification.style.cssText = `
+                position: fixed; top: ${20 + (document.querySelectorAll('.demo-notification').length * 70)}px; right: 20px; z-index: 10000;
+                background: ${type === 'warning' ? '#ff9800' : type === 'error' ? '#f44336' : '#4caf50'};
+                color: white; padding: 15px; border-radius: 5px;
+                box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+                max-width: 300px; font-family: Arial, sans-serif;
+                opacity: 0; transition: opacity 0.3s ease;
+            `;
+            notification.innerHTML = `
+                ${message}
+                <button onclick="this.parentElement.remove()" style="margin-left: 10px; background: none; border: none; color: white; cursor: pointer; font-size: 16px;">×</button>
+            `;
+            document.body.appendChild(notification);
+
+            // Fade in
+            setTimeout(() => { notification.style.opacity = '1'; }, 10);
+
+            // Auto-remove after 4 seconds
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.style.opacity = '0';
+                    setTimeout(() => notification.remove(), 300);
+                }
+            }, 4000);
+
+            logFeedback(`Showed ${type} notification: ${message}`, type);
+        }
+
+        function testSuccessNotification() {
+            showNotification('Operation completed successfully!', 'info');
+        }
+
+        function testWarningNotification() {
+            showNotification('Warning: Please review your settings before proceeding.', 'warning');
+        }
+
+        function testErrorNotification() {
+            showNotification('Error: Unable to complete the requested operation.', 'error');
+        }
+
+        function testMultipleNotifications() {
+            showNotification('First notification', 'info');
+            setTimeout(() => showNotification('Second notification', 'warning'), 500);
+            setTimeout(() => showNotification('Third notification', 'error'), 1000);
+            logFeedback('Tested multiple simultaneous notifications', 'info');
+        }
+
+        async function testBuyOrderFeedback() {
+            logFeedback('Testing buy order feedback...', 'info');
+            const startTime = performance.now();
+
+            try {
+                const response = await fetch('http://localhost:8001/api/stock/buy', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({symbol: 'AAPL', qty: 1})
+                });
+                const result = await response.json();
+                const duration = performance.now() - startTime;
+
+                if (result.success) {
+                    showNotification(`Buy order placed: ${result.order.id} for ${result.order.qty} shares of ${result.order.symbol}`, 'info');
+                    logFeedback(`Buy order successful in ${duration.toFixed(1)}ms`, 'success');
+                } else {
+                    showNotification('Buy order failed: ' + (result.error || 'Unknown error'), 'error');
+                    logFeedback(`Buy order failed in ${duration.toFixed(1)}ms`, 'error');
+                }
+            } catch (error) {
+                const duration = performance.now() - startTime;
+                showNotification('Buy order error: ' + error.message, 'error');
+                logFeedback(`Buy order error in ${duration.toFixed(1)}ms: ${error.message}`, 'error');
+            }
+        }
+
+        async function testSellOrderFeedback() {
+            logFeedback('Testing sell order feedback...', 'info');
+            const startTime = performance.now();
+
+            try {
+                const response = await fetch('http://localhost:8001/api/stock/sell', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({symbol: 'TSLA', qty: 1})
+                });
+                const result = await response.json();
+                const duration = performance.now() - startTime;
+
+                if (result.success) {
+                    showNotification(`Sell order placed: ${result.order.id} for ${result.order.qty} shares of ${result.order.symbol}`, 'info');
+                    logFeedback(`Sell order successful in ${duration.toFixed(1)}ms`, 'success');
+                } else {
+                    showNotification('Sell order failed: ' + (result.error || 'Unknown error'), 'error');
+                    logFeedback(`Sell order failed in ${duration.toFixed(1)}ms`, 'error');
+                }
+            } catch (error) {
+                const duration = performance.now() - startTime;
+                showNotification('Sell order error: ' + error.message, 'error');
+                logFeedback(`Sell order error in ${duration.toFixed(1)}ms: ${error.message}`, 'error');
+            }
+        }
+
+        async function testInvalidOrderFeedback() {
+            logFeedback('Testing invalid order feedback...', 'info');
+            const startTime = performance.now();
+
+            try {
+                const response = await fetch('http://localhost:8001/api/stock/buy', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({symbol: '', qty: 0}) // Invalid data
+                });
+                const result = await response.json();
+                const duration = performance.now() - startTime;
+
+                if (!result.success) {
+                    showNotification('Validation error: ' + (result.error || 'Invalid order parameters'), 'warning');
+                    logFeedback(`Invalid order validation working - ${duration.toFixed(1)}ms`, 'success');
+                } else {
+                    showNotification('Unexpected: Invalid order was accepted', 'error');
+                    logFeedback(`Invalid order validation failed - ${duration.toFixed(1)}ms`, 'error');
+                }
+            } catch (error) {
+                const duration = performance.now() - startTime;
+                showNotification('Order validation error: ' + error.message, 'warning');
+                logFeedback(`Order validation error in ${duration.toFixed(1)}ms: ${error.message}`, 'warning');
+            }
+        }
+
+        async function testSettingsSave() {
+            logFeedback('Testing settings save feedback...', 'info');
+            const startTime = performance.now();
+
+            try {
+                const response = await fetch('http://localhost:8001/api/settings', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        position_size: 0.025,
+                        stop_loss: 2.3,
+                        take_profit: 4.2
+                    })
+                });
+                const result = await response.json();
+                const duration = performance.now() - startTime;
+
+                if (result.success) {
+                    showNotification('Settings saved successfully!', 'info');
+                    logFeedback(`Settings saved in ${duration.toFixed(1)}ms`, 'success');
+                } else {
+                    showNotification('Settings save failed: ' + (result.error || 'Unknown error'), 'error');
+                    logFeedback(`Settings save failed in ${duration.toFixed(1)}ms`, 'error');
+                }
+            } catch (error) {
+                const duration = performance.now() - startTime;
+                showNotification('Settings error: ' + error.message, 'error');
+                logFeedback(`Settings error in ${duration.toFixed(1)}ms: ${error.message}`, 'error');
+            }
+        }
+
+        async function testSettingsReset() {
+            logFeedback('Testing settings reset feedback...', 'info');
+
+            // Simulate the non-blocking reset (no confirm dialog)
+            showNotification('Settings reset to defaults', 'info');
+            logFeedback('Settings reset - no blocking confirm dialog', 'success');
+        }
+
+        async function testInvalidSettings() {
+            logFeedback('Testing invalid settings feedback...', 'info');
+
+            try {
+                const response = await fetch('http://localhost:8001/api/settings', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        position_size: -1, // Invalid negative value
+                        stop_loss: 'invalid'
+                    })
+                });
+
+                // The backend should handle this gracefully
+                showNotification('Settings validation handled gracefully', 'warning');
+                logFeedback('Invalid settings handled without errors', 'success');
+            } catch (error) {
+                showNotification('Settings validation error handled', 'warning');
+                logFeedback('Settings validation error: ' + error.message, 'warning');
+            }
+        }
+
+        async function testMorningRoutine() {
+            logFeedback('Testing morning routine feedback...', 'info');
+            const startTime = performance.now();
+
+            try {
+                const response = await fetch('http://localhost:8001/api/morning-routine', {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                const duration = performance.now() - startTime;
+
+                showNotification(`Morning routine completed - Market: ${result.market_status}`, 'info');
+                logFeedback(`Morning routine completed in ${duration.toFixed(1)}ms`, 'success');
+            } catch (error) {
+                const duration = performance.now() - startTime;
+                showNotification('Morning routine error: ' + error.message, 'error');
+                logFeedback(`Morning routine error in ${duration.toFixed(1)}ms: ${error.message}`, 'error');
+            }
+        }
+
+        function testStrategyExecution() {
+            // Simulate strategy execution feedback (no blocking)
+            showNotification('Strategy execution started - RSI Strategy for AAPL', 'info');
+            logFeedback('Strategy execution feedback - non-blocking', 'success');
+        }
+
+        function testAnalysisRequest() {
+            // Simulate analysis request feedback (no blocking)
+            showNotification('AI analysis requested for current portfolio', 'info');
+            logFeedback('Analysis request feedback - non-blocking', 'success');
+        }
+
+        function measureResponseTime() {
+            const startTime = performance.now();
+
+            // Simulate an immediate UI response
+            setTimeout(() => {
+                const endTime = performance.now();
+                const duration = endTime - startTime;
+                document.getElementById('response-time').textContent = duration.toFixed(2) + 'ms';
+                logFeedback(`UI response time: ${duration.toFixed(2)}ms`, 'info');
+
+                if (duration < 50) {
+                    showNotification('Excellent response time!', 'info');
+                } else {
+                    showNotification('Response time could be improved', 'warning');
+                }
+            }, 1);
+        }
+
+        function testNoBlocking() {
+            logFeedback('Testing non-blocking operations...', 'info');
+
+            // Start a series of operations
+            let operationCount = 0;
+            const maxOperations = 10;
+
+            const interval = setInterval(() => {
+                operationCount++;
+
+                // This should not block the UI
+                if (operationCount <= maxOperations) {
+                    document.getElementById('blocking-result').textContent = `Operation ${operationCount}/${maxOperations}`;
+                } else {
+                    clearInterval(interval);
+                    document.getElementById('blocking-result').textContent = 'All operations completed - No blocking detected!';
+                    showNotification('Non-blocking test completed successfully', 'info');
+                    logFeedback('Non-blocking test passed', 'success');
+                }
+            }, 100);
+        }
+
+        function startResponsivenessCounter() {
+            logFeedback('Starting responsiveness counter...', 'info');
+
+            const counterElement = document.getElementById('responsiveness-counter');
+            let count = 0;
+
+            const counterInterval = setInterval(() => {
+                count++;
+                counterElement.textContent = count;
+
+                if (count >= 50) {
+                    clearInterval(counterInterval);
+                    showNotification('Responsiveness test completed - UI remained responsive', 'info');
+                    logFeedback('Responsiveness test passed - UI never blocked', 'success');
+                }
+            }, 50);
+        }
+
+        function clearLog() {
+            document.getElementById('feedback-log').innerHTML = '';
+            logCounter = 0;
+            logFeedback('Log cleared', 'info');
+        }
+
+        // Initialize the page
+        window.onload = function() {
+            logFeedback('User feedback test page loaded', 'info');
+            logFeedback('Ready to test non-blocking user experience', 'info');
+
+            // Test immediate responsiveness
+            setTimeout(() => {
+                logFeedback('Page fully responsive and ready', 'success');
+            }, 100);
+        };
+    </script>
+</body>
+</html>

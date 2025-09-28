@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; }
+        .log { background: #f5f5f5; padding: 10px; height: 400px; overflow-y: auto; border: 1px solid #ccc; }
+        button { padding: 10px; margin: 5px; }
+        input { padding: 5px; margin: 5px; width: 300px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>WebSocket Connection Test</h1>
+
+        <h3>Main WebSocket (/ws)</h3>
+        <button onclick="testMainWebSocket()">Test Main WebSocket</button>
+        <button onclick="disconnectMain()">Disconnect</button>
+
+        <h3>AI Chat WebSocket (/ws/ai-chat)</h3>
+        <button onclick="testAIChatWebSocket()">Test AI Chat WebSocket</button>
+        <input type="text" id="chatMessage" placeholder="Enter message for AI..." value="What's the market outlook for AAPL?">
+        <button onclick="sendChatMessage()">Send Message</button>
+        <button onclick="disconnectAI()">Disconnect</button>
+
+        <h3>Log</h3>
+        <div id="log" class="log"></div>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <script>
+        let mainWs = null;
+        let aiWs = null;
+
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}<br>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function testMainWebSocket() {
+            if (mainWs) {
+                log("Main WebSocket already connected");
+                return;
+            }
+
+            log("Attempting to connect to main WebSocket...");
+            mainWs = new WebSocket("ws://localhost:8001/ws");
+
+            mainWs.onopen = () => {
+                log("✓ Main WebSocket connected successfully!");
+            };
+
+            mainWs.onerror = (e) => {
+                log("✗ Main WebSocket error: " + JSON.stringify(e));
+            };
+
+            mainWs.onmessage = (msg) => {
+                log("Main WebSocket message: " + msg.data);
+            };
+
+            mainWs.onclose = () => {
+                log("Main WebSocket disconnected");
+                mainWs = null;
+            };
+        }
+
+        function testAIChatWebSocket() {
+            if (aiWs) {
+                log("AI Chat WebSocket already connected");
+                return;
+            }
+
+            log("Attempting to connect to AI Chat WebSocket...");
+            aiWs = new WebSocket("ws://localhost:8001/ws/ai-chat");
+
+            aiWs.onopen = () => {
+                log("✓ AI Chat WebSocket connected successfully!");
+            };
+
+            aiWs.onerror = (e) => {
+                log("✗ AI Chat WebSocket error: " + JSON.stringify(e));
+            };
+
+            aiWs.onmessage = (msg) => {
+                try {
+                    const data = JSON.parse(msg.data);
+                    log("AI Chat response: " + data.message);
+                } catch (e) {
+                    log("AI Chat message: " + msg.data);
+                }
+            };
+
+            aiWs.onclose = () => {
+                log("AI Chat WebSocket disconnected");
+                aiWs = null;
+            };
+        }
+
+        function sendChatMessage() {
+            if (!aiWs) {
+                log("AI Chat WebSocket not connected. Connect first.");
+                return;
+            }
+
+            const message = document.getElementById('chatMessage').value;
+            const payload = {
+                message: message,
+                context: { symbol: "AAPL" }
+            };
+
+            aiWs.send(JSON.stringify(payload));
+            log("Sent to AI: " + message);
+        }
+
+        function disconnectMain() {
+            if (mainWs) {
+                mainWs.close();
+                log("Disconnecting main WebSocket...");
+            }
+        }
+
+        function disconnectAI() {
+            if (aiWs) {
+                aiWs.close();
+                log("Disconnecting AI Chat WebSocket...");
+            }
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        // Auto-test on page load
+        window.onload = () => {
+            log("WebSocket test page loaded. Click buttons to test connections.");
+        };
+    </script>
+</body>
+</html>

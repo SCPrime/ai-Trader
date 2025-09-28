@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UI Function Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .test-button { margin: 5px; padding: 10px 15px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        .test-button:hover { background: #0056b3; }
+        .result { margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 3px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .warning { background: #fff3cd; color: #856404; }
+    </style>
+</head>
+<body>
+    <h1>UI Function Non-Blocking Test</h1>
+    <p>Testing that UI functions don't block the browser thread.</p>
+
+    <div class="test-section">
+        <h3>Test 1: Non-Blocking Notifications</h3>
+        <button class="test-button" onclick="testNotifications()">Test Notifications</button>
+        <div id="notification-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test 2: API Calls</h3>
+        <button class="test-button" onclick="testAPICall()">Test API Call</button>
+        <div id="api-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test 3: Settings Save/Load</h3>
+        <button class="test-button" onclick="testSettings()">Test Settings</button>
+        <div id="settings-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test 4: Trading Functions</h3>
+        <button class="test-button" onclick="testTrading()">Test Buy/Sell</button>
+        <div id="trading-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Test 5: Morning Routine</h3>
+        <button class="test-button" onclick="testMorningRoutine()">Test Morning Routine</button>
+        <div id="routine-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Responsiveness Test</h3>
+        <button class="test-button" onclick="startResponsivenessTest()">Start Responsiveness Test</button>
+        <div id="responsiveness-result" class="result"></div>
+        <div>Click count: <span id="click-counter">0</span> (should increment smoothly)</div>
+        <button class="test-button" onclick="incrementCounter()">Click Me Repeatedly</button>
+    </div>
+
+    <script>
+        let clickCount = 0;
+
+        // Simulate the notification system from the dashboard
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed; top: 20px; right: 20px; z-index: 10000;
+                background: ${type === 'warning' ? '#ff9800' : type === 'error' ? '#f44336' : '#4caf50'};
+                color: white; padding: 15px; border-radius: 5px;
+                box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+                max-width: 300px; font-family: Arial, sans-serif;
+            `;
+            notification.innerHTML = `
+                ${message}
+                <button onclick="this.parentElement.remove()" style="margin-left: 10px; background: none; border: none; color: white; cursor: pointer; font-size: 16px;">×</button>
+            `;
+            document.body.appendChild(notification);
+
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+
+        function testNotifications() {
+            console.log('Testing notifications...');
+            const startTime = performance.now();
+
+            // Test multiple notifications quickly
+            showNotification('Test notification 1', 'info');
+            showNotification('Test notification 2', 'warning');
+            showNotification('Test notification 3', 'error');
+
+            const endTime = performance.now();
+            const duration = endTime - startTime;
+
+            document.getElementById('notification-result').innerHTML =
+                `<span class="success">✓ Notifications completed in ${duration.toFixed(1)}ms (non-blocking)</span>`;
+        }
+
+        async function testAPICall() {
+            console.log('Testing API call...');
+            const startTime = performance.now();
+
+            try {
+                const response = await fetch('http://localhost:8001/api/health');
+                const data = await response.json();
+                const endTime = performance.now();
+                const duration = endTime - startTime;
+
+                document.getElementById('api-result').innerHTML =
+                    `<span class="success">✓ API call completed in ${duration.toFixed(1)}ms - Status: ${data.status}</span>`;
+            } catch (error) {
+                const endTime = performance.now();
+                const duration = endTime - startTime;
+                document.getElementById('api-result').innerHTML =
+                    `<span class="error">✗ API call failed in ${duration.toFixed(1)}ms - Error: ${error.message}</span>`;
+            }
+        }
+
+        async function testSettings() {
+            console.log('Testing settings...');
+            const startTime = performance.now();
+
+            try {
+                // Save settings
+                const saveResponse = await fetch('http://localhost:8001/api/settings', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({position_size: 0.025, stop_loss: 2.2})
+                });
+
+                // Load settings
+                const loadResponse = await fetch('http://localhost:8001/api/settings');
+                const settings = await loadResponse.json();
+
+                const endTime = performance.now();
+                const duration = endTime - startTime;
+
+                const positionSize = settings.position_size;
+                if (Math.abs(positionSize - 0.025) < 0.001) {
+                    document.getElementById('settings-result').innerHTML =
+                        `<span class="success">✓ Settings round-trip completed in ${duration.toFixed(1)}ms - Data preserved correctly</span>`;
+                } else {
+                    document.getElementById('settings-result').innerHTML =
+                        `<span class="warning">⚠ Settings completed in ${duration.toFixed(1)}ms but data may have issues</span>`;
+                }
+            } catch (error) {
+                const endTime = performance.now();
+                const duration = endTime - startTime;
+                document.getElementById('settings-result').innerHTML =
+                    `<span class="error">✗ Settings test failed in ${duration.toFixed(1)}ms - Error: ${error.message}</span>`;
+            }
+        }
+
+        async function testTrading() {
+            console.log('Testing trading functions...');
+            const startTime = performance.now();
+
+            try {
+                // Test buy order
+                const buyResponse = await fetch('http://localhost:8001/api/stock/buy', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({symbol: 'AAPL', qty: 1})
+                });
+                const buyResult = await buyResponse.json();
+
+                const endTime = performance.now();
+                const duration = endTime - startTime;
+
+                if (buyResult.success) {
+                    document.getElementById('trading-result').innerHTML =
+                        `<span class="success">✓ Trading functions completed in ${duration.toFixed(1)}ms - Order: ${buyResult.order.id}</span>`;
+                } else {
+                    document.getElementById('trading-result').innerHTML =
+                        `<span class="warning">⚠ Trading completed in ${duration.toFixed(1)}ms but may have issues</span>`;
+                }
+            } catch (error) {
+                const endTime = performance.now();
+                const duration = endTime - startTime;
+                document.getElementById('trading-result').innerHTML =
+                    `<span class="error">✗ Trading test failed in ${duration.toFixed(1)}ms - Error: ${error.message}</span>`;
+            }
+        }
+
+        async function testMorningRoutine() {
+            console.log('Testing morning routine...');
+            const startTime = performance.now();
+
+            try {
+                const response = await fetch('http://localhost:8001/api/morning-routine', {
+                    method: 'POST'
+                });
+                const result = await response.json();
+
+                const endTime = performance.now();
+                const duration = endTime - startTime;
+
+                document.getElementById('routine-result').innerHTML =
+                    `<span class="success">✓ Morning routine completed in ${duration.toFixed(1)}ms - Market: ${result.market_status}</span>`;
+            } catch (error) {
+                const endTime = performance.now();
+                const duration = endTime - startTime;
+                document.getElementById('routine-result').innerHTML =
+                    `<span class="error">✗ Morning routine failed in ${duration.toFixed(1)}ms - Error: ${error.message}</span>`;
+            }
+        }
+
+        function incrementCounter() {
+            clickCount++;
+            document.getElementById('click-counter').textContent = clickCount;
+        }
+
+        function startResponsivenessTest() {
+            console.log('Starting responsiveness test...');
+            let testClicks = 0;
+            const startTime = performance.now();
+
+            // Simulate many quick operations
+            const interval = setInterval(() => {
+                testClicks++;
+                if (testClicks >= 100) {
+                    clearInterval(interval);
+                    const endTime = performance.now();
+                    const duration = endTime - startTime;
+
+                    document.getElementById('responsiveness-result').innerHTML =
+                        `<span class="success">✓ Responsiveness test completed: 100 operations in ${duration.toFixed(1)}ms (${(100/duration*1000).toFixed(0)} ops/sec)</span>`;
+                }
+            }, 1);
+        }
+
+        // Log that the page loaded
+        console.log('UI Function Test page loaded successfully');
+        console.log('All functions should execute without blocking the UI thread');
+    </script>
+</body>
+</html>

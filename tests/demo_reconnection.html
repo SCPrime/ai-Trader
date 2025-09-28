@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Reconnection Demo</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        .status-panel { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        .log { background: #1e1e1e; color: #fff; padding: 15px; height: 400px; overflow-y: auto; border-radius: 5px; font-family: 'Courier New', monospace; }
+        .controls { margin: 20px 0; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        .btn-primary { background: #007bff; color: white; border: none; }
+        .btn-danger { background: #dc3545; color: white; border: none; }
+        .btn-success { background: #28a745; color: white; border: none; }
+        .btn-warning { background: #ffc107; color: black; border: none; }
+        .status-indicator { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; }
+        .connected { background: #28a745; }
+        .connecting { background: #ffc107; animation: pulse 1s infinite; }
+        .disconnected { background: #dc3545; }
+        .failed { background: #6c757d; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>WebSocket Reconnection Logic Demo</h1>
+
+        <div class="status-panel">
+            <h3>Connection Status</h3>
+            <div id="connectionStatus">
+                <span class="status-indicator disconnected"></span>
+                <span id="statusText">Disconnected</span>
+            </div>
+            <div id="reconnectionInfo" style="margin-top: 10px; font-size: 0.9em; color: #666;"></div>
+        </div>
+
+        <div class="controls">
+            <button class="btn-primary" onclick="connectWebSocket()">Connect</button>
+            <button class="btn-danger" onclick="disconnectWebSocket()">Disconnect</button>
+            <button class="btn-warning" onclick="simulateNetworkIssue()">Simulate Network Issue</button>
+            <button class="btn-success" onclick="testReconnection()">Test Reconnection Logic</button>
+            <button onclick="clearLog()">Clear Log</button>
+        </div>
+
+        <div class="log" id="log"></div>
+    </div>
+
+    <script>
+        let ws = null;
+        let reconnectAttempts = 0;
+        let maxReconnectAttempts = 5;
+        let reconnectDelay = 1000;
+        let maxReconnectDelay = 30000;
+        let reconnectTimeoutId = null;
+        let connectionState = 'disconnected';
+
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}<br>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function updateStatus(status, info = '') {
+            const indicator = document.querySelector('.status-indicator');
+            const statusText = document.getElementById('statusText');
+            const reconnectionInfo = document.getElementById('reconnectionInfo');
+
+            indicator.className = `status-indicator ${status}`;
+            connectionState = status;
+
+            switch (status) {
+                case 'connected':
+                    statusText.textContent = 'Connected';
+                    reconnectionInfo.textContent = '';
+                    break;
+                case 'connecting':
+                    statusText.textContent = 'Connecting...';
+                    reconnectionInfo.textContent = info;
+                    break;
+                case 'disconnected':
+                    statusText.textContent = 'Disconnected';
+                    reconnectionInfo.textContent = info;
+                    break;
+                case 'failed':
+                    statusText.textContent = 'Connection Failed';
+                    reconnectionInfo.textContent = info;
+                    break;
+            }
+        }
+
+        function connectWebSocket() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                log('Already connected');
+                return;
+            }
+
+            log('Attempting to connect to WebSocket...');
+            updateStatus('connecting', 'Establishing connection...');
+
+            try {
+                ws = new WebSocket('ws://localhost:8001/ws');
+
+                ws.onopen = () => {
+                    log('✓ WebSocket connected successfully!');
+                    reconnectAttempts = 0;
+                    reconnectDelay = 1000;
+                    updateStatus('connected');
+
+                    if (reconnectTimeoutId) {
+                        clearTimeout(reconnectTimeoutId);
+                        reconnectTimeoutId = null;
+                    }
+                };
+
+                ws.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        log(`📊 Received: ${data.type} - ${data.symbol} @ $${data.price?.toFixed(2)}`);
+                    } catch (e) {
+                        log(`📨 Received: ${event.data}`);
+                    }
+                };
+
+                ws.onclose = (event) => {
+                    log(`🔌 WebSocket closed (Code: ${event.code}, Reason: ${event.reason || 'No reason'})`);
+                    updateStatus('disconnected', `Connection closed (Code: ${event.code})`);
+
+                    if (event.code !== 1000) { // Not normal closure
+                        log('🔄 Unexpected disconnection detected, starting reconnection logic...');
+                        attemptReconnect();
+                    }
+                };
+
+                ws.onerror = (error) => {
+                    log(`❌ WebSocket error: ${error}`);
+                    updateStatus('disconnected', 'Connection error occurred');
+                };
+
+            } catch (error) {
+                log(`❌ Failed to create WebSocket: ${error}`);
+                updateStatus('failed', 'Failed to create connection');
+            }
+        }
+
+        function disconnectWebSocket() {
+            if (ws) {
+                log('🔌 Manually disconnecting WebSocket...');
+                ws.close(1000, 'Manual disconnect');
+                ws = null;
+                updateStatus('disconnected', 'Manually disconnected');
+            } else {
+                log('No active connection to disconnect');
+            }
+        }
+
+        function attemptReconnect() {
+            if (reconnectTimeoutId) {
+                clearTimeout(reconnectTimeoutId);
+            }
+
+            if (reconnectAttempts < maxReconnectAttempts) {
+                reconnectAttempts++;
+
+                const baseDelay = Math.min(reconnectDelay * Math.pow(2, reconnectAttempts - 1), maxReconnectDelay);
+                const jitter = Math.random() * 1000;
+                const delay = baseDelay + jitter;
+
+                log(`🔄 Reconnection attempt ${reconnectAttempts}/${maxReconnectAttempts} in ${Math.round(delay/1000)}s...`);
+                updateStatus('connecting', `Reconnecting... (${reconnectAttempts}/${maxReconnectAttempts})`);
+
+                reconnectTimeoutId = setTimeout(() => {
+                    log(`🔄 Executing reconnection attempt ${reconnectAttempts}`);
+                    connectWebSocket();
+                }, delay);
+            } else {
+                log('❌ Maximum reconnection attempts reached');
+                updateStatus('failed', 'Max reconnection attempts reached - manual intervention required');
+                showManualReconnectPrompt();
+            }
+        }
+
+        function showManualReconnectPrompt() {
+            log('🔧 Manual reconnection required - use the Connect button to retry');
+        }
+
+        function simulateNetworkIssue() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                log('🌐 Simulating network issue (forcing disconnect)...');
+                ws.close(1006, 'Simulated network issue');
+            } else {
+                log('❌ No active connection to simulate network issue on');
+            }
+        }
+
+        function testReconnection() {
+            log('🧪 Starting reconnection logic test...');
+
+            // Test sequence: Connect -> Disconnect -> Auto-reconnect
+            connectWebSocket();
+
+            setTimeout(() => {
+                log('🧪 Test: Simulating unexpected disconnect...');
+                if (ws) {
+                    ws.close(1006, 'Test disconnect');
+                }
+            }, 3000);
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        // Initialize page
+        window.onload = () => {
+            log('🚀 WebSocket Reconnection Demo initialized');
+            log('💡 Use the buttons above to test different scenarios');
+            updateStatus('disconnected', 'Ready to connect');
+        };
+    </script>
+</body>
+</html>

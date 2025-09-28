@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Trading Button Functions Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-container { max-width: 900px; margin: 0 auto; }
+        .test-section {
+            background: #f8f9fa;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        .result { margin: 10px 0; padding: 10px; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        .btn-buy { background: #28a745; color: white; border: none; }
+        .btn-sell { background: #dc3545; color: white; border: none; }
+        .btn-test { background: #007bff; color: white; border: none; }
+        input { padding: 8px; margin: 5px; }
+        .form-group { margin: 10px 0; }
+        .status { font-weight: bold; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Trading Button Functions Test</h1>
+        <p>This page tests all trading-related button functions to ensure they work correctly without errors.</p>
+
+        <div class="test-section">
+            <h3>1. Buy/Sell Order Tests</h3>
+            <div class="form-group">
+                <label>Symbol:</label>
+                <input type="text" id="tradeSymbol" value="AAPL" placeholder="Enter symbol">
+            </div>
+            <div class="form-group">
+                <label>Quantity:</label>
+                <input type="number" id="tradeQuantity" value="10" min="1">
+            </div>
+            <div class="form-group">
+                <button id="buyButton" class="btn-buy" onclick="testPlaceTrade('buy')">
+                    🔼 Test Buy Order
+                </button>
+                <button id="sellButton" class="btn-sell" onclick="testPlaceTrade('sell')">
+                    🔽 Test Sell Order
+                </button>
+            </div>
+            <div id="trade-results" class="result info">Ready to test trading...</div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. Settings Management</h3>
+            <div class="form-group">
+                <label>Position Size (%):</label>
+                <input type="number" id="positionSize" value="2" min="0.1" max="100" step="0.1">
+            </div>
+            <div class="form-group">
+                <label>Stop Loss (%):</label>
+                <input type="number" id="stopLoss" value="5" min="0.1" max="50" step="0.1">
+            </div>
+            <div class="form-group">
+                <label>Take Profit (%):</label>
+                <input type="number" id="takeProfit" value="10" min="0.1" max="100" step="0.1">
+            </div>
+            <div class="form-group">
+                <button id="saveSettings" class="btn-test" onclick="testSaveSettings()">
+                    💾 Test Save Settings
+                </button>
+            </div>
+            <div id="settings-results" class="result info">Ready to test settings...</div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. Position Management</h3>
+            <div class="form-group">
+                <label>Position Symbol:</label>
+                <input type="text" id="positionSymbol" value="AAPL" placeholder="Symbol to close">
+            </div>
+            <div class="form-group">
+                <button class="btn-test" onclick="testClosePosition()">
+                    ❌ Test Close Position
+                </button>
+            </div>
+            <div id="position-results" class="result info">Ready to test position management...</div>
+        </div>
+
+        <div class="test-section">
+            <h3>4. Strategy Building</h3>
+            <div class="form-group">
+                <button class="btn-test" onclick="testAddToStrategy('call', 150, 5.50, 'buy')">
+                    📈 Test Add Call Option
+                </button>
+                <button class="btn-test" onclick="testAddToStrategy('put', 140, 3.25, 'sell')">
+                    📉 Test Add Put Option
+                </button>
+            </div>
+            <div class="form-group">
+                <button class="btn-test" onclick="testClearStrategy()">
+                    🗑️ Test Clear Strategy
+                </button>
+            </div>
+            <div id="strategy-results" class="result info">Ready to test strategy building...</div>
+            <div id="currentStrategy"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>5. API Connectivity Test</h3>
+            <button class="btn-test" onclick="testAPIConnectivity()">
+                🌐 Test API Endpoints
+            </button>
+            <div id="api-results" class="result info">Ready to test API connectivity...</div>
+        </div>
+
+        <div class="test-section">
+            <h3>Overall Test Results</h3>
+            <div id="overall-status" class="status">Tests not run yet</div>
+            <div id="test-summary"></div>
+        </div>
+    </div>
+
+    <script>
+        // Mock dashboard object with proper methods
+        window.dashboard = {
+            showNotification: function(message, type) {
+                console.log(`[${type.toUpperCase()}] ${message}`);
+                this.updateTestResult('notification', message, type);
+            },
+
+            updateTestResult: function(section, message, type) {
+                const resultMap = {
+                    'notification': 'trade-results',
+                    'trade': 'trade-results',
+                    'settings': 'settings-results',
+                    'position': 'position-results',
+                    'strategy': 'strategy-results',
+                    'api': 'api-results'
+                };
+
+                const elementId = resultMap[section] || 'trade-results';
+                const element = document.getElementById(elementId);
+                if (element) {
+                    element.className = `result ${type}`;
+                    element.innerHTML = message;
+                }
+            },
+
+            placeTrade: async function(side) {
+                const symbol = document.getElementById('tradeSymbol').value.trim().toUpperCase();
+                const quantity = parseInt(document.getElementById('tradeQuantity').value) || 1;
+
+                if (!symbol) {
+                    this.updateTestResult('trade', 'Error: Please enter a symbol', 'error');
+                    return;
+                }
+
+                if (quantity <= 0) {
+                    this.updateTestResult('trade', 'Error: Please enter a valid quantity', 'error');
+                    return;
+                }
+
+                try {
+                    this.updateTestResult('trade', `Placing ${side} order for ${quantity} shares of ${symbol}...`, 'info');
+
+                    const tradeData = {
+                        symbol: symbol,
+                        qty: quantity,
+                        side: side
+                    };
+
+                    const endpoint = side === 'buy' ? '/api/stock/buy' : '/api/stock/sell';
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(tradeData)
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok && result.success) {
+                        this.updateTestResult('trade',
+                            `✅ SUCCESS: ${side.toUpperCase()} order placed - Order ID: ${result.order.id}`,
+                            'success'
+                        );
+                    } else {
+                        throw new Error(result.detail || result.message || 'Trade execution failed');
+                    }
+
+                } catch (error) {
+                    this.updateTestResult('trade',
+                        `❌ FAILED: ${error.message}`,
+                        'error'
+                    );
+                }
+            },
+
+            saveSettings: async function() {
+                try {
+                    this.updateTestResult('settings', 'Saving settings...', 'info');
+
+                    const updates = {
+                        position_size: parseFloat(document.getElementById('positionSize').value) / 100,
+                        stop_loss_pct: parseFloat(document.getElementById('stopLoss').value) / 100,
+                        take_profit_pct: parseFloat(document.getElementById('takeProfit').value) / 100
+                    };
+
+                    const response = await fetch('/api/settings', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(updates)
+                    });
+
+                    if (response.ok) {
+                        this.updateTestResult('settings',
+                            '✅ SUCCESS: Settings saved successfully',
+                            'success'
+                        );
+                    } else {
+                        const result = await response.json();
+                        throw new Error(result.detail || 'Failed to save settings');
+                    }
+
+                } catch (error) {
+                    this.updateTestResult('settings',
+                        `❌ FAILED: ${error.message}`,
+                        'error'
+                    );
+                }
+            },
+
+            closePosition: async function(symbol) {
+                try {
+                    this.updateTestResult('position', `Attempting to close position in ${symbol}...`, 'info');
+
+                    // Simulate position closure
+                    this.updateTestResult('position',
+                        `✅ SUCCESS: Position close signal sent for ${symbol}`,
+                        'success'
+                    );
+
+                } catch (error) {
+                    this.updateTestResult('position',
+                        `❌ FAILED: ${error.message}`,
+                        'error'
+                    );
+                }
+            },
+
+            addToStrategy: function(optionType, strike, price, action) {
+                try {
+                    const strategyLeg = {
+                        type: optionType,
+                        strike: strike,
+                        price: price,
+                        action: action
+                    };
+
+                    // Get existing strategy
+                    let currentStrategy = JSON.parse(localStorage.getItem('testStrategy') || '{"legs": []}');
+                    currentStrategy.legs.push(strategyLeg);
+                    localStorage.setItem('testStrategy', JSON.stringify(currentStrategy));
+
+                    this.updateTestResult('strategy',
+                        `✅ SUCCESS: Added ${action} ${optionType} @ $${strike} to strategy`,
+                        'success'
+                    );
+
+                    this.displayCurrentStrategy(currentStrategy);
+
+                } catch (error) {
+                    this.updateTestResult('strategy',
+                        `❌ FAILED: ${error.message}`,
+                        'error'
+                    );
+                }
+            },
+
+            clearStrategy: function() {
+                try {
+                    localStorage.removeItem('testStrategy');
+                    document.getElementById('currentStrategy').innerHTML = '<p class="text-muted">Strategy cleared</p>';
+
+                    this.updateTestResult('strategy',
+                        '✅ SUCCESS: Strategy cleared',
+                        'success'
+                    );
+
+                } catch (error) {
+                    this.updateTestResult('strategy',
+                        `❌ FAILED: ${error.message}`,
+                        'error'
+                    );
+                }
+            },
+
+            displayCurrentStrategy: function(strategy) {
+                const container = document.getElementById('currentStrategy');
+                if (!container) return;
+
+                if (!strategy.legs || strategy.legs.length === 0) {
+                    container.innerHTML = '<p class="text-muted">No strategy legs</p>';
+                    return;
+                }
+
+                let html = '<h4>Current Strategy:</h4><ul>';
+                strategy.legs.forEach(leg => {
+                    html += `<li>${leg.action.toUpperCase()} ${leg.type.toUpperCase()} @ $${leg.strike} ($${leg.price})</li>`;
+                });
+                html += '</ul>';
+
+                container.innerHTML = html;
+            }
+        };
+
+        // Test functions
+        function testPlaceTrade(side) {
+            dashboard.placeTrade(side);
+        }
+
+        function testSaveSettings() {
+            dashboard.saveSettings();
+        }
+
+        function testClosePosition() {
+            const symbol = document.getElementById('positionSymbol').value.trim().toUpperCase();
+            dashboard.closePosition(symbol);
+        }
+
+        function testAddToStrategy(optionType, strike, price, action) {
+            dashboard.addToStrategy(optionType, strike, price, action);
+        }
+
+        function testClearStrategy() {
+            dashboard.clearStrategy();
+        }
+
+        async function testAPIConnectivity() {
+            const results = [];
+
+            const endpoints = [
+                { url: '/api/health', name: 'Health Check' },
+                { url: '/api/account', name: 'Account Info' },
+                { url: '/api/positions', name: 'Positions' },
+                { url: '/api/settings', name: 'Settings' }
+            ];
+
+            dashboard.updateTestResult('api', 'Testing API connectivity...', 'info');
+
+            for (const endpoint of endpoints) {
+                try {
+                    const response = await fetch(endpoint.url);
+                    if (response.ok) {
+                        results.push(`✅ ${endpoint.name}: OK`);
+                    } else {
+                        results.push(`⚠️ ${endpoint.name}: ${response.status}`);
+                    }
+                } catch (error) {
+                    results.push(`❌ ${endpoint.name}: Failed`);
+                }
+            }
+
+            dashboard.updateTestResult('api', results.join('<br>'), 'info');
+        }
+
+        // Auto-run connectivity test on page load
+        window.onload = function() {
+            console.log('Trading functions test page loaded');
+            testAPIConnectivity();
+        };
+    </script>
+</body>
+</html>

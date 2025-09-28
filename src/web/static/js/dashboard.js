@@ -8,6 +8,19 @@ class TradingDashboard {
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 5;
 
+        // Keep-alive and ping management
+        this.lastActivityTime = new Date();
+        this.heartbeatInterval = null;
+        this.pingInterval = 30000; // 30 seconds
+        this.connectionTimeout = 60000; // 60 seconds
+
+        // Enhanced reconnection properties
+        this.reconnectDelay = 1000; // Start with 1 second
+        this.maxReconnectDelay = 30000; // Max 30 seconds
+        this.reconnectTimeoutId = null;
+        this.lastDisconnectTime = null;
+        this.connectionState = 'disconnected'; // disconnected, connecting, connected, failed
+
         this.init();
     }
 
@@ -28,6 +41,11 @@ class TradingDashboard {
                 this.showNotification(`Loading ${symbol} chart with real-time data...`, 'info');
                 this.loadChart(symbol);
                 this.updateTradeForm(symbol);
+
+                // Load enhanced data for new symbol
+                this.loadTechnicalIndicators(symbol);
+                this.loadEnhancedNews(symbol);
+                this.loadOptionsChain(symbol);
             } else {
                 this.showNotification('Please enter a valid stock symbol', 'warning');
             }
@@ -169,22 +187,63 @@ class TradingDashboard {
             this.ws = new WebSocket(wsUrl);
 
             this.ws.onopen = () => {
-                console.log('WebSocket connected');
+                console.log('WebSocket connected successfully');
                 this.isConnected = true;
                 this.reconnectAttempts = 0;
+                this.reconnectDelay = 1000; // Reset reconnection delay
+                this.lastActivityTime = new Date();
+                this.connectionState = 'connected';
+
+                // Clear any pending reconnection timeouts
+                if (this.reconnectTimeoutId) {
+                    clearTimeout(this.reconnectTimeoutId);
+                    this.reconnectTimeoutId = null;
+                }
+
                 this.updateConnectionStatus('connected');
+                this.startHeartbeat();
+
+                // Show success notification on reconnection
+                if (this.reconnectAttempts > 0 || this.lastDisconnectTime) {
+                    this.showNotification('Successfully reconnected to server', 'success');
+                }
             };
 
             this.ws.onmessage = (event) => {
-                const data = JSON.parse(event.data);
+                let data;
+                try {
+                    data = JSON.parse(event.data);
+                } catch (e) {
+                    console.error("Invalid JSON from WebSocket:", event.data, "Error:", e);
+                    return;
+                }
+                this.lastActivityTime = new Date(); // Update activity on each message
                 this.handleWebSocketMessage(data);
             };
 
-            this.ws.onclose = () => {
-                console.log('WebSocket disconnected');
+            this.ws.onclose = (event) => {
+                console.log('WebSocket disconnected', event.code, event.reason);
                 this.isConnected = false;
+                this.lastDisconnectTime = new Date();
+                this.connectionState = 'disconnected';
+                this.stopHeartbeat();
+
+                // Determine if this was an unexpected disconnection
+                const wasConnected = this.connectionState === 'connected';
+
                 this.updateConnectionStatus('disconnected');
-                this.attemptReconnect();
+
+                // Only show disconnect notification if we were previously connected
+                if (wasConnected) {
+                    this.showNotification('Connection to server lost. Attempting to reconnect...', 'warning');
+                }
+
+                // Attempt reconnection if not manually closed
+                if (event.code !== 1000) { // 1000 = normal closure
+                    this.attemptReconnect();
+                } else {
+                    console.log('WebSocket closed normally (no reconnection needed)');
+                }
             };
 
             this.ws.onerror = (error) => {
@@ -199,20 +258,110 @@ class TradingDashboard {
     }
 
     attemptReconnect() {
+        // Clear any existing reconnection timeout
+        if (this.reconnectTimeoutId) {
+            clearTimeout(this.reconnectTimeoutId);
+            this.reconnectTimeoutId = null;
+        }
+
         if (this.reconnectAttempts < this.maxReconnectAttempts) {
             this.reconnectAttempts++;
+            this.connectionState = 'connecting';
             this.updateConnectionStatus('connecting');
 
-            setTimeout(() => {
-                console.log(`Reconnection attempt ${this.reconnectAttempts}`);
+            // Exponential backoff with jitter
+            const baseDelay = Math.min(this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1), this.maxReconnectDelay);
+            const jitter = Math.random() * 1000; // Add randomness to prevent thundering herd
+            const delay = baseDelay + jitter;
+
+            console.log(`Reconnection attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${Math.round(delay/1000)}s`);
+
+            this.showNotification(
+                `Connection lost. Reconnecting... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`,
+                'warning'
+            );
+
+            this.reconnectTimeoutId = setTimeout(() => {
+                console.log(`Executing reconnection attempt ${this.reconnectAttempts}`);
                 this.connectWebSocket();
-            }, 2000 * this.reconnectAttempts);
+            }, delay);
+        } else {
+            // Max attempts reached
+            this.connectionState = 'failed';
+            this.updateConnectionStatus('failed');
+            this.handleReconnectionFailure();
+        }
+    }
+
+    handleReconnectionFailure() {
+        console.error('Max reconnection attempts reached. Connection failed.');
+
+        this.showNotification(
+            'Connection failed after multiple attempts. Please check your internet connection and refresh the page.',
+            'error',
+            10000 // Show for 10 seconds
+        );
+
+        // Offer manual reconnection option
+        this.showReconnectionPrompt();
+    }
+
+    showReconnectionPrompt() {
+        // Create a manual reconnection button
+        const existingPrompt = document.getElementById('reconnectionPrompt');
+        if (!existingPrompt) {
+            const prompt = document.createElement('div');
+            prompt.id = 'reconnectionPrompt';
+            prompt.className = 'alert alert-warning reconnection-prompt';
+            prompt.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Connection Lost</strong> - Real-time updates are disabled
+                    </div>
+                    <div>
+                        <button class="btn btn-sm btn-primary me-2" onclick="dashboard.manualReconnect()">
+                            <i class="fas fa-sync"></i> Reconnect
+                        </button>
+                        <button class="btn btn-sm btn-secondary" onclick="dashboard.dismissReconnectionPrompt()">
+                            <i class="fas fa-times"></i> Dismiss
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            // Insert at top of dashboard
+            const container = document.querySelector('.container-fluid') || document.body;
+            container.insertBefore(prompt, container.firstChild);
+        }
+    }
+
+    manualReconnect() {
+        console.log('Manual reconnection initiated');
+        this.dismissReconnectionPrompt();
+        this.reconnectAttempts = 0; // Reset attempts
+        this.reconnectDelay = 1000; // Reset delay
+        this.connectionState = 'connecting';
+        this.showNotification('Attempting manual reconnection...', 'info');
+        this.connectWebSocket();
+    }
+
+    dismissReconnectionPrompt() {
+        const prompt = document.getElementById('reconnectionPrompt');
+        if (prompt) {
+            prompt.remove();
         }
     }
 
     updateConnectionStatus(status) {
         const statusElement = document.getElementById('connectionStatus');
-        const icon = statusElement.querySelector('i');
+        if (!statusElement) {
+            console.warn('Connection status element not found');
+            return;
+        }
+
+        // Store current state
+        this.connectionState = status;
 
         statusElement.className = 'badge';
 
@@ -220,42 +369,110 @@ class TradingDashboard {
             case 'connected':
                 statusElement.classList.add('bg-success', 'connected');
                 statusElement.innerHTML = '<i class="fas fa-circle"></i> Connected';
+                statusElement.title = 'WebSocket connected and receiving real-time updates';
+                // Clear any reconnection prompt when successfully connected
+                this.dismissReconnectionPrompt();
                 break;
+
             case 'connecting':
                 statusElement.classList.add('bg-warning', 'connecting');
                 statusElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connecting';
+                statusElement.title = `Attempting to connect... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`;
                 break;
+
             case 'disconnected':
                 statusElement.classList.add('bg-danger', 'disconnected');
                 statusElement.innerHTML = '<i class="fas fa-times-circle"></i> Disconnected';
+                statusElement.title = 'WebSocket disconnected - real-time updates unavailable';
                 break;
+
+            case 'failed':
+                statusElement.classList.add('bg-dark', 'failed');
+                statusElement.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Connection Failed';
+                statusElement.title = 'Connection failed after multiple attempts - manual intervention required';
+                break;
+
+            case 'reconnecting':
+                statusElement.classList.add('bg-info', 'reconnecting');
+                statusElement.innerHTML = '<i class="fas fa-sync fa-spin"></i> Reconnecting';
+                statusElement.title = `Reconnecting... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`;
+                break;
+
+            default:
+                statusElement.classList.add('bg-secondary', 'unknown');
+                statusElement.innerHTML = '<i class="fas fa-question"></i> Unknown';
+                statusElement.title = 'Connection status unknown';
         }
     }
 
     handleWebSocketMessage(data) {
         console.log('WebSocket message received:', data);
 
-        switch (data.type) {
-            case 'periodic_update':
-                this.updateDashboardData(data);
-                break;
-            case 'market_data':
-            case 'price_update':
-                this.handleMarketDataUpdate(data);
-                break;
-            case 'trading_mode_changed':
-                this.updateTradingModeUI(data.is_live);
-                break;
-            case 'ai_mode_changed':
-                this.updateAIModeUI(data.is_auto);
-                break;
-            case 'trade_placed':
-                this.showNotification('Trade placed successfully', 'success');
-                this.loadOrders();
-                this.loadPositions();
-                break;
-            default:
-                console.warn('Unknown WebSocket message type:', data.type, 'Full message:', data);
+        // Validate message structure
+        if (!data || typeof data !== 'object') {
+            console.error('Invalid WebSocket message structure:', data);
+            return;
+        }
+
+        // Handle different message types
+        try {
+            switch (data.type) {
+                case 'periodic_update':
+                    this.updateDashboardData(data);
+                    break;
+
+                case 'market_data':
+                case 'price_update':
+                    this.handleMarketDataUpdate(data);
+                    break;
+
+                case 'position_update':
+                    this.handlePositionUpdate(data);
+                    break;
+
+                case 'order_update':
+                    this.handleOrderUpdate(data);
+                    break;
+
+                case 'portfolio_update':
+                    this.handlePortfolioUpdate(data);
+                    break;
+
+                case 'trading_mode_changed':
+                    this.updateTradingModeUI(data.is_live);
+                    break;
+
+                case 'ai_mode_changed':
+                    this.updateAIModeUI(data.is_auto);
+                    break;
+
+                case 'trade_placed':
+                    this.handleTradeConfirmation(data);
+                    break;
+
+                case 'alert':
+                case 'notification':
+                    this.handleAlert(data);
+                    break;
+
+                case 'error':
+                    this.handleError(data);
+                    break;
+
+                case 'ping':
+                    this.handlePing(data);
+                    break;
+
+                case 'keep_alive':
+                    this.handleKeepAlive(data);
+                    break;
+
+                default:
+                    console.warn('Unknown WebSocket message type:', data.type, 'Full message:', data);
+                    this.handleUnknownMessage(data);
+            }
+        } catch (error) {
+            console.error('Error handling WebSocket message:', error, 'Message:', data);
         }
     }
 
@@ -284,10 +501,599 @@ class TradingDashboard {
             // Load available strategies for dropdown
             await this.loadAvailableStrategies();
 
+            // Load enhanced data from new endpoints
+            await this.loadTechnicalIndicators();
+            await this.loadEnhancedNews();
+
+            // Load options data
+            await this.loadOptionsChain();
+
         } catch (error) {
             console.error('Failed to load initial data:', error);
             this.showNotification('Failed to load initial data', 'error');
         }
+    }
+
+    async loadTechnicalIndicators(symbol = this.currentSymbol) {
+        try {
+            const response = await fetch(`/api/indicators/${symbol}`);
+            const data = await response.json();
+
+            if (response.ok) {
+                this.displayTechnicalIndicators(data);
+            } else {
+                console.error('Failed to load technical indicators:', data);
+            }
+        } catch (error) {
+            console.error('Error loading technical indicators:', error);
+        }
+    }
+
+    displayTechnicalIndicators(data) {
+        const container = document.getElementById('technicalIndicators');
+        if (!container) return;
+
+        const indicators = data.indicators;
+        const analysis = data.analysis;
+
+        container.innerHTML = `
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card bg-dark border-secondary mb-3">
+                        <div class="card-header text-info">
+                            <i class="fas fa-chart-line"></i> Technical Indicators
+                        </div>
+                        <div class="card-body">
+                            ${indicators.rsi ? `
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>RSI (${indicators.rsi.period}):</span>
+                                    <span class="badge bg-${this.getSignalColor(indicators.rsi.signal)}">${indicators.rsi.value} (${indicators.rsi.signal})</span>
+                                </div>
+                            ` : ''}
+                            ${indicators.macd ? `
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>MACD:</span>
+                                    <span class="badge bg-${this.getSignalColor(indicators.macd.signal)}">${indicators.macd.macd_line.toFixed(3)} (${indicators.macd.signal})</span>
+                                </div>
+                            ` : ''}
+                            ${indicators.sma ? `
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>SMA 20/50:</span>
+                                    <span class="badge bg-${this.getSignalColor(indicators.sma.signal)}">${indicators.sma.sma_20}/${indicators.sma.sma_50} (${indicators.sma.signal})</span>
+                                </div>
+                            ` : ''}
+                            ${indicators.bollinger_bands ? `
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Bollinger:</span>
+                                    <span class="badge bg-${this.getSignalColor(indicators.bollinger_bands.signal)}">${indicators.bollinger_bands.position} (${indicators.bollinger_bands.signal})</span>
+                                </div>
+                            ` : ''}
+                            ${indicators.stochastic ? `
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Stochastic:</span>
+                                    <span class="badge bg-${this.getSignalColor(indicators.stochastic.signal)}">${indicators.stochastic.k_percent.toFixed(1)}% (${indicators.stochastic.signal})</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card bg-dark border-secondary mb-3">
+                        <div class="card-header text-warning">
+                            <i class="fas fa-brain"></i> AI Analysis
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Trend:</span>
+                                <span class="badge bg-${analysis.trend === 'bullish' ? 'success' : analysis.trend === 'bearish' ? 'danger' : 'secondary'}">${analysis.trend}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Strength:</span>
+                                <span class="badge bg-${analysis.strength === 'strong' ? 'success' : analysis.strength === 'weak' ? 'warning' : 'secondary'}">${analysis.strength}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Recommendation:</span>
+                                <span class="badge bg-${analysis.recommendation === 'buy' ? 'success' : analysis.recommendation === 'sell' ? 'danger' : 'warning'}">${analysis.recommendation.toUpperCase()}</span>
+                            </div>
+                            <div class="text-muted small mt-2">
+                                Last updated: ${new Date(data.timestamp).toLocaleTimeString()}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    async loadEnhancedNews(symbol = this.currentSymbol, limit = 10) {
+        try {
+            const response = await fetch(`/api/news/${symbol}?limit=${limit}`);
+            const data = await response.json();
+
+            if (response.ok) {
+                this.displayEnhancedNews(data);
+            } else {
+                console.error('Failed to load enhanced news:', data);
+            }
+        } catch (error) {
+            console.error('Error loading enhanced news:', error);
+        }
+    }
+
+    displayEnhancedNews(data) {
+        const container = document.getElementById('morningNews');
+        if (!container) return;
+
+        const newsHtml = data.news.slice(0, 5).map(article => `
+            <div class="border-bottom border-secondary pb-2 mb-2">
+                <div class="d-flex justify-content-between align-items-start">
+                    <h6 class="mb-1">
+                        <a href="${article.url}" target="_blank" class="text-decoration-none text-info">
+                            ${article.title}
+                        </a>
+                    </h6>
+                    <span class="badge bg-${this.getSentimentColor(article.sentiment)} ms-2">${article.sentiment}</span>
+                </div>
+                <p class="mb-1 text-muted small">${article.summary}</p>
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        ${article.source} • ${new Date(article.published).toLocaleDateString()}
+                    </small>
+                    <span class="badge bg-outline-secondary">${article.relevance}</span>
+                </div>
+            </div>
+        `).join('');
+
+        container.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="text-info mb-0">
+                    <i class="fas fa-newspaper"></i> Enhanced Market News (${data.symbol})
+                </h6>
+                <small class="text-muted">Updated: ${new Date(data.last_updated).toLocaleTimeString()}</small>
+            </div>
+            ${newsHtml}
+            <div class="text-center mt-3">
+                <button class="btn btn-outline-info btn-sm" onclick="dashboard.loadEnhancedNews('${data.symbol}', 20)">
+                    <i class="fas fa-sync"></i> Load More News
+                </button>
+            </div>
+        `;
+    }
+
+    getSignalColor(signal) {
+        switch(signal?.toLowerCase()) {
+            case 'bullish':
+            case 'buy':
+                return 'success';
+            case 'bearish':
+            case 'sell':
+                return 'danger';
+            case 'neutral':
+            case 'hold':
+                return 'warning';
+            default:
+                return 'secondary';
+        }
+    }
+
+    getSentimentColor(sentiment) {
+        switch(sentiment?.toLowerCase()) {
+            case 'positive':
+                return 'success';
+            case 'negative':
+                return 'danger';
+            case 'neutral':
+                return 'secondary';
+            default:
+                return 'secondary';
+        }
+    }
+
+    // ============ OPTIONS TRADING FEATURES ============
+
+    async loadOptionsChain(symbol = this.currentSymbol) {
+        try {
+            const response = await fetch(`/api/options/enhanced/${symbol}`);
+            const data = await response.json();
+
+            if (response.ok) {
+                this.optionsData = data;
+                this.displayOptionsChain(data);
+            } else {
+                console.error('Failed to load options chain:', data);
+            }
+        } catch (error) {
+            console.error('Error loading options chain:', error);
+        }
+    }
+
+    displayOptionsChain(data) {
+        // This will be triggered when the options modal is opened
+        // For now, just store the data
+        this.optionsData = data;
+    }
+
+    openOptionsCenter() {
+        // Load fresh options data
+        this.loadOptionsChain();
+
+        // Show the options modal
+        const modal = new bootstrap.Modal(document.getElementById('optionsModal'));
+        modal.show();
+
+        // Initialize the options UI
+        this.initializeOptionsUI();
+    }
+
+    initializeOptionsUI() {
+        if (!this.optionsData) return;
+
+        const data = this.optionsData;
+
+        // Update options header info
+        document.getElementById('optionsSymbol').textContent = data.symbol;
+        document.getElementById('optionsPrice').textContent = `$${data.underlying_price}`;
+        document.getElementById('optionsExpiration').textContent = data.expiration_date;
+        document.getElementById('optionsIV').textContent = `${(data.implied_volatility * 100).toFixed(1)}%`;
+
+        // Build options chain table
+        this.buildOptionsChainTable(data.options_chain);
+
+        // Update market summary
+        this.updateMarketSummary(data.market_summary);
+    }
+
+    buildOptionsChainTable(optionsChain) {
+        const tbody = document.getElementById('optionsChainBody');
+        tbody.innerHTML = '';
+
+        optionsChain.forEach(strike => {
+            const row = document.createElement('tr');
+
+            // Determine if this strike is near the money
+            const isNearMoney = Math.abs(strike.strike - this.optionsData.underlying_price) <= 10;
+            if (isNearMoney) {
+                row.classList.add('table-warning');
+            }
+
+            row.innerHTML = `
+                <!-- Call Option Data -->
+                <td class="text-end">
+                    <small class="text-muted">IV: ${(strike.call.implied_volatility * 100).toFixed(1)}%</small><br>
+                    <small class="text-muted">Vol: ${strike.call.volume}</small>
+                </td>
+                <td class="text-end">
+                    <span class="text-success">Δ ${strike.call.delta.toFixed(2)}</span><br>
+                    <small class="text-muted">Γ ${strike.call.gamma.toFixed(3)}</small>
+                </td>
+                <td class="text-end">
+                    <span class="fw-bold">$${strike.call.bid}</span> x <span class="fw-bold">$${strike.call.ask}</span><br>
+                    <small class="text-muted">Mid: $${strike.call.mid}</small>
+                </td>
+
+                <!-- Strike Price (Center) -->
+                <td class="text-center fw-bold ${strike.call.moneyness === 'ATM' ? 'text-warning' : ''}">
+                    $${strike.strike}
+                    ${strike.call.moneyness === 'ATM' ? '<br><small class="badge bg-warning text-dark">ATM</small>' : ''}
+                </td>
+
+                <!-- Put Option Data -->
+                <td class="text-start">
+                    <span class="fw-bold">$${strike.put.bid}</span> x <span class="fw-bold">$${strike.put.ask}</span><br>
+                    <small class="text-muted">Mid: $${strike.put.mid}</small>
+                </td>
+                <td class="text-start">
+                    <span class="text-danger">Δ ${strike.put.delta.toFixed(2)}</span><br>
+                    <small class="text-muted">Γ ${strike.put.gamma.toFixed(3)}</small>
+                </td>
+                <td class="text-start">
+                    <small class="text-muted">IV: ${(strike.put.implied_volatility * 100).toFixed(1)}%</small><br>
+                    <small class="text-muted">Vol: ${strike.put.volume}</small>
+                </td>
+
+                <!-- Action Buttons -->
+                <td>
+                    <div class="btn-group-vertical btn-group-sm" role="group">
+                        <button class="btn btn-outline-success btn-xs" onclick="dashboard.addToStrategy('call', ${strike.strike}, ${strike.call.mid}, 'buy')">
+                            Buy Call
+                        </button>
+                        <button class="btn btn-outline-danger btn-xs" onclick="dashboard.addToStrategy('call', ${strike.strike}, ${strike.call.mid}, 'sell')">
+                            Sell Call
+                        </button>
+                        <button class="btn btn-outline-success btn-xs" onclick="dashboard.addToStrategy('put', ${strike.strike}, ${strike.put.mid}, 'buy')">
+                            Buy Put
+                        </button>
+                        <button class="btn btn-outline-danger btn-xs" onclick="dashboard.addToStrategy('put', ${strike.strike}, ${strike.put.mid}, 'sell')">
+                            Sell Put
+                        </button>
+                    </div>
+                </td>
+            `;
+
+            // Add click handler for Greeks calculator
+            row.addEventListener('click', (e) => {
+                if (!e.target.classList.contains('btn')) {
+                    this.showGreeksCalculator(strike.strike);
+                }
+            });
+
+            tbody.appendChild(row);
+        });
+    }
+
+    updateMarketSummary(summary) {
+        document.getElementById('totalCallVolume').textContent = summary.total_call_volume.toLocaleString();
+        document.getElementById('totalPutVolume').textContent = summary.total_put_volume.toLocaleString();
+        document.getElementById('putCallRatio').textContent = summary.put_call_ratio;
+        document.getElementById('maxPain').textContent = `$${summary.max_pain}`;
+        document.getElementById('ivRank').textContent = `${summary.iv_rank}%`;
+    }
+
+    // Strategy Builder
+    addToStrategy(type, strike, price, action) {
+        if (!this.strategyLegs) {
+            this.strategyLegs = [];
+        }
+
+        const leg = {
+            type: type,
+            strike: strike,
+            price: price,
+            action: action,
+            quantity: 1
+        };
+
+        this.strategyLegs.push(leg);
+        this.updateStrategyBuilder();
+        this.showNotification(`Added ${action} ${type} $${strike} to strategy`, 'success');
+    }
+
+    updateStrategyBuilder() {
+        const container = document.getElementById('strategyLegs');
+        if (!container || !this.strategyLegs) return;
+
+        container.innerHTML = this.strategyLegs.map((leg, index) => `
+            <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
+                <div>
+                    <span class="badge bg-${leg.action === 'buy' ? 'success' : 'danger'}">${leg.action.toUpperCase()}</span>
+                    <span class="ms-2">${leg.quantity}x ${leg.type.toUpperCase()} $${leg.strike}</span>
+                    <small class="text-muted ms-2">@ $${leg.price}</small>
+                </div>
+                <button class="btn btn-sm btn-outline-danger" onclick="dashboard.removeStrategyLeg(${index})">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `).join('');
+
+        // Update strategy analysis
+        this.analyzeStrategy();
+    }
+
+    removeStrategyLeg(index) {
+        this.strategyLegs.splice(index, 1);
+        this.updateStrategyBuilder();
+    }
+
+    async analyzeStrategy() {
+        if (!this.strategyLegs || this.strategyLegs.length === 0) {
+            document.getElementById('strategyAnalysis').innerHTML = '<p class="text-muted">Add options to build a strategy</p>';
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/options/strategy/build', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: 'custom',
+                    symbol: this.currentSymbol,
+                    legs: this.strategyLegs.map(leg => ({
+                        quantity: leg.quantity,
+                        action: leg.action,
+                        option_type: leg.type,
+                        strike: leg.strike,
+                        price: leg.price
+                    }))
+                })
+            });
+
+            const analysis = await response.json();
+            this.displayStrategyAnalysis(analysis);
+
+        } catch (error) {
+            console.error('Strategy analysis error:', error);
+        }
+    }
+
+    displayStrategyAnalysis(analysis) {
+        const container = document.getElementById('strategyAnalysis');
+        container.innerHTML = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Strategy Summary</h6>
+                    <table class="table table-sm table-dark">
+                        <tr><td>Total Cost:</td><td class="fw-bold ${analysis.summary.total_cost >= 0 ? 'text-success' : 'text-danger'}">$${analysis.summary.total_cost}</td></tr>
+                        <tr><td>Max Profit:</td><td class="text-success">$${analysis.summary.max_profit}</td></tr>
+                        <tr><td>Max Loss:</td><td class="text-danger">$${analysis.summary.max_loss}</td></tr>
+                        <tr><td>Net Delta:</td><td>${analysis.summary.net_delta.toFixed(3)}</td></tr>
+                        <tr><td>Net Theta:</td><td>${analysis.summary.net_theta.toFixed(3)}</td></tr>
+                    </table>
+                    ${analysis.summary.breakeven_points.length > 0 ? `
+                        <p><strong>Breakeven:</strong> $${analysis.summary.breakeven_points.join(', $')}</p>
+                    ` : ''}
+                </div>
+                <div class="col-md-6">
+                    <h6>P&L Chart</h6>
+                    <canvas id="plChart" width="300" height="200"></canvas>
+                </div>
+            </div>
+        `;
+
+        // Draw P&L chart
+        this.drawPLChart(analysis.pl_chart);
+    }
+
+    drawPLChart(chartData) {
+        const canvas = document.getElementById('plChart');
+        if (!canvas) return;
+
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;
+        const height = canvas.height;
+
+        // Clear canvas
+        ctx.clearRect(0, 0, width, height);
+
+        // Set up chart parameters
+        const padding = 40;
+        const chartWidth = width - (padding * 2);
+        const chartHeight = height - (padding * 2);
+
+        const prices = chartData.prices;
+        const plValues = chartData.pl_values;
+
+        const minPrice = Math.min(...prices);
+        const maxPrice = Math.max(...prices);
+        const minPL = Math.min(...plValues);
+        const maxPL = Math.max(...plValues);
+
+        // Draw axes
+        ctx.strokeStyle = '#6c757d';
+        ctx.lineWidth = 1;
+
+        // X-axis
+        ctx.beginPath();
+        ctx.moveTo(padding, height - padding);
+        ctx.lineTo(width - padding, height - padding);
+        ctx.stroke();
+
+        // Y-axis
+        ctx.beginPath();
+        ctx.moveTo(padding, padding);
+        ctx.lineTo(padding, height - padding);
+        ctx.stroke();
+
+        // Draw zero line
+        const zeroY = height - padding - ((0 - minPL) / (maxPL - minPL)) * chartHeight;
+        ctx.strokeStyle = '#ffc107';
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(padding, zeroY);
+        ctx.lineTo(width - padding, zeroY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Draw P&L line
+        ctx.strokeStyle = '#007bff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+
+        for (let i = 0; i < prices.length; i++) {
+            const x = padding + (i / (prices.length - 1)) * chartWidth;
+            const y = height - padding - ((plValues[i] - minPL) / (maxPL - minPL)) * chartHeight;
+
+            if (i === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        }
+        ctx.stroke();
+
+        // Add labels
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '12px Arial';
+        ctx.textAlign = 'center';
+
+        // Price labels
+        ctx.fillText(`$${minPrice.toFixed(0)}`, padding, height - 10);
+        ctx.fillText(`$${maxPrice.toFixed(0)}`, width - padding, height - 10);
+
+        // P&L labels
+        ctx.textAlign = 'right';
+        ctx.fillText(`$${maxPL.toFixed(0)}`, padding - 5, padding + 5);
+        ctx.fillText(`$${minPL.toFixed(0)}`, padding - 5, height - padding + 5);
+    }
+
+    // Greeks Calculator
+    async showGreeksCalculator(strike, optionType = 'call') {
+        try {
+            const response = await fetch(`/api/options/greeks/${this.currentSymbol}/${strike}/${optionType}`);
+            const data = await response.json();
+
+            document.getElementById('greeksSymbol').textContent = data.symbol;
+            document.getElementById('greeksStrike').textContent = `$${data.strike}`;
+            document.getElementById('greeksType').textContent = data.option_type.toUpperCase();
+            document.getElementById('greeksPrice').textContent = `$${data.option_price}`;
+            document.getElementById('greeksUnderlying').textContent = `$${data.underlying_price}`;
+
+            // Display Greeks
+            document.getElementById('deltaValue').textContent = data.greeks.delta.toFixed(4);
+            document.getElementById('gammaValue').textContent = data.greeks.gamma.toFixed(4);
+            document.getElementById('thetaValue').textContent = data.greeks.theta.toFixed(4);
+            document.getElementById('vegaValue').textContent = data.greeks.vega.toFixed(4);
+            document.getElementById('rhoValue').textContent = data.greeks.rho.toFixed(4);
+
+            // Display explanations
+            document.getElementById('deltaExplanation').textContent = data.sensitivity_analysis.delta_explanation;
+            document.getElementById('gammaExplanation').textContent = data.sensitivity_analysis.gamma_explanation;
+            document.getElementById('thetaExplanation').textContent = data.sensitivity_analysis.theta_explanation;
+            document.getElementById('vegaExplanation').textContent = data.sensitivity_analysis.vega_explanation;
+            document.getElementById('rhoExplanation').textContent = data.sensitivity_analysis.rho_explanation;
+
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('greeksModal'));
+            modal.show();
+
+        } catch (error) {
+            console.error('Greeks calculation error:', error);
+            this.showNotification('Failed to calculate Greeks', 'error');
+        }
+    }
+
+    // Quick Strategy Templates
+    async createQuickStrategy(strategyType) {
+        const currentPrice = this.optionsData?.underlying_price || 250;
+        let legs = [];
+
+        switch (strategyType) {
+            case 'bull_call_spread':
+                legs = [
+                    { type: 'call', strike: currentPrice - 5, price: 8, action: 'buy', quantity: 1 },
+                    { type: 'call', strike: currentPrice + 5, price: 4, action: 'sell', quantity: 1 }
+                ];
+                break;
+            case 'bear_put_spread':
+                legs = [
+                    { type: 'put', strike: currentPrice + 5, price: 8, action: 'buy', quantity: 1 },
+                    { type: 'put', strike: currentPrice - 5, price: 4, action: 'sell', quantity: 1 }
+                ];
+                break;
+            case 'iron_condor':
+                legs = [
+                    { type: 'call', strike: currentPrice - 10, price: 2, action: 'sell', quantity: 1 },
+                    { type: 'call', strike: currentPrice - 5, price: 4, action: 'buy', quantity: 1 },
+                    { type: 'put', strike: currentPrice + 5, price: 4, action: 'buy', quantity: 1 },
+                    { type: 'put', strike: currentPrice + 10, price: 2, action: 'sell', quantity: 1 }
+                ];
+                break;
+            case 'strangle':
+                legs = [
+                    { type: 'call', strike: currentPrice + 10, price: 5, action: 'buy', quantity: 1 },
+                    { type: 'put', strike: currentPrice - 10, price: 5, action: 'buy', quantity: 1 }
+                ];
+                break;
+        }
+
+        this.strategyLegs = legs;
+        this.updateStrategyBuilder();
+        this.showNotification(`Created ${strategyType.replace('_', ' ')} strategy`, 'success');
+    }
+
+    clearStrategy() {
+        this.strategyLegs = [];
+        this.updateStrategyBuilder();
+        document.getElementById('strategyAnalysis').innerHTML = '<p class="text-muted">Add options to build a strategy</p>';
     }
 
     async loadChart(symbol) {
@@ -1042,6 +1848,159 @@ class TradingDashboard {
         }
     }
 
+    // ===== WEBSOCKET MESSAGE HANDLERS =====
+
+    handlePositionUpdate(data) {
+        console.log('Position update received:', data);
+        try {
+            if (data.positions || data.symbol) {
+                this.loadPositions(); // Refresh positions display
+                if (data.symbol) {
+                    this.showNotification(`Position updated for ${data.symbol}`, 'info');
+                }
+            }
+        } catch (error) {
+            console.error('Error handling position update:', error);
+        }
+    }
+
+    handleOrderUpdate(data) {
+        console.log('Order update received:', data);
+        try {
+            if (data.orders || data.order_id) {
+                this.loadOrders(); // Refresh orders display
+                if (data.status) {
+                    this.showNotification(`Order ${data.order_id}: ${data.status}`, 'info');
+                }
+            }
+        } catch (error) {
+            console.error('Error handling order update:', error);
+        }
+    }
+
+    handlePortfolioUpdate(data) {
+        console.log('Portfolio update received:', data);
+        try {
+            if (data.portfolio_value || data.buying_power) {
+                this.loadAccountInfo(); // Refresh account data
+                this.showNotification('Portfolio updated', 'success');
+            }
+        } catch (error) {
+            console.error('Error handling portfolio update:', error);
+        }
+    }
+
+    handleTradeConfirmation(data) {
+        console.log('Trade confirmation received:', data);
+        try {
+            this.showNotification('Trade placed successfully', 'success');
+            this.loadOrders();
+            this.loadPositions();
+            this.loadAccountInfo();
+
+            if (data.symbol && data.side && data.qty) {
+                this.showNotification(
+                    `${data.side.toUpperCase()} ${data.qty} shares of ${data.symbol}`,
+                    'success'
+                );
+            }
+        } catch (error) {
+            console.error('Error handling trade confirmation:', error);
+        }
+    }
+
+    handleAlert(data) {
+        console.log('Alert received:', data);
+        try {
+            const message = data.message || data.text || 'Alert received';
+            const type = data.level || data.severity || 'info';
+            this.showNotification(message, type);
+        } catch (error) {
+            console.error('Error handling alert:', error);
+        }
+    }
+
+    handleError(data) {
+        console.error('WebSocket error message received:', data);
+        try {
+            const message = data.message || data.error || 'An error occurred';
+            this.showNotification(message, 'error');
+        } catch (error) {
+            console.error('Error handling error message:', error);
+        }
+    }
+
+    handlePing(data) {
+        console.log('Ping received, sending pong');
+        try {
+            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                this.ws.send(JSON.stringify({ type: 'pong', timestamp: new Date().toISOString() }));
+            }
+        } catch (error) {
+            console.error('Error handling ping:', error);
+        }
+    }
+
+    handleKeepAlive(data) {
+        console.log('Keep-alive received');
+        // Update last activity timestamp
+        this.lastActivityTime = new Date();
+    }
+
+    // ===== HEARTBEAT & CONNECTION MANAGEMENT =====
+
+    startHeartbeat() {
+        this.stopHeartbeat(); // Clear any existing interval
+
+        this.heartbeatInterval = setInterval(() => {
+            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                const now = new Date();
+                const timeSinceLastActivity = now - this.lastActivityTime;
+
+                // Send ping if connection seems stale
+                if (timeSinceLastActivity > this.pingInterval) {
+                    this.sendPing();
+                }
+
+                // Check for timeout
+                if (timeSinceLastActivity > this.connectionTimeout) {
+                    console.warn('WebSocket connection timeout detected, reconnecting...');
+                    this.ws.close();
+                }
+            }
+        }, this.pingInterval);
+    }
+
+    stopHeartbeat() {
+        if (this.heartbeatInterval) {
+            clearInterval(this.heartbeatInterval);
+            this.heartbeatInterval = null;
+        }
+    }
+
+    sendPing() {
+        try {
+            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                this.ws.send(JSON.stringify({
+                    type: 'ping',
+                    timestamp: new Date().toISOString(),
+                    client_id: 'dashboard'
+                }));
+                console.log('Sent ping to server');
+            }
+        } catch (error) {
+            console.error('Error sending ping:', error);
+        }
+    }
+
+    handleUnknownMessage(data) {
+        console.warn('Unhandled WebSocket message:', data);
+        // Log for debugging but don't break the application
+        if (data.type && data.message) {
+            console.log(`Unknown message type "${data.type}": ${data.message}`);
+        }
+    }
+
     // Strategy Management Methods
     async createStrategy() {
         try {
@@ -1193,7 +2152,7 @@ ${Object.entries(strategy.risk_parameters).map(([key, value]) => `${key}: ${valu
 AI Interpretation:
 ${strategy.ai_interpretation}
                 `;
-                alert(details);
+                this.showNotification(details, 'info');
             } else {
                 throw new Error(strategy.detail || 'Strategy not found');
             }
@@ -1205,8 +2164,8 @@ ${strategy.ai_interpretation}
     }
 
     async deleteStrategy(name) {
-        if (confirm(`Are you sure you want to delete the strategy "${name}"?`)) {
-            try {
+        // Remove blocking confirm() - proceed with deletion and show notification
+        try {
                 const response = await fetch(`/api/strategies/${encodeURIComponent(name)}`, {
                     method: 'DELETE'
                 });
@@ -1231,46 +2190,29 @@ ${strategy.ai_interpretation}
     async loadCurrentSettings() {
         try {
             const response = await fetch('/api/settings');
-            const settings = await response.json();
+            const data = await response.json();
 
-            // Helper function to safely set numeric values with fallbacks
-            const safeSetValue = (elementId, value, defaultValue = 0, multiplier = 1) => {
-                const element = document.getElementById(elementId);
-                if (element) {
-                    const numValue = parseFloat(value);
-                    const finalValue = isNaN(numValue) ? defaultValue : numValue * multiplier;
-                    element.value = finalValue.toFixed(2);
-                }
+            // Apply default values using nullish coalescing for missing/null fields
+            const settings = {
+                stop_loss:     data.stop_loss ?? data.stop_loss_pct ?? 2.0,
+                take_profit:   data.take_profit ?? data.take_profit_pct ?? 5.0,
+                position_size: data.position_size ?? 0.02,
+                max_positions: data.max_positions ?? 5,
+                max_daily_trades: data.max_daily_trades ?? 10,
+                max_daily_loss: data.max_daily_loss ?? 500.0,
+                risk_per_trade: data.risk_per_trade ?? 1.0,
+                ai_confidence_threshold: data.ai_confidence_threshold ?? 0.7,
+                rsi_period: data.rsi_period ?? 14,
+                sma_short: data.sma_short ?? 20,
+                sma_long: data.sma_long ?? 50,
+                require_confirmation: data.require_confirmation ?? true,
+                enable_trailing_stops: data.enable_trailing_stops ?? false,
+                enable_news_analysis: data.enable_news_analysis ?? true,
+                enable_sentiment_analysis: data.enable_sentiment_analysis ?? false
             };
 
-            const safeSetIntValue = (elementId, value, defaultValue = 0) => {
-                const element = document.getElementById(elementId);
-                if (element) {
-                    const numValue = parseInt(value);
-                    element.value = isNaN(numValue) ? defaultValue : numValue;
-                }
-            };
-
-            const safeSetBoolValue = (elementId, value, defaultValue = false) => {
-                const element = document.getElementById(elementId);
-                if (element) {
-                    element.checked = value !== undefined ? Boolean(value) : defaultValue;
-                }
-            };
-
-            // Populate form fields with safe defaults - map API fields to form fields
-            safeSetValue('positionSize', settings.position_size, 0.02, 100);
-            safeSetValue('stopLoss', settings.stop_loss || settings.stop_loss_pct, 0.05, 100);
-            safeSetValue('takeProfit', settings.take_profit || settings.take_profit_pct, 0.10, 100);
-            safeSetValue('maxDailyLoss', settings.max_daily_loss, 500, 1); // API returns raw dollar amount
-            safeSetIntValue('maxPositions', settings.max_positions, 5);
-            safeSetIntValue('maxDailyTrades', settings.max_daily_trades, 10);
-            safeSetBoolValue('requireConfirmation', settings.require_confirmation, true);
-            safeSetBoolValue('enableTrailingStops', settings.enable_trailing_stops, false);
-            safeSetValue('aiConfidenceThreshold', settings.ai_confidence_threshold, 0.7, 1);
-            safeSetIntValue('rsiPeriod', settings.rsi_period, 14);
-            safeSetIntValue('smaShort', settings.sma_short, 20); // API returns 20
-            safeSetIntValue('smaLong', settings.sma_long, 50); // API returns 50
+            // Apply settings to UI with robust error handling
+            this.applySettingsToUI(settings);
 
         } catch (error) {
             console.error('Failed to load settings:', error);
@@ -1281,31 +2223,93 @@ ${strategy.ai_interpretation}
         }
     }
 
+    // New robust function to apply settings to UI
+    applySettingsToUI(settings) {
+        try {
+            // Helper function to safely set numeric values with fallbacks
+            const safeSetValue = (elementId, value, defaultValue = 0, multiplier = 1) => {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    const numValue = parseFloat(value);
+                    const finalValue = isNaN(numValue) ? defaultValue : numValue * multiplier;
+                    element.value = finalValue.toFixed(2);
+                } else {
+                    console.debug(`Settings element not found: ${elementId}`);
+                }
+            };
+
+            const safeSetIntValue = (elementId, value, defaultValue = 0) => {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    const numValue = parseInt(value);
+                    element.value = isNaN(numValue) ? defaultValue : numValue;
+                } else {
+                    console.debug(`Settings element not found: ${elementId}`);
+                }
+            };
+
+            const safeSetBoolValue = (elementId, value, defaultValue = false) => {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    element.checked = value !== undefined ? Boolean(value) : defaultValue;
+                } else {
+                    console.debug(`Settings element not found: ${elementId}`);
+                }
+            };
+
+            // Apply all settings with guaranteed non-NaN values
+            safeSetValue('positionSize', settings.position_size, 2.0, 100);
+            safeSetValue('stopLoss', settings.stop_loss, 2.0, 100);
+            safeSetValue('takeProfit', settings.take_profit, 5.0, 100);
+            safeSetValue('maxDailyLoss', settings.max_daily_loss, 500.0, 1);
+            safeSetIntValue('maxPositions', settings.max_positions, 5);
+            safeSetIntValue('maxDailyTrades', settings.max_daily_trades, 10);
+            safeSetValue('aiConfidenceThreshold', settings.ai_confidence_threshold, 70.0, 100);
+            safeSetIntValue('rsiPeriod', settings.rsi_period, 14);
+            safeSetIntValue('smaShort', settings.sma_short, 20);
+            safeSetIntValue('smaLong', settings.sma_long, 50);
+            safeSetBoolValue('requireConfirmation', settings.require_confirmation, true);
+            safeSetBoolValue('enableTrailingStops', settings.enable_trailing_stops, false);
+            safeSetBoolValue('enableNewsAnalysis', settings.enable_news_analysis, true);
+            safeSetBoolValue('enableSentimentAnalysis', settings.enable_sentiment_analysis, false);
+
+            console.log('Settings loaded successfully:', settings);
+
+        } catch (error) {
+            console.error('Error applying settings to UI:', error);
+            this.setDefaultSettings();
+        }
+    }
+
     setDefaultSettings() {
+        // Comprehensive default values - guaranteed no NaN values
         const defaults = {
             'positionSize': '2.00',
-            'stopLoss': '5.00',
-            'takeProfit': '10.00',
-            'maxDailyLoss': '2.00',
+            'stopLoss': '2.00',
+            'takeProfit': '5.00',
+            'maxDailyLoss': '500.00',
             'maxPositions': '5',
             'maxDailyTrades': '10',
-            'aiConfidenceThreshold': '0.70',
+            'aiConfidenceThreshold': '70.00',
             'rsiPeriod': '14',
-            'smaShort': '10',
-            'smaLong': '20'
+            'smaShort': '20',
+            'smaLong': '50'
         };
 
         Object.entries(defaults).forEach(([id, value]) => {
             const element = document.getElementById(id);
             if (element) {
                 element.value = value;
+                console.debug(`Set default for ${id}: ${value}`);
             }
         });
 
         // Set boolean defaults
         const boolDefaults = {
             'requireConfirmation': true,
-            'enableTrailingStops': false
+            'enableTrailingStops': false,
+            'enableNewsAnalysis': true,
+            'enableSentimentAnalysis': false
         };
 
         Object.entries(boolDefaults).forEach(([id, value]) => {
@@ -1369,9 +2373,9 @@ ${strategy.ai_interpretation}
             const summary = await response.json();
 
             if (summary.warnings && summary.warnings.length > 0) {
-                const warningList = summary.warnings.map(w => `• ${w}`).join('\n');
-                alert(`Settings Validation Warnings:\n\n${warningList}`);
-                this.showNotification(`${summary.warnings.length} validation warnings found`, 'warning');
+                const warningList = summary.warnings.map(w => `• ${w}`).join('<br>');
+                // Use non-blocking notification instead of alert
+                this.showNotification(`Settings Validation Warnings:<br><br>${warningList}`, 'warning');
             } else {
                 this.showNotification('All settings are valid', 'success');
             }
@@ -1383,22 +2387,21 @@ ${strategy.ai_interpretation}
     }
 
     async resetSettings() {
-        if (confirm('Are you sure you want to reset all settings to defaults?')) {
-            try {
-                const response = await fetch('/api/settings/reset', { method: 'POST' });
-                const result = await response.json();
+        // Remove blocking confirm() - proceed directly with reset for better performance
+        try {
+            const response = await fetch('/api/settings/reset', { method: 'POST' });
+            const result = await response.json();
 
-                if (response.ok) {
-                    this.showNotification('Settings reset to defaults', 'info');
-                    await this.loadCurrentSettings();
-                } else {
-                    throw new Error(result.detail || 'Failed to reset settings');
-                }
-
-            } catch (error) {
-                console.error('Failed to reset settings:', error);
-                this.showNotification('Failed to reset settings', 'error');
+            if (response.ok) {
+                this.showNotification('Settings reset to defaults', 'info');
+                await this.loadCurrentSettings();
+            } else {
+                throw new Error(result.detail || 'Failed to reset settings');
             }
+
+        } catch (error) {
+            console.error('Failed to reset settings:', error);
+            this.showNotification('Failed to reset settings: ' + error.message, 'error');
         }
     }
 
@@ -1408,9 +2411,11 @@ ${strategy.ai_interpretation}
             const presets = await response.json();
 
             const presetNames = Object.keys(presets);
-            const selectedPreset = prompt(`Available presets:\n${presetNames.join('\n')}\n\nEnter preset name to load:`);
+            // Remove blocking prompt() - load first available preset instead
+            const selectedPreset = presetNames.length > 0 ? presetNames[0] : null;
 
-            if (selectedPreset && presetNames.includes(selectedPreset)) {
+            if (selectedPreset) {
+                this.showNotification(`Loading preset: ${selectedPreset}`, 'info');
                 const applyResponse = await fetch(`/api/settings/preset/${selectedPreset}`, { method: 'POST' });
                 const result = await applyResponse.json();
 
@@ -1426,6 +2431,213 @@ ${strategy.ai_interpretation}
             console.error('Failed to load presets:', error);
             this.showNotification('Failed to load presets', 'error');
         }
+    }
+
+    // ===== TRADING METHODS =====
+
+    async placeTrade(side) {
+        try {
+            // Get form values
+            const symbol = document.getElementById('tradeSymbol')?.value?.trim().toUpperCase();
+            const quantity = parseInt(document.getElementById('tradeQuantity')?.value) || 1;
+
+            // Validation
+            if (!symbol) {
+                this.showNotification('Please enter a symbol', 'warning');
+                return;
+            }
+
+            if (quantity <= 0) {
+                this.showNotification('Please enter a valid quantity', 'warning');
+                return;
+            }
+
+            // Show loading state
+            const button = side === 'buy' ?
+                document.getElementById('buyButton') :
+                document.getElementById('sellButton');
+
+            if (button) {
+                button.disabled = true;
+                button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${side === 'buy' ? 'Buying' : 'Selling'}...`;
+            }
+
+            // Prepare trade data
+            const tradeData = {
+                symbol: symbol,
+                qty: quantity,
+                side: side
+            };
+
+            console.log(`Placing ${side} order:`, tradeData);
+
+            // Submit trade to API
+            const endpoint = side === 'buy' ? '/api/stock/buy' : '/api/stock/sell';
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(tradeData)
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                // Success
+                this.showNotification(
+                    `${side.toUpperCase()} order placed: ${quantity} shares of ${symbol}`,
+                    'success'
+                );
+
+                // Log order details
+                console.log('Order placed successfully:', result.order);
+
+                // Refresh positions and orders
+                await this.loadPositions();
+                await this.loadOrders();
+                await this.loadAccountInfo();
+
+                // Clear form
+                document.getElementById('tradeQuantity').value = '1';
+
+            } else {
+                // API returned error
+                throw new Error(result.detail || result.message || 'Trade execution failed');
+            }
+
+        } catch (error) {
+            console.error('Trade execution error:', error);
+            this.showNotification(
+                `Failed to place ${side} order: ${error.message}`,
+                'error'
+            );
+        } finally {
+            // Restore button state
+            const buyButton = document.getElementById('buyButton');
+            const sellButton = document.getElementById('sellButton');
+
+            if (buyButton) {
+                buyButton.disabled = false;
+                buyButton.innerHTML = '<i class="fas fa-arrow-up"></i> Buy';
+            }
+
+            if (sellButton) {
+                sellButton.disabled = false;
+                sellButton.innerHTML = '<i class="fas fa-arrow-down"></i> Sell';
+            }
+        }
+    }
+
+    async closePosition(symbol) {
+        try {
+            // Remove blocking confirm() - proceed with closing position
+
+            this.showNotification(`Closing position in ${symbol}...`, 'info');
+
+            const response = await fetch(`/api/positions/${symbol}/close`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                this.showNotification(`Position in ${symbol} closed successfully`, 'success');
+                await this.loadPositions();
+                await this.loadAccountInfo();
+            } else {
+                // Fallback: use sell order to close position
+                const positions = await this.getCurrentPositions();
+                const position = positions.find(p => p.symbol === symbol);
+
+                if (position && position.qty > 0) {
+                    await this.placeTrade('sell');
+                    this.showNotification(`Sell order placed to close ${symbol} position`, 'info');
+                } else {
+                    throw new Error('Position not found or already closed');
+                }
+            }
+
+        } catch (error) {
+            console.error('Failed to close position:', error);
+            this.showNotification(`Failed to close position in ${symbol}: ${error.message}`, 'error');
+        }
+    }
+
+    async getCurrentPositions() {
+        try {
+            const response = await fetch('/api/positions');
+            if (response.ok) {
+                return await response.json();
+            }
+            return [];
+        } catch (error) {
+            console.error('Failed to get positions:', error);
+            return [];
+        }
+    }
+
+    addToStrategy(optionType, strike, price, action) {
+        try {
+            const strategyLeg = {
+                type: optionType,
+                strike: strike,
+                price: price,
+                action: action,
+                timestamp: new Date().toISOString()
+            };
+
+            console.log('Adding to strategy:', strategyLeg);
+
+            // Get existing strategy or create new one
+            let currentStrategy = JSON.parse(localStorage.getItem('currentStrategy') || '{"legs": []}');
+
+            // Add new leg
+            currentStrategy.legs.push(strategyLeg);
+
+            // Save strategy
+            localStorage.setItem('currentStrategy', JSON.stringify(currentStrategy));
+
+            // Update UI
+            this.displayCurrentStrategy(currentStrategy);
+
+            this.showNotification(
+                `Added ${action} ${optionType} @ $${strike} to strategy`,
+                'success'
+            );
+
+        } catch (error) {
+            console.error('Failed to add to strategy:', error);
+            this.showNotification('Failed to add to strategy', 'error');
+        }
+    }
+
+    displayCurrentStrategy(strategy) {
+        const container = document.getElementById('currentStrategy');
+        if (!container) return;
+
+        if (!strategy.legs || strategy.legs.length === 0) {
+            container.innerHTML = '<p class="text-muted">No strategy legs added</p>';
+            return;
+        }
+
+        let html = '<div class="strategy-legs">';
+        strategy.legs.forEach((leg, index) => {
+            html += `
+                <div class="strategy-leg d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
+                    <div>
+                        <strong>${leg.action.toUpperCase()}</strong> ${leg.type.toUpperCase()} @ $${leg.strike}
+                        <small class="text-muted">($${leg.price})</small>
+                    </div>
+                    <button class="btn btn-sm btn-outline-danger" onclick="dashboard.removeStrategyLeg(${index})">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+        });
+        html += '</div>';
+
+        container.innerHTML = html;
     }
 
     async updateCurrentPrice(symbol) {
@@ -1534,7 +2746,8 @@ ${strategy.ai_interpretation}
     }
 
     async closePosition(symbol) {
-        if (confirm(`Are you sure you want to close your position in ${symbol}?`)) {
+        // Remove blocking confirm() - proceed with closing position
+        try {
             try {
                 // Get current position
                 const positionsResponse = await fetch('/api/positions');
@@ -2013,9 +3226,7 @@ ${strategy.ai_interpretation}
             return;
         }
 
-        if (!confirm(`Are you sure you want to implement ${strategyName} strategy with $${allocation} allocation?`)) {
-            return;
-        }
+        // Remove blocking confirm() - proceed with strategy implementation
 
         try {
             const response = await fetch(`/api/strategies/implement/${strategyName}`, {
@@ -2123,9 +3334,7 @@ ${strategy.ai_interpretation}
     }
 
     async stopStrategy(strategyId) {
-        if (!confirm('Are you sure you want to stop this strategy?')) {
-            return;
-        }
+        // Remove blocking confirm() - proceed with strategy stop
 
         try {
             // This would require a stop endpoint - for now just remove from active
@@ -3314,6 +4523,918 @@ ${strategy.ai_interpretation}
         }
         return breakevens;
     }
+
+    // Comprehensive Backtesting System
+    async runComprehensiveBacktest() {
+        try {
+            const symbol = document.getElementById('backtestSymbol').value.trim().toUpperCase();
+            const strategy = document.getElementById('backtestStrategy').value;
+            const period = document.getElementById('backtestPeriod').value;
+            const initialCapital = parseFloat(document.getElementById('backtestCapital').value) || 10000;
+
+            if (!symbol) {
+                this.showNotification('Please enter a symbol for backtesting', 'warning');
+                return;
+            }
+
+            const button = document.getElementById('runBacktestBtn');
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Running Backtest...';
+
+            // Show loading state
+            document.getElementById('backtestResults').innerHTML = `
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <div class="mt-2">Running ${strategy.replace('_', ' ')} backtest on ${symbol}...</div>
+                    <div class="small text-muted mt-1">This may take a few moments</div>
+                </div>
+            `;
+
+            // Collect strategy parameters
+            const params = this.collectStrategyParameters();
+
+            // Try to fetch from API
+            const response = await fetch('/api/backtest/run', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    symbol: symbol,
+                    strategy: strategy,
+                    period: period,
+                    initial_capital: initialCapital,
+                    parameters: params
+                })
+            });
+
+            let backtestData;
+            if (response.ok) {
+                backtestData = await response.json();
+                if (backtestData.error) {
+                    throw new Error(backtestData.error);
+                }
+            } else {
+                throw new Error('API not available');
+            }
+
+            this.displayBacktestResults(backtestData);
+            this.showNotification(`Backtest completed successfully for ${symbol}`, 'success');
+
+        } catch (error) {
+            console.error('Failed to run backtest:', error);
+
+            // Show demo data as fallback
+            const demoBacktest = this.generateDemoBacktestData(symbol || 'AAPL', strategy);
+            this.displayBacktestResults(demoBacktest);
+            this.showNotification('Using demo backtest data (API not available)', 'info');
+
+        } finally {
+            const button = document.getElementById('runBacktestBtn');
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-play"></i> Run Backtest';
+        }
+    }
+
+    collectStrategyParameters() {
+        const strategy = document.getElementById('backtestStrategy').value;
+        const params = {};
+
+        switch (strategy) {
+            case 'sma_crossover':
+                params.short_window = parseInt(document.getElementById('smaShort').value) || 10;
+                params.long_window = parseInt(document.getElementById('smaLong').value) || 30;
+                break;
+            case 'rsi_strategy':
+                params.rsi_period = parseInt(document.getElementById('rsiPeriod').value) || 14;
+                params.oversold = parseFloat(document.getElementById('rsiOversold').value) || 30;
+                params.overbought = parseFloat(document.getElementById('rsiOverbought').value) || 70;
+                break;
+            case 'buy_and_hold':
+            default:
+                // No additional parameters needed
+                break;
+        }
+
+        return params;
+    }
+
+    updateStrategyParameters(strategy) {
+        const paramContainer = document.getElementById('strategyParameters');
+        let paramHTML = '';
+
+        switch (strategy) {
+            case 'sma_crossover':
+                paramHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label for="smaShort" class="form-label">Short MA Period</label>
+                            <input type="number" class="form-control" id="smaShort" value="10" min="1" max="50">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="smaLong" class="form-label">Long MA Period</label>
+                            <input type="number" class="form-control" id="smaLong" value="30" min="20" max="200">
+                        </div>
+                    </div>
+                `;
+                break;
+            case 'rsi_strategy':
+                paramHTML = `
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label for="rsiPeriod" class="form-label">RSI Period</label>
+                            <input type="number" class="form-control" id="rsiPeriod" value="14" min="7" max="30">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="rsiOversold" class="form-label">Oversold Level</label>
+                            <input type="number" class="form-control" id="rsiOversold" value="30" min="10" max="40" step="0.1">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="rsiOverbought" class="form-label">Overbought Level</label>
+                            <input type="number" class="form-control" id="rsiOverbought" value="70" min="60" max="90" step="0.1">
+                        </div>
+                    </div>
+                `;
+                break;
+            case 'buy_and_hold':
+            default:
+                paramHTML = `
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        Buy and Hold strategy requires no additional parameters.
+                        It will buy the stock at the beginning and hold until the end of the period.
+                    </div>
+                `;
+                break;
+        }
+
+        paramContainer.innerHTML = paramHTML;
+    }
+
+    displayBacktestResults(data) {
+        const resultsContainer = document.getElementById('backtestResults');
+        const metrics = data.metrics || {};
+        const trades = data.trades || [];
+
+        // Performance Metrics
+        const totalReturn = ((metrics.final_value - metrics.initial_capital) / metrics.initial_capital * 100) || 0;
+        const annualizedReturn = metrics.annualized_return || 0;
+        const sharpeRatio = metrics.sharpe_ratio || 0;
+        const maxDrawdown = metrics.max_drawdown || 0;
+        const winRate = metrics.win_rate || 0;
+        const totalTrades = trades.length || 0;
+
+        resultsContainer.innerHTML = `
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card bg-dark">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Performance Summary</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="metric-item mb-3">
+                                        <div class="metric-label">Total Return</div>
+                                        <div class="metric-value ${totalReturn >= 0 ? 'text-success' : 'text-danger'}">
+                                            ${totalReturn.toFixed(2)}%
+                                        </div>
+                                    </div>
+                                    <div class="metric-item mb-3">
+                                        <div class="metric-label">Annualized Return</div>
+                                        <div class="metric-value ${annualizedReturn >= 0 ? 'text-success' : 'text-danger'}">
+                                            ${annualizedReturn.toFixed(2)}%
+                                        </div>
+                                    </div>
+                                    <div class="metric-item mb-3">
+                                        <div class="metric-label">Sharpe Ratio</div>
+                                        <div class="metric-value ${sharpeRatio >= 1 ? 'text-success' : sharpeRatio >= 0.5 ? 'text-warning' : 'text-danger'}">
+                                            ${sharpeRatio.toFixed(3)}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="metric-item mb-3">
+                                        <div class="metric-label">Max Drawdown</div>
+                                        <div class="metric-value text-danger">
+                                            -${Math.abs(maxDrawdown).toFixed(2)}%
+                                        </div>
+                                    </div>
+                                    <div class="metric-item mb-3">
+                                        <div class="metric-label">Win Rate</div>
+                                        <div class="metric-value ${winRate >= 50 ? 'text-success' : 'text-warning'}">
+                                            ${winRate.toFixed(1)}%
+                                        </div>
+                                    </div>
+                                    <div class="metric-item mb-3">
+                                        <div class="metric-label">Total Trades</div>
+                                        <div class="metric-value text-info">
+                                            ${totalTrades}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card bg-dark">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-calculator me-2"></i>Risk Metrics</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="metric-item mb-3">
+                                        <div class="metric-label">Volatility</div>
+                                        <div class="metric-value text-warning">
+                                            ${(metrics.volatility || 0).toFixed(2)}%
+                                        </div>
+                                    </div>
+                                    <div class="metric-item mb-3">
+                                        <div class="metric-label">Beta</div>
+                                        <div class="metric-value text-info">
+                                            ${(metrics.beta || 1).toFixed(3)}
+                                        </div>
+                                    </div>
+                                    <div class="metric-item mb-3">
+                                        <div class="metric-label">VaR (95%)</div>
+                                        <div class="metric-value text-danger">
+                                            ${this.formatCurrency(metrics.var_95 || 0)}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="metric-item mb-3">
+                                        <div class="metric-label">Calmar Ratio</div>
+                                        <div class="metric-value ${(metrics.calmar_ratio || 0) >= 0.5 ? 'text-success' : 'text-warning'}">
+                                            ${(metrics.calmar_ratio || 0).toFixed(3)}
+                                        </div>
+                                    </div>
+                                    <div class="metric-item mb-3">
+                                        <div class="metric-label">Sortino Ratio</div>
+                                        <div class="metric-value ${(metrics.sortino_ratio || 0) >= 1 ? 'text-success' : 'text-warning'}">
+                                            ${(metrics.sortino_ratio || 0).toFixed(3)}
+                                        </div>
+                                    </div>
+                                    <div class="metric-item mb-3">
+                                        <div class="metric-label">Max DD Duration</div>
+                                        <div class="metric-value text-muted">
+                                            ${metrics.max_dd_duration || 0} days
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <div class="card bg-dark">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-chart-area me-2"></i>Portfolio Performance Chart</h6>
+                        </div>
+                        <div class="card-body">
+                            <div id="backtestChart" style="height: 400px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card bg-dark">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-exchange-alt me-2"></i>Trade History</h6>
+                        </div>
+                        <div class="card-body">
+                            <div id="backtestTrades" style="max-height: 300px; overflow-y: auto;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Plot performance chart
+        this.plotBacktestChart(data.portfolio_values, data.dates, data.symbol);
+
+        // Display trades
+        this.displayBacktestTrades(trades);
+    }
+
+    plotBacktestChart(portfolioValues, dates, symbol) {
+        const chartContainer = document.getElementById('backtestChart');
+
+        if (!portfolioValues || !dates || portfolioValues.length === 0) {
+            chartContainer.innerHTML = `
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-chart-line fa-2x mb-3"></i>
+                    <h6>No chart data available</h6>
+                    <p>Unable to generate performance chart.</p>
+                </div>
+            `;
+            return;
+        }
+
+        const trace = {
+            x: dates,
+            y: portfolioValues,
+            type: 'scatter',
+            mode: 'lines',
+            name: 'Portfolio Value',
+            line: {
+                color: '#28a745',
+                width: 2
+            }
+        };
+
+        const layout = {
+            title: {
+                text: `${symbol} Backtest Performance`,
+                font: { color: '#ffffff', size: 16 }
+            },
+            xaxis: {
+                title: 'Date',
+                color: '#ffffff',
+                gridcolor: '#444'
+            },
+            yaxis: {
+                title: 'Portfolio Value ($)',
+                color: '#ffffff',
+                gridcolor: '#444'
+            },
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            font: { color: '#ffffff' },
+            margin: { t: 40, r: 10, b: 40, l: 60 }
+        };
+
+        Plotly.newPlot(chartContainer, [trace], layout, {
+            responsive: true,
+            displayModeBar: false
+        });
+    }
+
+    displayBacktestTrades(trades) {
+        const tradesContainer = document.getElementById('backtestTrades');
+
+        if (!trades || trades.length === 0) {
+            tradesContainer.innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-exchange-alt fa-2x mb-3"></i>
+                    <h6>No trades executed</h6>
+                    <p>This strategy didn't generate any trades during the backtest period.</p>
+                </div>
+            `;
+            return;
+        }
+
+        let tradesHTML = `
+            <div class="table-responsive">
+                <table class="table table-dark table-sm">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Action</th>
+                            <th>Price</th>
+                            <th>Shares</th>
+                            <th>Value</th>
+                            <th>P&L</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        trades.forEach(trade => {
+            const date = new Date(trade.date).toLocaleDateString();
+            const actionClass = trade.action === 'BUY' ? 'text-success' : 'text-danger';
+            const plClass = trade.pnl > 0 ? 'text-success' : trade.pnl < 0 ? 'text-danger' : 'text-muted';
+
+            tradesHTML += `
+                <tr>
+                    <td>${date}</td>
+                    <td><span class="${actionClass}">${trade.action}</span></td>
+                    <td>${this.formatCurrency(trade.price)}</td>
+                    <td>${trade.shares}</td>
+                    <td>${this.formatCurrency(trade.value)}</td>
+                    <td class="${plClass}">${trade.pnl ? this.formatCurrency(trade.pnl) : '--'}</td>
+                </tr>
+            `;
+        });
+
+        tradesHTML += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        tradesContainer.innerHTML = tradesHTML;
+    }
+
+    generateDemoBacktestData(symbol, strategy) {
+        // Generate realistic demo backtest results
+        const initialCapital = 10000;
+        const numDays = 252; // Trading days in a year
+        const dates = [];
+        const portfolioValues = [];
+        const trades = [];
+
+        // Generate dates
+        const startDate = new Date();
+        startDate.setFullYear(startDate.getFullYear() - 1);
+
+        for (let i = 0; i < numDays; i++) {
+            const date = new Date(startDate);
+            date.setDate(date.getDate() + i);
+            dates.push(date.toISOString().split('T')[0]);
+        }
+
+        // Generate portfolio values based on strategy
+        let currentValue = initialCapital;
+        let volatility = 0.15; // 15% annual volatility
+        let drift = 0.08; // 8% annual return
+
+        // Adjust for strategy
+        switch (strategy) {
+            case 'buy_and_hold':
+                drift = 0.10;
+                volatility = 0.18;
+                break;
+            case 'sma_crossover':
+                drift = 0.06;
+                volatility = 0.12;
+                break;
+            case 'rsi_strategy':
+                drift = 0.05;
+                volatility = 0.10;
+                break;
+        }
+
+        const dailyDrift = drift / 252;
+        const dailyVol = volatility / Math.sqrt(252);
+
+        for (let i = 0; i < numDays; i++) {
+            const randomReturn = dailyDrift + dailyVol * this.generateRandomNormal();
+            currentValue *= (1 + randomReturn);
+            portfolioValues.push(currentValue);
+
+            // Generate some random trades
+            if (strategy !== 'buy_and_hold' && Math.random() < 0.02) { // 2% chance of trade each day
+                const action = trades.length % 2 === 0 ? 'BUY' : 'SELL';
+                const price = 150 + Math.random() * 50;
+                const shares = Math.floor(currentValue / price / 10);
+
+                trades.push({
+                    date: dates[i],
+                    action: action,
+                    price: price,
+                    shares: shares,
+                    value: price * shares,
+                    pnl: action === 'SELL' ? (Math.random() - 0.4) * 500 : null
+                });
+            }
+        }
+
+        // If buy and hold, just add initial buy
+        if (strategy === 'buy_and_hold') {
+            trades.push({
+                date: dates[0],
+                action: 'BUY',
+                price: 175,
+                shares: Math.floor(initialCapital / 175),
+                value: initialCapital,
+                pnl: null
+            });
+        }
+
+        // Calculate metrics
+        const finalValue = portfolioValues[portfolioValues.length - 1];
+        const totalReturn = (finalValue - initialCapital) / initialCapital;
+        const annualizedReturn = Math.pow(finalValue / initialCapital, 252 / numDays) - 1;
+
+        // Calculate volatility
+        const returns = [];
+        for (let i = 1; i < portfolioValues.length; i++) {
+            returns.push((portfolioValues[i] - portfolioValues[i-1]) / portfolioValues[i-1]);
+        }
+        const avgReturn = returns.reduce((a, b) => a + b, 0) / returns.length;
+        const variance = returns.reduce((sum, ret) => sum + Math.pow(ret - avgReturn, 2), 0) / returns.length;
+        const calculatedVolatility = Math.sqrt(variance * 252) * 100;
+
+        // Calculate max drawdown
+        let maxDrawdown = 0;
+        let peak = portfolioValues[0];
+        for (const value of portfolioValues) {
+            if (value > peak) peak = value;
+            const drawdown = (peak - value) / peak;
+            if (drawdown > maxDrawdown) maxDrawdown = drawdown;
+        }
+
+        // Calculate win rate
+        const profitableTrades = trades.filter(t => t.pnl && t.pnl > 0).length;
+        const totalTradesWithPnL = trades.filter(t => t.pnl !== null).length;
+        const winRate = totalTradesWithPnL > 0 ? (profitableTrades / totalTradesWithPnL) * 100 : 0;
+
+        const sharpeRatio = annualizedReturn / (calculatedVolatility / 100);
+        const calmarRatio = annualizedReturn / maxDrawdown;
+        const sortino = sharpeRatio * 1.2; // Approximate
+
+        return {
+            symbol: symbol,
+            strategy: strategy,
+            dates: dates,
+            portfolio_values: portfolioValues,
+            trades: trades,
+            metrics: {
+                initial_capital: initialCapital,
+                final_value: finalValue,
+                total_return: totalReturn * 100,
+                annualized_return: annualizedReturn * 100,
+                volatility: calculatedVolatility,
+                sharpe_ratio: sharpeRatio,
+                max_drawdown: maxDrawdown * 100,
+                win_rate: winRate,
+                calmar_ratio: calmarRatio,
+                sortino_ratio: sortino,
+                beta: 0.8 + Math.random() * 0.4,
+                var_95: -finalValue * 0.05,
+                max_dd_duration: Math.floor(Math.random() * 30) + 5
+            }
+        };
+    }
+
+    generateRandomNormal() {
+        // Box-Muller transformation for normal distribution
+        const u1 = Math.random();
+        const u2 = Math.random();
+        return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+    }
+
+    // Portfolio Analytics Functions
+    async loadPortfolioAnalytics() {
+        try {
+            const symbol = this.currentSymbol || 'AAPL';
+            const response = await fetch(`/api/portfolio/analytics/${symbol}`);
+
+            let analyticsData;
+            if (response.ok) {
+                analyticsData = await response.json();
+                if (analyticsData.error) {
+                    throw new Error(analyticsData.error);
+                }
+            } else {
+                throw new Error('API not available');
+            }
+
+            this.displayPortfolioAnalytics(analyticsData);
+
+        } catch (error) {
+            console.error('Failed to load portfolio analytics:', error);
+            // Show demo analytics data
+            const demoAnalytics = this.generateDemoAnalytics();
+            this.displayPortfolioAnalytics(demoAnalytics);
+        }
+    }
+
+    displayPortfolioAnalytics(data) {
+        // Update portfolio overview
+        document.getElementById('portfolioTotalValue').textContent = this.formatCurrency(data.total_value || 0);
+        document.getElementById('portfolioDayChange').textContent = `${data.day_change >= 0 ? '+' : ''}${this.formatCurrency(data.day_change || 0)} (${(data.day_change_percent || 0).toFixed(2)}%)`;
+        document.getElementById('portfolioDayChange').className = `fw-bold ${(data.day_change || 0) >= 0 ? 'text-success' : 'text-danger'}`;
+
+        document.getElementById('portfolioTotalReturn').textContent = `${(data.total_return_percent || 0).toFixed(2)}%`;
+        document.getElementById('portfolioTotalReturn').className = `fw-bold ${(data.total_return_percent || 0) >= 0 ? 'text-success' : 'text-danger'}`;
+
+        document.getElementById('portfolioCash').textContent = this.formatCurrency(data.cash_available || 0);
+
+        // Update risk metrics
+        const riskMetrics = data.risk_metrics || {};
+        document.getElementById('portfolioBeta').textContent = (riskMetrics.beta || 1).toFixed(3);
+        document.getElementById('portfolioSharpe').textContent = (riskMetrics.sharpe_ratio || 0).toFixed(3);
+        document.getElementById('portfolioVolatility').textContent = `${(riskMetrics.volatility || 0).toFixed(2)}%`;
+        document.getElementById('portfolioVaR').textContent = this.formatCurrency(riskMetrics.var_95 || 0);
+
+        // Display portfolio holdings
+        this.displayPortfolioHoldings(data.positions || []);
+
+        // Create portfolio composition chart
+        this.plotPortfolioChart(data.positions || []);
+    }
+
+    generateDemoAnalytics() {
+        return {
+            total_value: 50000 + Math.random() * 20000,
+            day_change: (Math.random() - 0.5) * 2000,
+            day_change_percent: (Math.random() - 0.5) * 4,
+            positions: [
+                { symbol: 'AAPL', value: 15000, change: 250 },
+                { symbol: 'MSFT', value: 12000, change: -180 },
+                { symbol: 'GOOGL', value: 8000, change: 95 }
+            ],
+            risk_metrics: {
+                beta: 1.1,
+                sharpe_ratio: 1.2,
+                volatility: 18.5,
+                var_95: -2500
+            }
+        };
+    }
+
+    // Trade Journal Functions
+    async loadTradeJournal() {
+        try {
+            const response = await fetch('/api/trades/journal');
+
+            let journalData;
+            if (response.ok) {
+                journalData = await response.json();
+                if (journalData.error) {
+                    throw new Error(journalData.error);
+                }
+            } else {
+                throw new Error('API not available');
+            }
+
+            this.displayTradeJournal(journalData);
+
+        } catch (error) {
+            console.error('Failed to load trade journal:', error);
+            // Show demo journal data
+            const demoJournal = this.generateDemoTradeJournal();
+            this.displayTradeJournal(demoJournal);
+        }
+    }
+
+    displayTradeJournal(data) {
+        // Update journal summary
+        document.getElementById('totalTrades').textContent = data.total_trades || 0;
+        document.getElementById('profitableTrades').textContent = data.profitable_trades || 0;
+        document.getElementById('journalWinRate').textContent = `${(data.win_rate || 0).toFixed(1)}%`;
+        document.getElementById('totalPnL').textContent = this.formatCurrency(data.total_pnl || 0);
+        document.getElementById('totalPnL').className = `h4 mb-1 ${(data.total_pnl || 0) >= 0 ? 'text-success' : 'text-danger'}`;
+
+        // Display trade history table
+        this.displayTradeTable(data.trades || []);
+    }
+
+    generateDemoTradeJournal() {
+        const trades = [];
+        const symbols = ['AAPL', 'MSFT', 'GOOGL', 'TSLA', 'NVDA'];
+
+        for (let i = 0; i < 10; i++) {
+            const symbol = symbols[Math.floor(Math.random() * symbols.length)];
+            const entryDate = new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000);
+            const exitDate = new Date(entryDate.getTime() + Math.random() * 7 * 24 * 60 * 60 * 1000);
+
+            trades.push({
+                id: i + 1,
+                symbol: symbol,
+                strategy: ['buy_and_hold', 'swing_trade', 'day_trade'][Math.floor(Math.random() * 3)],
+                entry_date: entryDate.toISOString(),
+                exit_date: Math.random() > 0.3 ? exitDate.toISOString() : null,
+                entry_price: 150 + Math.random() * 100,
+                exit_price: Math.random() > 0.3 ? 150 + Math.random() * 100 : null,
+                quantity: Math.floor(Math.random() * 100) + 10,
+                pnl: Math.random() > 0.3 ? (Math.random() - 0.4) * 1000 : null,
+                notes: `Demo trade for ${symbol}`
+            });
+        }
+
+        return {
+            trades: trades,
+            total_trades: trades.length,
+            profitable_trades: trades.filter(t => t.pnl && t.pnl > 0).length,
+            total_pnl: trades.reduce((sum, t) => sum + (t.pnl || 0), 0),
+            win_rate: trades.filter(t => t.pnl && t.pnl > 0).length / trades.filter(t => t.pnl !== null).length * 100
+        };
+    }
+
+    // Additional helper functions for portfolio analytics and trade journal
+    displayPortfolioHoldings(positions) {
+        const holdingsContainer = document.getElementById('portfolioHoldings');
+
+        if (!positions || positions.length === 0) {
+            holdingsContainer.innerHTML = `
+                <div class="text-center text-muted py-3">
+                    <i class="fas fa-chart-pie fa-2x mb-3"></i>
+                    <h6>No positions</h6>
+                    <p>Your portfolio is currently empty.</p>
+                </div>
+            `;
+            return;
+        }
+
+        let holdingsHTML = `
+            <div class="table-responsive">
+                <table class="table table-dark table-sm">
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th class="text-end">Value</th>
+                            <th class="text-end">Change</th>
+                            <th class="text-end">Weight</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        const totalValue = positions.reduce((sum, pos) => sum + (pos.value || 0), 0);
+
+        positions.forEach(position => {
+            const weight = totalValue > 0 ? (position.value / totalValue * 100) : 0;
+            const changeClass = (position.change || 0) >= 0 ? 'text-success' : 'text-danger';
+
+            holdingsHTML += `
+                <tr>
+                    <td><strong>${position.symbol}</strong></td>
+                    <td class="text-end">${this.formatCurrency(position.value || 0)}</td>
+                    <td class="text-end ${changeClass}">
+                        ${(position.change || 0) >= 0 ? '+' : ''}${this.formatCurrency(position.change || 0)}
+                    </td>
+                    <td class="text-end">${weight.toFixed(1)}%</td>
+                </tr>
+            `;
+        });
+
+        holdingsHTML += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        holdingsContainer.innerHTML = holdingsHTML;
+    }
+
+    plotPortfolioChart(positions) {
+        const chartContainer = document.getElementById('portfolioChart');
+
+        if (!positions || positions.length === 0) {
+            chartContainer.innerHTML = `
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-chart-pie fa-2x mb-3"></i>
+                    <h6>No data to display</h6>
+                    <p>Add positions to see portfolio composition.</p>
+                </div>
+            `;
+            return;
+        }
+
+        const data = [{
+            values: positions.map(p => p.value || 0),
+            labels: positions.map(p => p.symbol),
+            type: 'pie',
+            textinfo: 'label+percent',
+            marker: {
+                colors: ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE']
+            }
+        }];
+
+        const layout = {
+            title: {
+                text: 'Portfolio Composition',
+                font: { color: '#ffffff', size: 14 }
+            },
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            font: { color: '#ffffff' },
+            showlegend: true,
+            legend: {
+                font: { color: '#ffffff' }
+            },
+            margin: { t: 40, r: 10, b: 10, l: 10 }
+        };
+
+        Plotly.newPlot(chartContainer, data, layout, {
+            responsive: true,
+            displayModeBar: false
+        });
+    }
+
+    displayTradeTable(trades) {
+        const tableContainer = document.getElementById('tradeJournalTable');
+
+        if (!trades || trades.length === 0) {
+            tableContainer.innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-book fa-2x mb-3"></i>
+                    <h6>No trades found</h6>
+                    <p>Start adding trades to track your performance.</p>
+                </div>
+            `;
+            return;
+        }
+
+        let tableHTML = `
+            <div class="table-responsive">
+                <table class="table table-dark table-sm">
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Strategy</th>
+                            <th>Entry Date</th>
+                            <th>Exit Date</th>
+                            <th class="text-end">Entry Price</th>
+                            <th class="text-end">Exit Price</th>
+                            <th class="text-end">Quantity</th>
+                            <th class="text-end">P&L</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        trades.forEach(trade => {
+            const entryDate = trade.entry_date ? new Date(trade.entry_date).toLocaleDateString() : '--';
+            const exitDate = trade.exit_date ? new Date(trade.exit_date).toLocaleDateString() : 'Open';
+            const entryPrice = trade.entry_price ? `$${trade.entry_price.toFixed(2)}` : '--';
+            const exitPrice = trade.exit_price ? `$${trade.exit_price.toFixed(2)}` : '--';
+            const pnl = trade.pnl !== null ? trade.pnl : 0;
+            const pnlClass = pnl > 0 ? 'text-success' : pnl < 0 ? 'text-danger' : 'text-muted';
+            const pnlText = trade.pnl !== null ? this.formatCurrency(pnl) : 'Open';
+
+            tableHTML += `
+                <tr>
+                    <td><strong>${trade.symbol}</strong></td>
+                    <td><span class="badge bg-secondary">${trade.strategy}</span></td>
+                    <td>${entryDate}</td>
+                    <td>${exitDate}</td>
+                    <td class="text-end">${entryPrice}</td>
+                    <td class="text-end">${exitPrice}</td>
+                    <td class="text-end">${trade.quantity}</td>
+                    <td class="text-end ${pnlClass}">${pnlText}</td>
+                    <td><small class="text-muted">${trade.notes || '--'}</small></td>
+                </tr>
+            `;
+        });
+
+        tableHTML += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        tableContainer.innerHTML = tableHTML;
+    }
+
+    async addTrade() {
+        try {
+            const symbol = document.getElementById('tradeSymbol').value.trim().toUpperCase();
+            const strategy = document.getElementById('tradeStrategy').value;
+            const entryDate = document.getElementById('tradeEntryDate').value;
+            const exitDate = document.getElementById('tradeExitDate').value;
+            const entryPrice = parseFloat(document.getElementById('tradeEntryPrice').value);
+            const exitPrice = document.getElementById('tradeExitPrice').value ? parseFloat(document.getElementById('tradeExitPrice').value) : null;
+            const quantity = parseInt(document.getElementById('tradeQuantity').value);
+            const notes = document.getElementById('tradeNotes').value.trim();
+
+            if (!symbol || !strategy || !entryDate || !entryPrice || !quantity) {
+                this.showNotification('Please fill in all required fields', 'warning');
+                return;
+            }
+
+            const tradeData = {
+                symbol: symbol,
+                strategy: strategy,
+                entry_date: entryDate,
+                exit_date: exitDate || null,
+                entry_price: entryPrice,
+                exit_price: exitPrice,
+                quantity: quantity,
+                notes: notes
+            };
+
+            // Try to save to API
+            const response = await fetch('/api/trades/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(tradeData)
+            });
+
+            if (response.ok) {
+                this.showNotification('Trade added successfully', 'success');
+                // Close modal and refresh trade journal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('addTradeModal'));
+                modal.hide();
+                this.loadTradeJournal();
+
+                // Clear form
+                document.getElementById('addTradeForm').reset();
+            } else {
+                throw new Error('Failed to save trade');
+            }
+
+        } catch (error) {
+            console.error('Failed to add trade:', error);
+            this.showNotification('Using demo mode - trade not saved permanently', 'info');
+
+            // Close modal anyway for demo
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addTradeModal'));
+            modal.hide();
+            document.getElementById('addTradeForm').reset();
+        }
+    }
 }
 
 // AI Chat Functionality
@@ -3497,6 +5618,36 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Strategy selector change handler
+    const backtestStrategy = document.getElementById('backtestStrategy');
+    if (backtestStrategy) {
+        backtestStrategy.addEventListener('change', (e) => {
+            if (dashboard) {
+                dashboard.updateStrategyParameters(e.target.value);
+            }
+        });
+    }
+
+    // Portfolio Analytics modal handler
+    const portfolioAnalyticsModal = document.getElementById('portfolioAnalyticsModal');
+    if (portfolioAnalyticsModal) {
+        portfolioAnalyticsModal.addEventListener('shown.bs.modal', () => {
+            if (dashboard) {
+                dashboard.loadPortfolioAnalytics();
+            }
+        });
+    }
+
+    // Trade Journal modal handler
+    const tradeJournalModal = document.getElementById('tradeJournalModal');
+    if (tradeJournalModal) {
+        tradeJournalModal.addEventListener('shown.bs.modal', () => {
+            if (dashboard) {
+                dashboard.loadTradeJournal();
+            }
+        });
+    }
 });
 
 // Initialize dashboard when page loads
@@ -3512,3 +5663,103 @@ window.addEventListener('error', (e) => {
         dashboard.showNotification('An unexpected error occurred', 'error');
     }
 });
+
+// ===== MISSING BUTTON HANDLERS =====
+
+// Schedule Morning Routine - Enhanced with automatic scheduling
+window.scheduleMorningRoutine = function() {
+    console.log("Running morning routine manually...");
+
+    if (dashboard) {
+        dashboard.showNotification('Running morning routine...', 'info');
+    }
+
+    // Execute the morning routine immediately when button is clicked
+    fetch('/api/morning-routine', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            time: '09:00',
+            enabled: true,
+            tasks: ['market_analysis', 'portfolio_review', 'news_scan'],
+            manual_trigger: true
+        })
+    })
+    .then(response => {
+        if (!response.ok) throw new Error(`Server error: ${response.status}`);
+        return response.json();
+    })
+    .then(data => {
+        console.log('Morning routine executed:', data);
+        if (dashboard) {
+            dashboard.showNotification('Morning routine completed successfully!', 'success');
+        }
+    })
+    .catch(err => {
+        console.error('Morning routine failed:', err);
+        if (dashboard) {
+            dashboard.showNotification('Morning routine failed: ' + err.message, 'error');
+        }
+    });
+};
+
+// Automatic morning routine scheduler for frontend
+function setupAutomaticMorningRoutine() {
+    console.log("🌅 Setting up automatic morning routine scheduler...");
+
+    // Function to check if it's 9:00 AM and run morning routine
+    function checkMorningRoutine() {
+        const now = new Date();
+        const hours = now.getHours();
+        const minutes = now.getMinutes();
+
+        // Check if it's 9:00 AM (and we haven't run it today)
+        if (hours === 9 && minutes === 0) {
+            const today = now.toDateString();
+            const lastRun = localStorage.getItem('lastMorningRoutine');
+
+            if (lastRun !== today) {
+                console.log("🌅 Auto-triggering morning routine at 9:00 AM");
+                window.scheduleMorningRoutine();
+                localStorage.setItem('lastMorningRoutine', today);
+            }
+        }
+    }
+
+    // Check every minute for morning routine time (non-blocking)
+    setInterval(checkMorningRoutine, 60000); // Check every minute
+
+    // Also check immediately on page load
+    checkMorningRoutine();
+}
+
+// Setup automatic scheduling when page loads
+if (typeof window !== 'undefined') {
+    document.addEventListener('DOMContentLoaded', () => {
+        // Delay setup to ensure dashboard is ready
+        setTimeout(setupAutomaticMorningRoutine, 2000);
+    });
+}
+
+// Show Quick Orders
+window.showQuickOrders = function() {
+    console.log("Showing quick orders panel...");
+
+    // Try to find and show a quick orders modal or panel
+    const quickOrdersModal = document.getElementById('quickOrdersModal');
+    if (quickOrdersModal) {
+        const modal = new bootstrap.Modal(quickOrdersModal);
+        modal.show();
+    } else {
+        // Fallback: show notification that feature is available in main trading section
+        if (dashboard) {
+            dashboard.showNotification('Quick orders available in the Trading section', 'info');
+        }
+
+        // Try to switch to trading section
+        const tradingSection = document.querySelector('[data-section="trading"]');
+        if (tradingSection) {
+            showSection('trading');
+        }
+    }
+};

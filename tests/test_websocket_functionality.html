@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .button { margin: 5px; padding: 10px 15px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        .button:hover { background: #0056b3; }
+        .log { background: #f8f9fa; padding: 10px; border-radius: 3px; height: 200px; overflow-y: auto; font-family: monospace; }
+        .connected { color: #28a745; }
+        .disconnected { color: #dc3545; }
+        .message { color: #17a2b8; }
+        .error { color: #dc3545; }
+    </style>
+</head>
+<body>
+    <h1>WebSocket Functionality Test</h1>
+    <p>Testing WebSocket connections and real-time updates.</p>
+
+    <div class="test-section">
+        <h3>Connection Status</h3>
+        <div>Main WebSocket: <span id="main-ws-status" class="disconnected">Disconnected</span></div>
+        <div>AI Chat WebSocket: <span id="ai-ws-status" class="disconnected">Disconnected</span></div>
+        <button class="button" onclick="connectMainWS()">Connect Main WS</button>
+        <button class="button" onclick="connectAIWS()">Connect AI WS</button>
+        <button class="button" onclick="disconnectAll()">Disconnect All</button>
+    </div>
+
+    <div class="test-section">
+        <h3>Message Testing</h3>
+        <button class="button" onclick="sendTestMessage()">Send Test Message</button>
+        <button class="button" onclick="simulateMarketUpdate()">Simulate Market Update</button>
+        <button class="button" onclick="testReconnection()">Test Reconnection</button>
+    </div>
+
+    <div class="test-section">
+        <h3>WebSocket Log</h3>
+        <div id="ws-log" class="log"></div>
+        <button class="button" onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <script>
+        let mainWS = null;
+        let aiWS = null;
+        let reconnectAttempts = 0;
+        let maxReconnectAttempts = 5;
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logDiv = document.getElementById('ws-log');
+            const className = type === 'error' ? 'error' : type === 'connected' ? 'connected' : type === 'disconnected' ? 'disconnected' : 'message';
+            logDiv.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function updateStatus(wsType, connected) {
+            const statusElement = document.getElementById(`${wsType}-ws-status`);
+            statusElement.textContent = connected ? 'Connected' : 'Disconnected';
+            statusElement.className = connected ? 'connected' : 'disconnected';
+        }
+
+        function connectMainWS() {
+            if (mainWS) {
+                mainWS.close();
+            }
+
+            log('Connecting to main WebSocket...');
+
+            try {
+                mainWS = new WebSocket('ws://localhost:8001/ws');
+
+                mainWS.onopen = function(event) {
+                    log('Main WebSocket connected successfully', 'connected');
+                    updateStatus('main', true);
+                    reconnectAttempts = 0;
+                };
+
+                mainWS.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        log(`Main WS received: ${data.type || 'unknown'} - ${JSON.stringify(data).substring(0, 100)}...`, 'message');
+
+                        // Test that we can handle different message types
+                        if (data.type === 'market_data') {
+                            log(`Market update: ${data.data?.symbol} @ $${data.data?.price}`, 'message');
+                        }
+                    } catch (e) {
+                        log(`Main WS received invalid JSON: ${event.data.substring(0, 50)}`, 'error');
+                    }
+                };
+
+                mainWS.onclose = function(event) {
+                    log(`Main WebSocket closed: Code ${event.code}, Reason: ${event.reason}`, 'disconnected');
+                    updateStatus('main', false);
+
+                    // Test automatic reconnection
+                    if (reconnectAttempts < maxReconnectAttempts) {
+                        setTimeout(() => {
+                            reconnectAttempts++;
+                            log(`Attempting reconnection ${reconnectAttempts}/${maxReconnectAttempts}...`);
+                            connectMainWS();
+                        }, 2000);
+                    }
+                };
+
+                mainWS.onerror = function(error) {
+                    log(`Main WebSocket error: ${error}`, 'error');
+                    updateStatus('main', false);
+                };
+
+            } catch (error) {
+                log(`Failed to create main WebSocket: ${error}`, 'error');
+            }
+        }
+
+        function connectAIWS() {
+            if (aiWS) {
+                aiWS.close();
+            }
+
+            log('Connecting to AI Chat WebSocket...');
+
+            try {
+                aiWS = new WebSocket('ws://localhost:8001/ws/ai-chat');
+
+                aiWS.onopen = function(event) {
+                    log('AI Chat WebSocket connected successfully', 'connected');
+                    updateStatus('ai', true);
+                };
+
+                aiWS.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        log(`AI WS received: ${data.type || 'ai_response'} - ${data.message?.substring(0, 50) || JSON.stringify(data).substring(0, 50)}...`, 'message');
+                    } catch (e) {
+                        log(`AI WS received: ${event.data.substring(0, 50)}`, 'message');
+                    }
+                };
+
+                aiWS.onclose = function(event) {
+                    log(`AI Chat WebSocket closed: Code ${event.code}`, 'disconnected');
+                    updateStatus('ai', false);
+                };
+
+                aiWS.onerror = function(error) {
+                    log(`AI Chat WebSocket error: ${error}`, 'error');
+                    updateStatus('ai', false);
+                };
+
+            } catch (error) {
+                log(`Failed to create AI Chat WebSocket: ${error}`, 'error');
+            }
+        }
+
+        function sendTestMessage() {
+            if (aiWS && aiWS.readyState === WebSocket.OPEN) {
+                const testMessage = {
+                    message: "test message from WebSocket test",
+                    timestamp: new Date().toISOString()
+                };
+                aiWS.send(JSON.stringify(testMessage));
+                log('Sent test message to AI Chat WebSocket');
+            } else {
+                log('AI Chat WebSocket not connected - cannot send message', 'error');
+            }
+        }
+
+        function simulateMarketUpdate() {
+            // Simulate receiving a market data update
+            if (mainWS && mainWS.readyState === WebSocket.OPEN) {
+                log('Simulating market data update...');
+
+                // Test that the WebSocket can handle a market update message
+                const mockUpdate = {
+                    type: 'market_data',
+                    data: {
+                        symbol: 'AAPL',
+                        price: 253.45,
+                        change: 2.15,
+                        change_percent: 0.85,
+                        timestamp: new Date().toISOString()
+                    }
+                };
+
+                // Simulate the message handler
+                mainWS.onmessage({ data: JSON.stringify(mockUpdate) });
+            } else {
+                log('Main WebSocket not connected - cannot simulate update', 'error');
+            }
+        }
+
+        function testReconnection() {
+            log('Testing reconnection logic...');
+            if (mainWS && mainWS.readyState === WebSocket.OPEN) {
+                log('Forcing WebSocket disconnection...');
+                mainWS.close(1000, 'Test reconnection');
+            } else {
+                log('WebSocket not connected - starting fresh connection test');
+                connectMainWS();
+            }
+        }
+
+        function disconnectAll() {
+            log('Disconnecting all WebSocket connections...');
+
+            if (mainWS) {
+                mainWS.close(1000, 'Manual disconnect');
+                mainWS = null;
+            }
+
+            if (aiWS) {
+                aiWS.close(1000, 'Manual disconnect');
+                aiWS = null;
+            }
+        }
+
+        function clearLog() {
+            document.getElementById('ws-log').innerHTML = '';
+        }
+
+        // Auto-start testing
+        window.onload = function() {
+            log('WebSocket test page loaded');
+            log('Testing WebSocket functionality...');
+
+            // Test connection sequence
+            setTimeout(() => {
+                log('Starting automatic connection test...');
+                connectMainWS();
+            }, 1000);
+
+            setTimeout(() => {
+                connectAIWS();
+            }, 2000);
+        };
+
+        // Test responsiveness during WebSocket operations
+        let testCounter = 0;
+        setInterval(() => {
+            testCounter++;
+            // This should continue running smoothly even during WebSocket operations
+        }, 100);
+    </script>
+</body>
+</html>
