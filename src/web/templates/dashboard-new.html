@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Trading Suite</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📈</text></svg>">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+    <!-- Plotly.js -->
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+    <!-- New Trading Theme CSS -->
+    <link href="/static/css/trading-theme.css" rel="stylesheet">
+</head>
+<body>
+    <div class="trading-app">
+        <!-- SIDEBAR NAVIGATION -->
+        <nav class="trading-sidebar" id="tradingSidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <i class="fas fa-chart-line"></i>
+                    <span class="nav-text">AI Trading</span>
+                </div>
+                <button class="sidebar-toggle" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+
+            <div class="sidebar-nav">
+                <!-- DASHBOARD -->
+                <div class="nav-section">
+                    <div class="nav-section-title">Dashboard</div>
+                    <a href="#" class="nav-item active" onclick="showSection('dashboard')">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span class="nav-text">Overview</span>
+                    </a>
+                </div>
+
+                <!-- TRADING -->
+                <div class="nav-section">
+                    <div class="nav-section-title">Trading</div>
+                    <a href="#" class="nav-item" onclick="showSection('trading')">
+                        <i class="fas fa-exchange-alt"></i>
+                        <span class="nav-text">Live Trading</span>
+                    </a>
+                    <div class="nav-subitems">
+                        <a href="#" class="nav-subitem" onclick="setTradingMode('paper')">Paper Trading</a>
+                        <a href="#" class="nav-subitem" onclick="setTradingMode('live')">Live Trading</a>
+                        <a href="#" class="nav-subitem" onclick="showQuickOrders()">Quick Orders</a>
+                    </div>
+                </div>
+
+                <!-- ANALYTICS -->
+                <div class="nav-section">
+                    <div class="nav-section-title">Analytics</div>
+                    <a href="#" class="nav-item" onclick="showSection('portfolio')">
+                        <i class="fas fa-chart-pie"></i>
+                        <span class="nav-text">Portfolio</span>
+                    </a>
+                    <a href="#" class="nav-item" onclick="showSection('performance')">
+                        <i class="fas fa-chart-line"></i>
+                        <span class="nav-text">Performance</span>
+                    </a>
+                    <a href="#" class="nav-item" onclick="showSection('risk')">
+                        <i class="fas fa-shield-alt"></i>
+                        <span class="nav-text">Risk Metrics</span>
+                    </a>
+                </div>
+
+                <!-- RESEARCH -->
+                <div class="nav-section">
+                    <div class="nav-section-title">Research</div>
+                    <a href="#" class="nav-item" onclick="showSection('charts')">
+                        <i class="fas fa-chart-candlestick"></i>
+                        <span class="nav-text">Charts & Indicators</span>
+                    </a>
+                    <a href="#" class="nav-item" onclick="showSection('news')">
+                        <i class="fas fa-newspaper"></i>
+                        <span class="nav-text">News & Sentiment</span>
+                    </a>
+                    <a href="#" class="nav-item" onclick="showSection('ai-analysis')">
+                        <i class="fas fa-brain"></i>
+                        <span class="nav-text">AI Analysis</span>
+                    </a>
+                </div>
+
+                <!-- STRATEGIES -->
+                <div class="nav-section">
+                    <div class="nav-section-title">Strategies</div>
+                    <a href="#" class="nav-item" onclick="showSection('backtesting')">
+                        <i class="fas fa-history"></i>
+                        <span class="nav-text">Backtesting</span>
+                    </a>
+                    <a href="#" class="nav-item" onclick="showSection('options')">
+                        <i class="fas fa-cogs"></i>
+                        <span class="nav-text">Options Trading</span>
+                    </a>
+                    <a href="#" class="nav-item" onclick="showSection('strategy-builder')">
+                        <i class="fas fa-hammer"></i>
+                        <span class="nav-text">Strategy Builder</span>
+                    </a>
+                </div>
+
+                <!-- AUTOMATION -->
+                <div class="nav-section">
+                    <div class="nav-section-title">Automation</div>
+                    <a href="#" class="nav-item" onclick="showSection('ai-assistant')">
+                        <i class="fas fa-robot"></i>
+                        <span class="nav-text">AI Assistant</span>
+                    </a>
+                    <a href="#" class="nav-item" onclick="showSection('morning-routine')">
+                        <i class="fas fa-sun"></i>
+                        <span class="nav-text">Morning Routine</span>
+                    </a>
+                    <a href="#" class="nav-item" onclick="showSection('auto-trading')">
+                        <i class="fas fa-magic"></i>
+                        <span class="nav-text">Auto Trading</span>
+                    </a>
+                </div>
+            </div>
+        </nav>
+
+        <!-- MAIN CONTENT -->
+        <main class="trading-main" id="tradingMain">
+            <!-- TOP BAR -->
+            <header class="trading-topbar">
+                <div class="topbar-symbol">
+                    <input type="text" id="symbolSearch" placeholder="Search symbols..." class="trade-input" style="width: 200px;">
+                    <div class="d-flex align-items-center gap-2">
+                        <span id="currentSymbol">AAPL</span>
+                        <span class="symbol-price" id="currentPrice">$150.25</span>
+                        <span class="symbol-change positive" id="currentChange">+2.1%</span>
+                    </div>
+                </div>
+
+                <div class="topbar-status">
+                    <div class="status-indicator paper" id="tradingMode">
+                        <i class="fas fa-paper-plane"></i>
+                        Paper Trading
+                    </div>
+                    <div class="status-indicator connected" id="connectionStatus">
+                        <i class="fas fa-circle"></i>
+                        Connected
+                    </div>
+                    <button class="btn-trading btn-outline btn-sm" onclick="showSettings()">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- CONTENT AREA -->
+            <div class="trading-content">
+                <!-- PRIMARY CONTENT -->
+                <div class="content-primary">
+                    <!-- DASHBOARD SECTION -->
+                    <div id="dashboard-section" class="content-section">
+                        <!-- Portfolio Summary -->
+                        <div class="portfolio-summary">
+                            <div class="portfolio-metric">
+                                <div class="metric-value metric-positive" id="portfolioValue">$52,340</div>
+                                <div class="metric-label">Portfolio Value</div>
+                            </div>
+                            <div class="portfolio-metric">
+                                <div class="metric-value metric-positive" id="dayChange">+$1,240</div>
+                                <div class="metric-label">Day Change</div>
+                            </div>
+                            <div class="portfolio-metric">
+                                <div class="metric-value" id="totalReturn">+12.4%</div>
+                                <div class="metric-label">Total Return</div>
+                            </div>
+                            <div class="portfolio-metric">
+                                <div class="metric-value" id="activePositions">8</div>
+                                <div class="metric-label">Active Positions</div>
+                            </div>
+                        </div>
+
+                        <!-- Main Chart -->
+                        <div class="trading-card">
+                            <div class="card-header">
+                                <span><i class="fas fa-chart-line"></i> Price Chart</span>
+                                <div class="d-flex gap-1">
+                                    <button class="btn-trading btn-outline btn-sm" onclick="changeTimeframe('1D')">1D</button>
+                                    <button class="btn-trading btn-outline btn-sm" onclick="changeTimeframe('1W')">1W</button>
+                                    <button class="btn-trading btn-outline btn-sm" onclick="changeTimeframe('1M')">1M</button>
+                                    <button class="btn-trading btn-outline btn-sm" onclick="changeTimeframe('1Y')">1Y</button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div id="chartContainer" class="chart-container"></div>
+                            </div>
+                        </div>
+
+                        <!-- Positions Table -->
+                        <div class="trading-card">
+                            <div class="card-header">
+                                <span><i class="fas fa-list"></i> Current Positions</span>
+                                <button class="btn-trading btn-primary btn-sm" onclick="refreshPositions()">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <div id="positionsTable">
+                                    <!-- Positions will be loaded here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- OTHER SECTIONS (Hidden by default) -->
+                    <div id="trading-section" class="content-section hidden">
+                        <h2>Trading Interface</h2>
+                        <!-- Trading content -->
+                    </div>
+
+                    <div id="portfolio-section" class="content-section hidden">
+                        <h2>Portfolio Analytics</h2>
+                        <!-- Portfolio content -->
+                    </div>
+
+                    <div id="charts-section" class="content-section hidden">
+                        <h2>Charts & Technical Analysis</h2>
+                        <!-- Charts content -->
+                    </div>
+
+                    <!-- Add more sections as needed -->
+                </div>
+
+                <!-- SECONDARY CONTENT (Right Panel) -->
+                <div class="content-secondary">
+                    <!-- Quick Trade Panel -->
+                    <div class="quick-trade-panel">
+                        <div class="card-header">
+                            <span><i class="fas fa-bolt"></i> Quick Trade</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-2">
+                                <label class="metric-label">Quantity</label>
+                                <input type="number" class="trade-input" id="tradeQuantity" value="100" min="1">
+                            </div>
+                            <div class="mb-3">
+                                <label class="metric-label">Order Type</label>
+                                <select class="trade-input" id="orderType">
+                                    <option value="market">Market</option>
+                                    <option value="limit">Limit</option>
+                                    <option value="stop">Stop</option>
+                                </select>
+                            </div>
+                            <div class="trade-actions">
+                                <button class="btn-trading btn-primary" onclick="quickBuy()">
+                                    <i class="fas fa-arrow-up"></i>
+                                    BUY
+                                </button>
+                                <button class="btn-trading btn-danger" onclick="quickSell()">
+                                    <i class="fas fa-arrow-down"></i>
+                                    SELL
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AI Insights -->
+                    <div class="trading-card">
+                        <div class="card-header">
+                            <span><i class="fas fa-brain"></i> AI Insights</span>
+                            <button class="btn-trading btn-outline btn-sm" onclick="refreshAI()">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                        <div class="card-body card-compact">
+                            <div id="aiInsights">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <span class="font-weight-medium">Recommendation:</span>
+                                    <span class="text-success font-weight-bold">BUY</span>
+                                </div>
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <span class="font-weight-medium">Confidence:</span>
+                                    <span class="text-success">78%</span>
+                                </div>
+                                <div class="text-muted font-size-sm">
+                                    Strong technical indicators suggest upward momentum. RSI oversold, MACD bullish crossover.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Technical Indicators -->
+                    <div class="trading-card">
+                        <div class="card-header">
+                            <span><i class="fas fa-chart-bar"></i> Technical Indicators</span>
+                        </div>
+                        <div class="card-body card-compact">
+                            <div id="technicalIndicators">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>RSI (14):</span>
+                                    <span class="text-warning font-mono">67.3</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>MACD:</span>
+                                    <span class="text-success font-mono">+0.45</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>SMA 50:</span>
+                                    <span class="font-mono">$148.22</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span>SMA 200:</span>
+                                    <span class="font-mono">$142.85</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent News -->
+                    <div class="trading-card">
+                        <div class="card-header">
+                            <span><i class="fas fa-newspaper"></i> Recent News</span>
+                        </div>
+                        <div class="card-body card-compact">
+                            <div id="recentNews">
+                                <div class="mb-2 pb-2 border-bottom">
+                                    <div class="font-weight-medium">Q3 Earnings Beat</div>
+                                    <div class="text-muted font-size-sm">2 hours ago</div>
+                                </div>
+                                <div class="mb-2 pb-2 border-bottom">
+                                    <div class="font-weight-medium">New Product Launch</div>
+                                    <div class="text-muted font-size-sm">5 hours ago</div>
+                                </div>
+                                <div>
+                                    <div class="font-weight-medium">Analyst Upgrade</div>
+                                    <div class="text-muted font-size-sm">1 day ago</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Mobile Menu Toggle -->
+    <button class="mobile-menu-toggle" id="mobileMenuToggle" onclick="toggleMobileSidebar()">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- SCRIPTS -->
+    <script src="/static/js/trading-dashboard.js"></script>
+    <script>
+        // Sidebar functionality
+        function toggleSidebar() {
+            const sidebar = document.getElementById('tradingSidebar');
+            const main = document.getElementById('tradingMain');
+
+            sidebar.classList.toggle('collapsed');
+            main.classList.toggle('sidebar-collapsed');
+        }
+
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('tradingSidebar');
+            sidebar.classList.toggle('open');
+        }
+
+        // Navigation functionality
+        function showSection(sectionName) {
+            // Hide all sections
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.add('hidden');
+            });
+
+            // Show selected section
+            const targetSection = document.getElementById(sectionName + '-section');
+            if (targetSection) {
+                targetSection.classList.remove('hidden');
+            }
+
+            // Update nav active state
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+        }
+
+        // Trading functionality
+        function quickBuy() {
+            const symbol = document.getElementById('currentSymbol').textContent;
+            const quantity = document.getElementById('tradeQuantity').value;
+            const orderType = document.getElementById('orderType').value;
+
+            console.log(`Buy ${quantity} shares of ${symbol} - ${orderType} order`);
+            // Implement actual trading logic
+        }
+
+        function quickSell() {
+            const symbol = document.getElementById('currentSymbol').textContent;
+            const quantity = document.getElementById('tradeQuantity').value;
+            const orderType = document.getElementById('orderType').value;
+
+            console.log(`Sell ${quantity} shares of ${symbol} - ${orderType} order`);
+            // Implement actual trading logic
+        }
+
+        function setTradingMode(mode) {
+            const modeElement = document.getElementById('tradingMode');
+            if (mode === 'live') {
+                modeElement.className = 'status-indicator live';
+                modeElement.innerHTML = '<i class="fas fa-bolt"></i> Live Trading';
+            } else {
+                modeElement.className = 'status-indicator paper';
+                modeElement.innerHTML = '<i class="fas fa-paper-plane"></i> Paper Trading';
+            }
+        }
+
+        // Utility functions
+        function changeTimeframe(timeframe) {
+            console.log(`Changing timeframe to ${timeframe}`);
+            // Implement chart timeframe change
+        }
+
+        function refreshPositions() {
+            console.log('Refreshing positions...');
+            // Implement positions refresh
+        }
+
+        function refreshAI() {
+            console.log('Refreshing AI insights...');
+            // Implement AI insights refresh
+        }
+
+        function showSettings() {
+            console.log('Opening settings...');
+            // Implement settings modal
+        }
+
+        // Initialize the dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load initial data
+            console.log('Dashboard initialized');
+
+            // Setup real-time updates
+            // setupWebSocket();
+
+            // Load chart
+            // initializeChart();
+        });
+
+        // Handle mobile menu
+        document.addEventListener('click', function(e) {
+            const sidebar = document.getElementById('tradingSidebar');
+            const toggle = document.getElementById('mobileMenuToggle');
+
+            if (window.innerWidth <= 768 &&
+                !sidebar.contains(e.target) &&
+                !toggle.contains(e.target)) {
+                sidebar.classList.remove('open');
+            }
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            const sidebar = document.getElementById('tradingSidebar');
+            if (window.innerWidth > 768) {
+                sidebar.classList.remove('open');
+            }
+        });
+    </script>
+
+    <style>
+        /* Mobile menu toggle (only visible on mobile) */
+        .mobile-menu-toggle {
+            display: none;
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            z-index: 1001;
+            background: var(--trading-green);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 1.2rem;
+            box-shadow: var(--shadow-md);
+        }
+
+        @media (max-width: 768px) {
+            .mobile-menu-toggle {
+                display: block;
+            }
+
+            .trading-topbar {
+                padding-left: 60px;
+            }
+        }
+
+        /* Content sections */
+        .content-section {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-3);
+            padding: var(--space-3);
+        }
+
+        /* Custom styles for specific elements */
+        .font-size-sm {
+            font-size: 0.75rem;
+        }
+
+        .border-bottom {
+            border-bottom: 1px solid var(--border-gray);
+        }
+    </style>
+</body>
+</html>
