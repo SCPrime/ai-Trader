@@ -1,0 +1,33 @@
+{
+  "trading": {
+    "mode": "paper",
+    "auto_trade": false,
+    "confirm_trades": true,
+    "max_position_size": 10000,
+    "max_daily_trades": 50
+  },
+  "risk": {
+    "stop_loss_percent": 2.0,
+    "take_profit_percent": 5.0,
+    "max_portfolio_risk": 20.0,
+    "position_sizing": "kelly"
+  },
+  "technical": {
+    "rsi_period": 14,
+    "rsi_oversold": 30,
+    "rsi_overbought": 70,
+    "macd_fast": 12,
+    "macd_slow": 26,
+    "macd_signal": 9
+  },
+  "options": {
+    "enabled": true,
+    "level": 2,
+    "max_contracts": 10,
+    "strategies": ["covered_call", "cash_secured_put", "spreads"]
+  },
+  "news": {
+    "enabled": true,
+    "sources": ["yahoo", "benzinga", "finnhub"]
+  }
+}

@@ -1,0 +1,15 @@
+trading:
+  mode: paper  # NEVER change to 'live' until ready
+  max_position_size: 1000  # Maximum $ per trade
+  stop_loss_percent: 2  # 2% stop loss
+  daily_loss_limit: 100  # Stop trading after $100 loss
+  
+security:
+  require_confirmation: true
+  enable_notifications: true
+  webhook_alerts: true
+  
+logging:
+  level: INFO
+  file: logs/trading_bot.log
+  rotate: daily

@@ -1,0 +1,82 @@
+{
+    "folders": [
+        {
+            "path": "."
+        }
+    ],
+    "settings": {
+        "python.defaultInterpreterPath": "python",
+        "files.watcherExclude": {
+            "**/.git/objects/**": true,
+            "**/.git/subtree-cache/**": true,
+            "**/node_modules/*/**": true,
+            "**/.hg/store/**": true,
+            "**/logs/**": true,
+            "**/backups/**": true
+        },
+        "python.terminal.activateEnvironment": true,
+        "terminal.integrated.defaultProfile.windows": "PowerShell"
+    },
+    "extensions": {
+        "recommendations": [
+            "ms-python.python",
+            "ms-python.vscode-pylance",
+            "ms-toolsai.jupyter"
+        ]
+    },
+    "tasks": {
+        "version": "2.0.0",
+        "tasks": [
+            {
+                "label": "Auto Start Monitor",
+                "type": "shell",
+                "command": "python",
+                "args": ["vscode_monitor.py"],
+                "runOptions": {
+                    "runOn": "folderOpen"
+                },
+                "presentation": {
+                    "reveal": "always",
+                    "panel": "new",
+                    "showReuseMessage": false,
+                    "clear": true
+                },
+                "group": "build",
+                "problemMatcher": []
+            },
+            {
+                "label": "Quick Start Dashboard",
+                "type": "shell",
+                "command": "python",
+                "args": ["app.py"],
+                "group": "build",
+                "presentation": {
+                    "reveal": "always",
+                    "panel": "new"
+                },
+                "problemMatcher": []
+            }
+        ]
+    },
+    "launch": {
+        "version": "0.2.0",
+        "configurations": [
+            {
+                "name": "Launch Trading Bot",
+                "type": "python",
+                "request": "launch",
+                "program": "${workspaceFolder}/app.py",
+                "console": "integratedTerminal",
+                "justMyCode": true
+            },
+            {
+                "name": "Run Monitor",
+                "type": "python",
+                "request": "launch",
+                "program": "${workspaceFolder}/vscode_monitor.py",
+                "console": "integratedTerminal",
+                "justMyCode": true
+            }
+        ]
+    }
+}
