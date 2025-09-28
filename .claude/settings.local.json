@@ -41,7 +41,8 @@
       "Bash(find:*)",
       "Bash(tasklist:*)",
       "Bash(chmod:*)",
-      "Bash(./final_cleanup.sh)"
+      "Bash(./final_cleanup.sh)",
+      "Bash(start http://localhost:8001)"
     ],
     "deny": [],
     "ask": []

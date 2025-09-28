@@ -55,6 +55,27 @@
                 </div>
             </div>
 
+            <!-- Morning Routine Button -->
+            <div class="navbar-nav me-3">
+                <button class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#morningRoutineModal">
+                    <i class="fas fa-sun"></i> Morning Check
+                </button>
+            </div>
+
+            <!-- AI Chat Button -->
+            <div class="navbar-nav me-3">
+                <button class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#aiChatModal">
+                    <i class="fas fa-robot"></i> AI Chat
+                </button>
+            </div>
+
+            <!-- News Research Button -->
+            <div class="navbar-nav me-3">
+                <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#newsResearchModal">
+                    <i class="fas fa-newspaper"></i> News Research
+                </button>
+            </div>
+
             <!-- Connection Status -->
             <div class="navbar-nav">
                 <div class="nav-item">
@@ -647,6 +668,12 @@
                             <button class="btn btn-primary" id="strategizeBtn">
                                 <i class="fas fa-search"></i> Strategize (Test Market)
                             </button>
+                            <button class="btn btn-info" id="backtestBtn" data-bs-toggle="modal" data-bs-target="#backtestModal">
+                                <i class="fas fa-chart-bar"></i> Run Backtest
+                            </button>
+                            <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#optionsCenterModal">
+                                <i class="fas fa-chart-pie"></i> Options Center
+                            </button>
                             <button class="btn btn-success" id="implementStrategyBtn" disabled>
                                 <i class="fas fa-play"></i> Implement Strategy
                             </button>
@@ -803,6 +830,621 @@
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Chat Modal -->
+    <div class="modal fade" id="aiChatModal" tabindex="-1" aria-labelledby="aiChatModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content bg-dark text-light">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title" id="aiChatModalLabel">
+                        <i class="fas fa-robot text-info"></i> AI Trading Assistant
+                        <span class="badge bg-info ms-2" id="aiProvider">Claude</span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0" style="height: 70vh;">
+                    <div class="row g-0 h-100">
+                        <!-- Sidebar with Quick Actions -->
+                        <div class="col-md-3 bg-secondary p-3">
+                            <h6><i class="fas fa-bolt"></i> Quick Actions</h6>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-light btn-sm" onclick="sendAIMessage('What are my current positions?')">
+                                    <i class="fas fa-chart-pie"></i> Portfolio Overview
+                                </button>
+                                <button class="btn btn-outline-light btn-sm" onclick="sendAIMessage('How is my performance today?')">
+                                    <i class="fas fa-chart-line"></i> Today\'s Performance
+                                </button>
+                                <button class="btn btn-outline-light btn-sm" onclick="sendAIMessage('Analyze AAPL stock')">
+                                    <i class="fas fa-search"></i> Stock Analysis
+                                </button>
+                                <button class="btn btn-outline-light btn-sm" onclick="sendAIMessage('What is my risk exposure?')">
+                                    <i class="fas fa-exclamation-triangle"></i> Risk Assessment
+                                </button>
+                                <button class="btn btn-outline-light btn-sm" onclick="sendAIMessage('Should I adjust my trading strategy?')">
+                                    <i class="fas fa-cogs"></i> Strategy Review
+                                </button>
+                                <button class="btn btn-outline-light btn-sm" onclick="sendAIMessage('Show me market news and sentiment')">
+                                    <i class="fas fa-newspaper"></i> Market News
+                                </button>
+                                <button class="btn btn-outline-light btn-sm" onclick="sendAIMessage('Explain options trading strategies')">
+                                    <i class="fas fa-graduation-cap"></i> Options Education
+                                </button>
+                            </div>
+
+                            <hr class="border-light">
+
+                            <h6><i class="fas fa-info-circle"></i> Bot Status</h6>
+                            <div class="small">
+                                <div class="d-flex justify-content-between">
+                                    <span>Mode:</span>
+                                    <span class="badge bg-success">Paper Trading</span>
+                                </div>
+                                <div class="d-flex justify-content-between mt-1">
+                                    <span>Portfolio:</span>
+                                    <span id="aiChatPortfolioValue">Loading...</span>
+                                </div>
+                                <div class="d-flex justify-content-between mt-1">
+                                    <span>P&L Today:</span>
+                                    <span id="aiChatDayPnL" class="text-success">Loading...</span>
+                                </div>
+                                <div class="d-flex justify-content-between mt-1">
+                                    <span>Positions:</span>
+                                    <span id="aiChatPositionCount">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Chat Area -->
+                        <div class="col-md-9 d-flex flex-column">
+                            <!-- Messages -->
+                            <div class="flex-grow-1 p-3 overflow-auto" id="aiChatMessages" style="max-height: calc(70vh - 80px);">
+                                <div class="ai-message mb-3">
+                                    <div class="d-flex">
+                                        <div class="me-2">
+                                            <i class="fas fa-robot text-info"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <div class="bg-info bg-opacity-10 p-2 rounded">
+                                                Hello! I'm your AI trading assistant powered by Claude. I can help you:
+                                                <ul class="mb-0 mt-2">
+                                                    <li>Analyze your portfolio and positions</li>
+                                                    <li>Explain market trends and news</li>
+                                                    <li>Review trading strategies and risk</li>
+                                                    <li>Provide educational content about trading</li>
+                                                    <li>Answer questions about your trading bot</li>
+                                                </ul>
+                                                <div class="mt-2 small text-muted">
+                                                    What would you like to know about your trading activity?
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Input Area -->
+                            <div class="border-top border-secondary p-3">
+                                <div class="input-group">
+                                    <input type="text" class="form-control bg-dark text-light border-secondary"
+                                           id="aiChatInput"
+                                           placeholder="Ask about your trades, strategies, market analysis..."
+                                           style="border-right: none;">
+                                    <button class="btn btn-info" type="button" onclick="sendAIMessage()">
+                                        <i class="fas fa-paper-plane"></i> Send
+                                    </button>
+                                </div>
+                                <div class="small text-muted mt-1">
+                                    <i class="fas fa-lightbulb"></i>
+                                    Tip: Try asking "What's my best performing stock?" or "Explain covered calls"
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Backtest Modal -->
+    <div class="modal fade" id="backtestModal" tabindex="-1" aria-labelledby="backtestModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content bg-dark text-light">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title" id="backtestModalLabel">
+                        <i class="fas fa-chart-bar text-info"></i> Strategy Backtesting
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <!-- Backtest Configuration -->
+                        <div class="col-md-4">
+                            <div class="card bg-secondary">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fas fa-cogs"></i> Backtest Configuration</h6>
+                                </div>
+                                <div class="card-body">
+                                    <form id="backtestForm">
+                                        <div class="mb-3">
+                                            <label for="backtestSymbol" class="form-label">Symbol</label>
+                                            <input type="text" class="form-control bg-dark text-light border-secondary"
+                                                   id="backtestSymbol" value="AAPL" placeholder="e.g., AAPL, MSFT">
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="backtestStrategy" class="form-label">Strategy</label>
+                                            <select class="form-select bg-dark text-light border-secondary" id="backtestStrategy">
+                                                <option value="buy_hold">Buy & Hold</option>
+                                                <option value="sma_crossover">SMA Crossover</option>
+                                                <option value="rsi_strategy">RSI Strategy</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="backtestPeriod" class="form-label">Time Period</label>
+                                            <select class="form-select bg-dark text-light border-secondary" id="backtestPeriod">
+                                                <option value="3mo">3 Months</option>
+                                                <option value="6mo">6 Months</option>
+                                                <option value="1y" selected>1 Year</option>
+                                                <option value="2y">2 Years</option>
+                                                <option value="5y">5 Years</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="backtestCapital" class="form-label">Initial Capital</label>
+                                            <input type="number" class="form-control bg-dark text-light border-secondary"
+                                                   id="backtestCapital" value="10000" min="1000" step="1000">
+                                        </div>
+
+                                        <!-- Strategy Parameters (Dynamic) -->
+                                        <div id="strategyParameters" class="mb-3">
+                                            <!-- Parameters will be populated based on selected strategy -->
+                                        </div>
+
+                                        <button type="button" class="btn btn-primary w-100" id="runBacktestBtn">
+                                            <i class="fas fa-play"></i> Run Backtest
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Backtest Results -->
+                        <div class="col-md-8">
+                            <div class="card bg-secondary">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fas fa-chart-line"></i> Backtest Results</h6>
+                                </div>
+                                <div class="card-body">
+                                    <!-- Loading State -->
+                                    <div id="backtestLoading" style="display: none;">
+                                        <div class="text-center py-5">
+                                            <div class="spinner-border text-primary" role="status"></div>
+                                            <div class="mt-2">Running backtest...</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Results Display -->
+                                    <div id="backtestResults" style="display: none;">
+                                        <!-- Performance Metrics -->
+                                        <div class="row mb-4">
+                                            <div class="col-md-3">
+                                                <div class="text-center p-2 border rounded">
+                                                    <div class="h5 mb-1" id="totalReturn">-</div>
+                                                    <div class="small text-muted">Total Return</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="text-center p-2 border rounded">
+                                                    <div class="h5 mb-1" id="winRate">-</div>
+                                                    <div class="small text-muted">Win Rate</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="text-center p-2 border rounded">
+                                                    <div class="h5 mb-1" id="sharpeRatio">-</div>
+                                                    <div class="small text-muted">Sharpe Ratio</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="text-center p-2 border rounded">
+                                                    <div class="h5 mb-1" id="maxDrawdown">-</div>
+                                                    <div class="small text-muted">Max Drawdown</div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Equity Curve Chart -->
+                                        <div class="mb-4">
+                                            <div id="equityCurveChart" style="height: 400px;"></div>
+                                        </div>
+
+                                        <!-- Trade Details -->
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <h6>Trade Summary</h6>
+                                                <table class="table table-dark table-sm">
+                                                    <tr><td>Total Trades:</td><td id="totalTrades">-</td></tr>
+                                                    <tr><td>Average Trade:</td><td id="avgTrade">-</td></tr>
+                                                    <tr><td>Best Trade:</td><td id="bestTrade">-</td></tr>
+                                                    <tr><td>Worst Trade:</td><td id="worstTrade">-</td></tr>
+                                                    <tr><td>Final Value:</td><td id="finalValue">-</td></tr>
+                                                </table>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <h6>Recent Trades</h6>
+                                                <div id="tradesList" style="max-height: 200px; overflow-y: auto;">
+                                                    <!-- Trade list will be populated here -->
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Error Display -->
+                                    <div id="backtestError" style="display: none;">
+                                        <div class="alert alert-danger">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            <span id="errorMessage">An error occurred during backtesting.</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Initial Message -->
+                                    <div id="backtestInitial">
+                                        <div class="text-center py-5 text-muted">
+                                            <i class="fas fa-chart-bar fa-3x mb-3"></i>
+                                            <h5>Strategy Backtesting</h5>
+                                            <p>Configure your backtest parameters and click "Run Backtest" to see how your strategy would have performed historically.</p>
+                                            <div class="mt-3">
+                                                <small>
+                                                    <strong>Available Strategies:</strong><br>
+                                                    • <strong>Buy & Hold:</strong> Simple buy and hold for baseline comparison<br>
+                                                    • <strong>SMA Crossover:</strong> Moving average crossover signals<br>
+                                                    • <strong>RSI Strategy:</strong> Oversold/overbought RSI signals
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Morning Routine Modal -->
+    <div class="modal fade" id="morningRoutineModal" tabindex="-1" aria-labelledby="morningRoutineModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content bg-dark text-light">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title" id="morningRoutineModalLabel">
+                        <i class="fas fa-sun text-warning"></i> Morning Market Check
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card bg-secondary mb-3">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fas fa-clock"></i> Market Status</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div id="marketStatus">
+                                        <div class="d-flex justify-content-between">
+                                            <span>Status:</span>
+                                            <span id="marketOpen" class="badge bg-success">Loading...</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between mt-2">
+                                            <span>Next Open:</span>
+                                            <span id="nextOpen">Loading...</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between mt-2">
+                                            <span>Time:</span>
+                                            <span id="currentTime">Loading...</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card bg-secondary">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fas fa-wallet"></i> Account Summary</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div id="accountSummary">
+                                        <div class="d-flex justify-content-between">
+                                            <span>Portfolio Value:</span>
+                                            <span id="morningPortfolioValue">Loading...</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between mt-2">
+                                            <span>Buying Power:</span>
+                                            <span id="morningBuyingPower">Loading...</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between mt-2">
+                                            <span>Day Change:</span>
+                                            <span id="morningDayChange" class="text-success">Loading...</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="card bg-secondary mb-3">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fas fa-chart-line"></i> Your Positions</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div id="morningPositions" style="max-height: 200px; overflow-y: auto;">
+                                        Loading positions...
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card bg-secondary">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fas fa-list"></i> Pending Orders</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div id="morningOrders" style="max-height: 150px; overflow-y: auto;">
+                                        Loading orders...
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="card bg-secondary">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fas fa-newspaper"></i> Market News Headlines</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div id="morningNews" style="max-height: 200px; overflow-y: auto;">
+                                        Loading market news...
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Loading State -->
+                    <div id="morningRoutineLoading" class="text-center py-4" style="display: none;">
+                        <div class="spinner-border text-warning" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <div class="mt-2">Running morning routine...</div>
+                    </div>
+
+                    <!-- Results Container -->
+                    <div id="morningRoutineResults">
+                        <div class="mt-3 text-center">
+                            <button id="runMorningRoutineBtn" class="btn btn-warning">
+                                <i class="fas fa-play"></i> Run Morning Routine
+                            </button>
+                            <button class="btn btn-success" onclick="scheduleMorningRoutine()">
+                                <i class="fas fa-clock"></i> Schedule Daily
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- News Research Modal -->
+    <div class="modal fade" id="newsResearchModal" tabindex="-1" aria-labelledby="newsResearchModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content bg-dark text-light">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title" id="newsResearchModalLabel">
+                        <i class="fas fa-newspaper text-success"></i> News Research Center
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <input type="text" class="form-control bg-dark text-light border-secondary"
+                                   id="newsSymbolSearch" placeholder="Enter symbol (e.g., AAPL, MSFT)">
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select bg-dark text-light border-secondary" id="newsSource">
+                                <option value="all">All Sources</option>
+                                <option value="yahoo">Yahoo Finance</option>
+                                <option value="google">Google News</option>
+                                <option value="reddit">Reddit</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <button id="searchNewsBtn" class="btn btn-success w-100">
+                                <i class="fas fa-search"></i> Search News
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="card bg-secondary">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fas fa-list"></i> News Articles</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div id="newsResults" style="max-height: 500px; overflow-y: auto;">
+                                        <div class="text-center text-muted py-5">
+                                            <i class="fas fa-newspaper fa-3x mb-3"></i>
+                                            <h5>News Research Center</h5>
+                                            <p>Enter a symbol and click "Search News" to get the latest financial news and analysis.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="card bg-secondary mb-3">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fas fa-chart-line"></i> Sentiment Analysis</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div id="sentimentAnalysis">
+                                        <div class="text-center text-muted">
+                                            Search for news to see sentiment analysis
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card bg-secondary">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fas fa-calendar"></i> Upcoming Events</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div id="upcomingEvents">
+                                        <div class="small">
+                                            <div>• Earnings reports</div>
+                                            <div>• Fed announcements</div>
+                                            <div>• Economic data releases</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Options Center Modal -->
+    <div class="modal fade" id="optionsCenterModal" tabindex="-1" aria-labelledby="optionsCenterModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content bg-dark text-light">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title" id="optionsCenterModalLabel">
+                        <i class="fas fa-chart-pie text-warning"></i> Options Trading Center
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="card bg-secondary">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fas fa-cogs"></i> Strategy Builder</h6>
+                                </div>
+                                <div class="card-body">
+                                    <form id="optionsStrategyForm">
+                                        <div class="mb-3">
+                                            <label class="form-label">Symbol</label>
+                                            <input type="text" class="form-control bg-dark text-light border-secondary"
+                                                   id="optionsSymbol" value="AAPL">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Strategy Type</label>
+                                            <select class="form-select bg-dark text-light border-secondary" id="optionsStrategy">
+                                                <option value="covered_call">Covered Call</option>
+                                                <option value="cash_secured_put">Cash-Secured Put</option>
+                                                <option value="protective_put">Protective Put</option>
+                                                <option value="collar">Collar</option>
+                                                <option value="iron_condor">Iron Condor</option>
+                                                <option value="butterfly">Butterfly Spread</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Expiration</label>
+                                            <select class="form-select bg-dark text-light border-secondary" id="optionsExpiration">
+                                                <option value="weekly">This Week</option>
+                                                <option value="monthly">This Month</option>
+                                                <option value="quarterly">Next Quarter</option>
+                                            </select>
+                                        </div>
+                                        <button type="button" id="buildOptionsStrategyBtn" class="btn btn-warning w-100">
+                                            <i class="fas fa-hammer"></i> Build Strategy
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-8">
+                            <div class="card bg-secondary mb-3">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fas fa-chart-area"></i> Profit/Loss Diagram</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div id="optionsPLChart" style="height: 300px;">
+                                        <div class="text-center text-muted py-5">
+                                            <i class="fas fa-chart-line fa-3x mb-3"></i>
+                                            <h5>Options P/L Visualization</h5>
+                                            <p>Select a strategy and click "Build Strategy" to see the profit/loss diagram.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="card bg-secondary">
+                                        <div class="card-header">
+                                            <h6 class="mb-0"><i class="fas fa-calculator"></i> Greeks</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="optionsGreeks">
+                                                <div class="small">
+                                                    <div class="d-flex justify-content-between">
+                                                        <span>Delta:</span><span id="optionsDelta">--</span>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between">
+                                                        <span>Gamma:</span><span id="optionsGamma">--</span>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between">
+                                                        <span>Theta:</span><span id="optionsTheta">--</span>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between">
+                                                        <span>Vega:</span><span id="optionsVega">--</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card bg-secondary">
+                                        <div class="card-header">
+                                            <h6 class="mb-0"><i class="fas fa-bullseye"></i> Strategy Metrics</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="strategyMetrics">
+                                                <div class="small">
+                                                    <div class="d-flex justify-content-between">
+                                                        <span>Max Profit:</span><span id="maxProfit">--</span>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between">
+                                                        <span>Max Loss:</span><span id="maxLoss">--</span>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between">
+                                                        <span>Breakeven:</span><span id="breakeven">--</span>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between">
+                                                        <span>Probability:</span><span id="successProb">--</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
