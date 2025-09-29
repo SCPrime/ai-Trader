@@ -1,14 +1,19 @@
 services:
 - type: web
   name: ai-trader-backend
-  env: python
+  runtime: python
   plan: starter
-  buildCommand: pip install -r backend/requirements.txt
-  startCommand: uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
+  region: virginia
+  branch: feat/option-a-cloud-backend
+  rootDir: backend
+  buildCommand: pip install -r requirements.txt
+  startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
   envVars:
     - key: API_TOKEN
-      value: <set-in-dashboard>
+      sync: false
     - key: ALLOW_ORIGIN
-      value: https://<your-vercel-domain>
+      value: https://ai-trader-snowy.vercel.app
     - key: LIVE_TRADING
       value: "false"
+    - key: REDIS_URL
+      sync: false
