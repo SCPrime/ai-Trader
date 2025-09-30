@@ -1,0 +1,79 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                        AI-TRADER — OPS QUICK CARD                            ║
+║                        (Print & Keep Near Desk)                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+📍 LIVE URLs
+─────────────────────────────────────────────────────────────────────────────
+  Frontend:      https://ai-trader-snowy.vercel.app
+  Proxy Health:  https://ai-trader-snowy.vercel.app/api/proxy/api/health
+  Backend:       https://ai-trader-86a1.onrender.com
+
+🚨 EMERGENCY: STOP ALL TRADING (Kill-Switch ON)
+─────────────────────────────────────────────────────────────────────────────
+  curl -s -X POST "https://ai-trader-snowy.vercel.app/api/proxy/api/admin/kill" \
+    -H "content-type: application/json" -d "true"
+
+✅ RESUME TRADING (Kill-Switch OFF)
+─────────────────────────────────────────────────────────────────────────────
+  curl -s -X POST "https://ai-trader-snowy.vercel.app/api/proxy/api/admin/kill" \
+    -H "content-type: application/json" -d "false"
+
+🧪 TEST: Dry-Run Order (Safe, always allowed)
+─────────────────────────────────────────────────────────────────────────────
+  curl -s -X POST "https://ai-trader-snowy.vercel.app/api/proxy/api/trading/execute" \
+    -H "content-type: application/json" \
+    -d '{"dryRun":true,"requestId":"test-123","orders":[{"symbol":"SPY","side":"buy","qty":1}]}'
+
+🔁 TEST: Duplicate Detection (Send same requestId twice)
+─────────────────────────────────────────────────────────────────────────────
+  Second call returns: {"duplicate":true,"accepted":false}
+
+🏥 HEALTH CHECK (30-second verification)
+─────────────────────────────────────────────────────────────────────────────
+  Browser:  https://ai-trader-snowy.vercel.app/api/proxy/api/health
+  Expect:   {"status":"ok","time":"..."}
+
+  PowerShell Smoke Test (all endpoints):
+  cd C:\Users\SSaint-Cyr\Documents\source\ai-Trader
+  .\test-deployment.ps1 -VercelDomain "ai-trader-snowy.vercel.app" -TestDuplicate
+
+🚀 DEPLOY (from local machine)
+─────────────────────────────────────────────────────────────────────────────
+  cd C:\Users\SSaint-Cyr\Documents\source\ai-Trader\frontend
+  vercel --prod
+
+📊 PRE-LIVE CHECKLIST
+─────────────────────────────────────────────────────────────────────────────
+  ☐ Kill-switch test (enable → try live execute → expect 423 error)
+  ☐ LIVE_TRADING env var correct (false for safety, true for live window)
+  ☐ Duplicate detection working (run smoke test)
+  ☐ Redis connected (check /api/health for "redis":{"connected":true})
+  ☐ Backend logs clear (no errors in Render → Logs)
+
+🛡️ SAFETY LAYERS
+─────────────────────────────────────────────────────────────────────────────
+  1. LIVE_TRADING=false (Render env) → All orders become dry-run
+  2. Kill-Switch=true → Blocks live execute even if LIVE_TRADING=true
+  ⚠️  BOTH must be green for live orders to execute
+
+📞 QUICK TROUBLESHOOTING
+─────────────────────────────────────────────────────────────────────────────
+  Proxy 404?        → Vercel → Settings → Root Directory = "frontend"
+  Proxy 500?        → Vercel → Env Vars → Check BACKEND_API_BASE_URL, API_TOKEN
+  Backend 403?      → Render → ALLOW_ORIGIN must match Vercel domain
+  Duplicate fails?  → Check backend logs; verify requestId sent in body
+
+🔗 DASHBOARDS
+─────────────────────────────────────────────────────────────────────────────
+  Vercel:  https://vercel.com/scprimes-projects/ai-trader/deployments
+  Render:  https://dashboard.render.com
+
+📄 FULL DOCS
+─────────────────────────────────────────────────────────────────────────────
+  See: OPERATIONS.md in repo root
+  Repo: https://github.com/SCPrime/ai-Trader
+
+═══════════════════════════════════════════════════════════════════════════════
+Last Updated: 2025-09-30 | Maintained By: Spence
+═══════════════════════════════════════════════════════════════════════════════
