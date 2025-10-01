@@ -201,6 +201,8 @@ export interface UserOverrides {
   allow_override_strikes: boolean;
   allow_override_qty: boolean;
   allow_override_dte: boolean;
+  allow_risk_param_edits: boolean; // Allow editing circuit breakers, slippage, reprices
+  show_advisory_warnings: boolean; // Show warnings when exceeding recommended thresholds
 }
 
 // ============================================================================

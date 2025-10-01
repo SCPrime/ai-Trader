@@ -51,8 +51,8 @@
   },
   "sizing": {
     "allocation_type": "max_loss",
-    "risk_per_trade_pct": 0.01,
-    "max_concurrent_positions": 6,
+    "risk_per_trade_pct": 0.02,
+    "max_concurrent_positions": 8,
     "portfolio_heat_max": 0.15
   },
   "exits": {

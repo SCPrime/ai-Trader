@@ -70,8 +70,8 @@
   },
   "sizing": {
     "allocation_type": "cash",
-    "per_trade_cash": 500,
-    "max_concurrent_positions": 6,
+    "per_trade_cash": 2000,
+    "max_concurrent_positions": 8,
     "portfolio_heat_max": 0.25
   },
   "exits": {
@@ -110,11 +110,16 @@
       "delta",
       "dte",
       "profit_target_pct",
-      "max_loss_pct"
+      "max_loss_pct",
+      "vix_gt",
+      "slippage_budget_pct",
+      "max_order_reprices"
     ],
     "allow_override_strikes": true,
     "allow_override_qty": true,
-    "allow_override_dte": true
+    "allow_override_dte": true,
+    "allow_risk_param_edits": true,
+    "show_advisory_warnings": true
   },
   "broker_routing": {
     "order_type": "NET_MULTI",

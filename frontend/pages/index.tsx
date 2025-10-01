@@ -3,6 +3,7 @@ import RadialMenu, { workflows, Workflow } from '../components/RadialMenu';
 import PositionsTable from '../components/PositionsTable';
 import MorningRoutine from '../components/MorningRoutine';
 import ExecuteTradeForm from '../components/ExecuteTradeForm';
+import ResearchDashboard from '../components/trading/ResearchDashboard';
 
 export default function Dashboard() {
   const [selectedWorkflow, setSelectedWorkflow] = useState<string>('');
@@ -27,6 +28,9 @@ export default function Dashboard() {
 
         case 'execute':
           return <ExecuteTradeForm />;
+
+        case 'research':
+          return <ResearchDashboard />;
 
         case 'pnl-dashboard':
           return (

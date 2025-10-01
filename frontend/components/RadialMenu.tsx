@@ -72,6 +72,13 @@ const workflows: Workflow[] = [
     icon: '⚡',
     color: '#FF4444',
     description: 'Execute trades with advanced order types, smart routing, and risk management controls.'
+  },
+  {
+    id: 'research',
+    name: 'Research',
+    icon: '🔬',
+    color: '#F97316',
+    description: 'Stock analysis with charts, indicators, options chain, and AI strategy recommendations.'
   }
 ];
 
