@@ -25,11 +25,11 @@ export default function RadialMenuNav({ onWorkflowSelect }: RadialMenuNavProps) 
   }, [onWorkflowSelect]);
 
   return (
-    <div className="radial-menu-wrapper">
+    <div style={{ width: '600px', height: '700px' }}>
       <iframe
         ref={iframeRef}
         src="/radial-ui.html"
-        className="w-[600px] h-[700px] border-0 bg-transparent"
+        style={{ width: '600px', height: '700px', border: 0, backgroundColor: 'transparent' }}
         title="Trading Workflow Navigation"
         sandbox="allow-scripts allow-same-origin"
       />
