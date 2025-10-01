@@ -1,5 +1,7 @@
 import StatusBar from "../components/StatusBar";
 import ExecuteTradeForm from "../components/ExecuteTradeForm";
+import PositionsTable from "../components/PositionsTable";
+import MorningRoutine from "../components/MorningRoutine";
 
 export default function Home() {
   return (
@@ -48,6 +50,8 @@ export default function Home() {
           }}
         >
           <ExecuteTradeForm />
+          <PositionsTable />
+          <MorningRoutine />
         </div>
 
         {/* Features Card */}
