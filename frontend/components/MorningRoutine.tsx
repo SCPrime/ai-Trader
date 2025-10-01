@@ -83,16 +83,16 @@ export default function MorningRoutine() {
   );
 }
 
-const card: React.CSSProperties = { padding: 16, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12 };
-const cardHeader: React.CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 };
-const title: React.CSSProperties = { margin: 0, fontSize: 18, color: "#111827" };
-const btnPrimary: React.CSSProperties = { padding: "8px 12px", borderRadius: 8, border: "1px solid #3b82f6", background: "#3b82f6", color: "#fff", cursor: "pointer" };
-const muted: React.CSSProperties = { color: "#6b7280", fontSize: 13, marginBottom: 8 };
+const card: React.CSSProperties = { padding: 24, background: "#1f2937", border: "1px solid #374151", borderRadius: 12 };
+const cardHeader: React.CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 };
+const title: React.CSSProperties = { margin: 0, fontSize: 24, color: "#f9fafb", fontWeight: 700 };
+const btnPrimary: React.CSSProperties = { padding: "8px 16px", borderRadius: 8, border: "none", background: "#3b82f6", color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 600 };
+const muted: React.CSSProperties = { color: "#9ca3af", fontSize: 14, marginBottom: 12 };
 const rowBox = (ok: boolean): React.CSSProperties => ({
-  border: `1px solid ${ok ? "#34d399" : "#ef4444"}`,
-  background: ok ? "#ecfdf5" : "#fef2f2",
-  color: ok ? "#065f46" : "#991b1b",
+  border: `1px solid ${ok ? "#10b981" : "#ef4444"}`,
+  background: ok ? "#064e3b" : "#7f1d1d",
+  color: ok ? "#d1fae5" : "#fecaca",
   borderRadius: 8,
-  padding: 10,
+  padding: 12,
 });
-const pre: React.CSSProperties = { margin: 0, whiteSpace: "pre-wrap", wordBreak: "break-word", background: "#fff", border: "1px solid #e5e7eb", borderRadius: 6, padding: 8 };
+const pre: React.CSSProperties = { margin: 0, whiteSpace: "pre-wrap", wordBreak: "break-word", background: "#111827", border: "1px solid #374151", borderRadius: 6, padding: 8, color: "#9ca3af", fontSize: 12 };
