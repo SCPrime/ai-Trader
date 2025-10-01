@@ -38,10 +38,10 @@ export default function Dashboard() {
               padding: '24px',
               minHeight: '200px'
             }}>
-              <h4 style={{ color: '#FF8800', fontSize: '1.5rem', marginBottom: '16px', margin: 0, marginBottom: '16px' }}>
+              <h4 style={{ color: '#FF8800', fontSize: '1.5rem', margin: 0, marginBottom: '16px' }}>
                 💰 P&L Dashboard
               </h4>
-              <p style={{ color: '#cbd5e1', lineHeight: 1.6, marginBottom: '12px', margin: 0, marginBottom: '12px' }}>
+              <p style={{ color: '#cbd5e1', lineHeight: 1.6, margin: 0, marginBottom: '12px' }}>
                 Comprehensive profit and loss analysis with daily, weekly, and monthly performance metrics.
               </p>
               <p style={{ color: '#94a3b8', fontStyle: 'italic', margin: 0 }}>
@@ -60,10 +60,10 @@ export default function Dashboard() {
               padding: '24px',
               minHeight: '200px'
             }}>
-              <h4 style={{ color: '#7E57C2', fontSize: '1.5rem', marginBottom: '16px', margin: 0, marginBottom: '16px' }}>
+              <h4 style={{ color: '#7E57C2', fontSize: '1.5rem', margin: 0, marginBottom: '16px' }}>
                 📰 News Review
               </h4>
-              <p style={{ color: '#cbd5e1', lineHeight: 1.6, marginBottom: '12px', margin: 0, marginBottom: '12px' }}>
+              <p style={{ color: '#cbd5e1', lineHeight: 1.6, margin: 0, marginBottom: '12px' }}>
                 Real-time market news aggregation with AI-powered sentiment analysis and breaking news alerts.
               </p>
               <p style={{ color: '#94a3b8', fontStyle: 'italic', margin: 0 }}>
@@ -82,10 +82,10 @@ export default function Dashboard() {
               padding: '24px',
               minHeight: '200px'
             }}>
-              <h4 style={{ color: '#0097A7', fontSize: '1.5rem', marginBottom: '16px', margin: 0, marginBottom: '16px' }}>
+              <h4 style={{ color: '#0097A7', fontSize: '1.5rem', margin: 0, marginBottom: '16px' }}>
                 🤖 AI Recommendations
               </h4>
-              <p style={{ color: '#cbd5e1', lineHeight: 1.6, marginBottom: '12px', margin: 0, marginBottom: '12px' }}>
+              <p style={{ color: '#cbd5e1', lineHeight: 1.6, margin: 0, marginBottom: '12px' }}>
                 AI-generated trade recommendations based on technical indicators, patterns, and market conditions.
               </p>
               <p style={{ color: '#94a3b8', fontStyle: 'italic', margin: 0 }}>
@@ -104,10 +104,10 @@ export default function Dashboard() {
               padding: '24px',
               minHeight: '200px'
             }}>
-              <h4 style={{ color: '#5E35B1', fontSize: '1.5rem', marginBottom: '16px', margin: 0, marginBottom: '16px' }}>
+              <h4 style={{ color: '#5E35B1', fontSize: '1.5rem', margin: 0, marginBottom: '16px' }}>
                 🎯 Strategy Builder
               </h4>
-              <p style={{ color: '#cbd5e1', lineHeight: 1.6, marginBottom: '12px', margin: 0, marginBottom: '12px' }}>
+              <p style={{ color: '#cbd5e1', lineHeight: 1.6, margin: 0, marginBottom: '12px' }}>
                 Design, test, and refine custom trading strategies with drag-and-drop rule builder.
               </p>
               <p style={{ color: '#94a3b8', fontStyle: 'italic', margin: 0 }}>
@@ -126,10 +126,10 @@ export default function Dashboard() {
               padding: '24px',
               minHeight: '200px'
             }}>
-              <h4 style={{ color: '#00BCD4', fontSize: '1.5rem', marginBottom: '16px', margin: 0, marginBottom: '16px' }}>
+              <h4 style={{ color: '#00BCD4', fontSize: '1.5rem', margin: 0, marginBottom: '16px' }}>
                 📈 Backtesting
               </h4>
-              <p style={{ color: '#cbd5e1', lineHeight: 1.6, marginBottom: '12px', margin: 0, marginBottom: '12px' }}>
+              <p style={{ color: '#cbd5e1', lineHeight: 1.6, margin: 0, marginBottom: '12px' }}>
                 Test strategies against historical data to validate performance before live deployment.
               </p>
               <p style={{ color: '#94a3b8', fontStyle: 'italic', margin: 0 }}>
@@ -157,7 +157,6 @@ export default function Dashboard() {
         }}>
           <h4 style={{
             color: displayWorkflow.color,
-            marginBottom: '10px',
             fontSize: '1.1rem',
             margin: 0,
             marginBottom: '10px'
@@ -187,7 +186,6 @@ export default function Dashboard() {
       }}>
         <h4 style={{
           color: '#7E57C2',
-          marginBottom: '10px',
           fontSize: '1.1rem',
           margin: 0,
           marginBottom: '10px'
@@ -271,7 +269,6 @@ export default function Dashboard() {
       }}>
         <h3 style={{
           color: '#00ACC1',
-          marginBottom: '12px',
           fontSize: '1.25rem',
           margin: 0,
           marginBottom: '12px'
@@ -290,7 +287,6 @@ export default function Dashboard() {
         <p style={{
           color: '#94a3b8',
           lineHeight: 1.6,
-          marginBottom: '8px',
           margin: 0,
           marginBottom: '8px'
         }}>
