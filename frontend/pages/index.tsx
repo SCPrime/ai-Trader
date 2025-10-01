@@ -1,5 +1,3 @@
-'use client';
-
 import { useState } from 'react';
 import StatusBar from '../components/StatusBar';
 import PositionsTable from '../components/PositionsTable';
