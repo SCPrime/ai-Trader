@@ -4,39 +4,29 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: '/(.*)',
+        source: "/(.*)",
         headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          // ✅ CSP that permits Next.js hydration & our inline styles
           {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
-          },
-          {
-            key: 'X-Frame-Options',
-            value: 'DENY',
-          },
-          {
-            key: 'X-XSS-Protection',
-            value: '1; mode=block',
-          },
-          {
-            key: 'Referrer-Policy',
-            value: 'strict-origin-when-cross-origin',
-          },
-          {
-            key: 'Content-Security-Policy',
+            key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
-              "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: https:",
+              "script-src 'self' 'unsafe-inline'",  // allow Next inline boot script
+              "style-src 'self' 'unsafe-inline'",   // allow React inline style props
+              "img-src 'self' data:",
+              "connect-src 'self'",                 // proxy is same-origin (/api/proxy/*)
               "font-src 'self' data:",
-              "connect-src 'self' https://ai-trader-snowy.vercel.app",
               "frame-ancestors 'none'",
-            ].join('; '),
-          },
-        ],
-      },
+              "base-uri 'self'",
+              "object-src 'none'"
+            ].join("; ")
+          }
+        ]
+      }
     ];
-  },
+  }
 };
 module.exports = nextConfig;
