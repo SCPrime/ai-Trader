@@ -1,172 +1,113 @@
-import StatusBar from "../components/StatusBar";
-import ExecuteTradeForm from "../components/ExecuteTradeForm";
-import PositionsTable from "../components/PositionsTable";
-import MorningRoutine from "../components/MorningRoutine";
+'use client';
 
-export default function Home() {
+import { useState } from 'react';
+import StatusBar from '../components/StatusBar';
+import PositionsTable from '../components/PositionsTable';
+import ExecuteTradeForm from '../components/ExecuteTradeForm';
+import MorningRoutine from '../components/MorningRoutine';
+import RadialMenuNav from '../components/RadialMenuNav';
+
+export default function Dashboard() {
+  const [activeWorkflow, setActiveWorkflow] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleWorkflowSelect = (workflowId: string) => {
+    console.log('Dashboard: Workflow selected:', workflowId);
+    setIsLoading(true);
+    setActiveWorkflow(workflowId);
+    // Simulate component loading
+    setTimeout(() => setIsLoading(false), 300);
+  };
+
+  const renderWorkflowContent = () => {
+    if (isLoading) {
+      return (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '256px' }}>
+          <div style={{ fontSize: '18px', color: '#9ca3af' }}>Loading workflow...</div>
+        </div>
+      );
+    }
+
+    switch(activeWorkflow) {
+      case 'morning-routine':
+        return <MorningRoutine />;
+
+      case 'active-positions':
+        return <PositionsTable />;
+
+      case 'execute':
+        return <ExecuteTradeForm />;
+
+      case 'pnl-dashboard':
+        return (
+          <div style={{ padding: '24px', background: '#1f2937', borderRadius: '12px', color: 'white' }}>
+            <h3 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '16px' }}>P&L Dashboard</h3>
+            <p style={{ color: '#9ca3af' }}>P&L tracking coming soon...</p>
+          </div>
+        );
+
+      case 'news-review':
+        return (
+          <div style={{ padding: '24px', background: '#1f2937', borderRadius: '12px', color: 'white' }}>
+            <h3 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '16px' }}>News Review</h3>
+            <p style={{ color: '#9ca3af' }}>Market news integration coming soon...</p>
+          </div>
+        );
+
+      default:
+        return (
+          <div style={{ padding: '24px', background: '#1f2937', borderRadius: '12px', color: 'white' }}>
+            <h3 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '16px' }}>Welcome to AI Trader</h3>
+            <p style={{ color: '#9ca3af', marginBottom: '16px' }}>
+              Select a workflow from the radial menu to begin trading operations.
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '24px' }}>
+              <div style={{ padding: '16px', background: '#374151', borderRadius: '8px' }}>
+                <h4 style={{ fontWeight: '600', marginBottom: '8px' }}>Quick Start:</h4>
+                <ul style={{ fontSize: '14px', color: '#9ca3af', listStyle: 'none', padding: 0 }}>
+                  <li>• Click "Morning Routine" for system check</li>
+                  <li>• Click "Positions" to view portfolio</li>
+                  <li>• Click "Execute" to place orders</li>
+                </ul>
+              </div>
+              <div style={{ padding: '16px', background: '#374151', borderRadius: '8px' }}>
+                <h4 style={{ fontWeight: '600', marginBottom: '8px' }}>System Status:</h4>
+                <StatusBar />
+              </div>
+            </div>
+          </div>
+        );
+    }
+  };
+
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        padding: "24px",
-        fontFamily: "system-ui, -apple-system, sans-serif",
-        backgroundColor: "#f9fafb",
-      }}
-    >
-      <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
-        {/* Header */}
-        <div style={{ marginBottom: "32px" }}>
-          <h1
-            style={{
-              fontSize: "2.5rem",
-              marginBottom: "8px",
-              color: "#111827",
-              fontWeight: "700",
-            }}
-          >
-            AI Trader
-          </h1>
-          <p
-            style={{
-              fontSize: "1.1rem",
-              color: "#6b7280",
-              marginBottom: "0",
-            }}
-          >
-            Production-ready trading platform with secure cloud backend
-          </p>
-        </div>
-
-        {/* Status Bar */}
-        <StatusBar />
-
-        {/* Main Content Grid */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr",
-            gap: "24px",
-            marginBottom: "32px",
-          }}
-        >
-          <ExecuteTradeForm />
-          <PositionsTable />
-          <MorningRoutine />
-        </div>
-
-        {/* Features Card */}
-        <div
-          style={{
-            padding: "24px",
-            backgroundColor: "white",
-            borderRadius: "12px",
-            border: "1px solid #e5e7eb",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-          }}
-        >
-          <h3 style={{ margin: "0 0 16px 0", color: "#111827", fontSize: "18px" }}>
-            🚀 Production Features
-          </h3>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-              gap: "12px",
-            }}
-          >
-            <FeatureItem
-              icon="🔒"
-              title="Secure Proxy"
-              description="All API calls routed server-side, no token exposure"
-            />
-            <FeatureItem
-              icon="🔁"
-              title="Idempotency"
-              description="Duplicate protection with 600s TTL"
-            />
-            <FeatureItem
-              icon="🛑"
-              title="Kill Switch"
-              description="Emergency halt for all live trading"
-            />
-            <FeatureItem
-              icon="✅"
-              title="Dry-Run Mode"
-              description="Test orders safely before going live"
-            />
-            <FeatureItem
-              icon="🌐"
-              title="Cloud Native"
-              description="Deployed on Vercel (frontend) + Render (backend)"
-            />
-            <FeatureItem
-              icon="⚡"
-              title="Real-time Health"
-              description="Live status monitoring with auto-refresh"
-            />
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(to bottom right, #1f2937, #111827)', color: 'white' }}>
+      {/* Header */}
+      <header style={{ borderBottom: '1px solid #374151', background: 'rgba(31, 41, 55, 0.5)', backdropFilter: 'blur(10px)' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '16px 24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h1 style={{ fontSize: '24px', fontWeight: 'bold' }}>
+              🎯 AI Trading Platform
+            </h1>
+            <StatusBar />
           </div>
         </div>
+      </header>
 
-        {/* Footer */}
-        <div
-          style={{
-            marginTop: "48px",
-            padding: "16px",
-            textAlign: "center",
-            color: "#9ca3af",
-            fontSize: "13px",
-          }}
-        >
-          <p style={{ margin: 0 }}>
-            Frontend:{" "}
-            <a
-              href="https://ai-trader-snowy.vercel.app"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: "#3b82f6", textDecoration: "none" }}
-            >
-              Vercel
-            </a>
-            {" | "}
-            Backend:{" "}
-            <a
-              href="https://ai-trader-86a1.onrender.com/api/health"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: "#3b82f6", textDecoration: "none" }}
-            >
-              Render
-            </a>
-          </p>
+      {/* Main Content */}
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px 24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '600px 1fr', gap: '32px' }}>
+          {/* Left: Radial Menu */}
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <RadialMenuNav onWorkflowSelect={handleWorkflowSelect} />
+          </div>
+
+          {/* Right: Dynamic Content */}
+          <div style={{ flex: 1 }}>
+            {renderWorkflowContent()}
+          </div>
         </div>
       </div>
-    </main>
-  );
-}
-
-function FeatureItem({
-  icon,
-  title,
-  description,
-}: {
-  icon: string;
-  title: string;
-  description: string;
-}) {
-  return (
-    <div
-      style={{
-        padding: "12px",
-        backgroundColor: "#f9fafb",
-        borderRadius: "8px",
-        border: "1px solid #e5e7eb",
-      }}
-    >
-      <div style={{ fontSize: "24px", marginBottom: "8px" }}>{icon}</div>
-      <div style={{ fontWeight: "600", fontSize: "14px", color: "#111827", marginBottom: "4px" }}>
-        {title}
-      </div>
-      <div style={{ fontSize: "13px", color: "#6b7280", lineHeight: "1.4" }}>{description}</div>
     </div>
   );
 }

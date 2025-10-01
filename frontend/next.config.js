@@ -12,17 +12,7 @@ const nextConfig = {
           // ✅ CSP that permits Next.js hydration & our inline styles
           {
             key: "Content-Security-Policy",
-            value: [
-              "default-src 'self'",
-              "script-src 'self' 'unsafe-inline'",  // allow Next inline boot script
-              "style-src 'self' 'unsafe-inline'",   // allow React inline style props
-              "img-src 'self' data:",
-              "connect-src 'self'",                 // proxy is same-origin (/api/proxy/*)
-              "font-src 'self' data:",
-              "frame-ancestors 'none'",
-              "base-uri 'self'",
-              "object-src 'none'"
-            ].join("; ")
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src 'self' https://ai-trader-86a1.onrender.com wss://ai-trader-86a1.onrender.com; img-src 'self' data: blob: https:; font-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
           }
         ]
       }

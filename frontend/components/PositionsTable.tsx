@@ -23,8 +23,10 @@ export default function PositionsTable() {
         throw new Error(`Positions failed: ${res.status} ${text}`);
       }
       const data = await res.json();
+      console.log('API response data:', data);
       // Accept either {positions:[...]} or plain array
       const arr = Array.isArray(data) ? data : Array.isArray(data?.positions) ? data.positions : [];
+      console.log('Setting rows to:', arr);
       setRows(arr);
       setLastRefreshed(new Date().toLocaleTimeString());
     } catch (e: any) {

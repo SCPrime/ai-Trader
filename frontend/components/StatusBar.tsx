@@ -1,133 +1,81 @@
-"use client";
-import { useEffect, useState } from "react";
+'use client';
 
-interface HealthData {
-  status: string;
-  time?: string;
-  redis?: {
-    connected: boolean;
-    latency_ms?: number;
-  };
-}
+import { useState, useEffect, useCallback } from 'react';
 
 export default function StatusBar() {
-  const [health, setHealth] = useState<HealthData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<'checking' | 'healthy' | 'error'>('checking');
+  const [message, setMessage] = useState('Initializing system check...');
+  const [lastCheck, setLastCheck] = useState<Date | null>(null);
 
-  const fetchHealth = async () => {
+  const fetchHealth = useCallback(async () => {
     try {
-      const res = await fetch("/api/proxy/api/health");
-      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-      const data = await res.json();
-      setHealth(data);
-      setError(null);
-    } catch (err: any) {
-      setError(err.message);
-      setHealth(null);
-    } finally {
-      setLoading(false);
-    }
-  };
+      setStatus('checking');
+      setMessage('Checking backend health... (may take 5-10s on first load)');
 
-  useEffect(() => {
-    fetchHealth();
-    const interval = setInterval(fetchHealth, 30000); // refresh every 30s
-    return () => clearInterval(interval);
+      const res = await fetch('/api/proxy/api/health', {
+        headers: {
+          'cache-control': 'no-cache',
+          'pragma': 'no-cache'
+        }
+      });
+
+      if (!res.ok) {
+        throw new Error(`Backend returned status ${res.status}`);
+      }
+
+      const data = await res.json();
+      console.log('Health check response:', data);
+
+      setStatus('healthy');
+      setMessage(`✓ System operational • Backend: Online • Redis: ${data.redis?.status || 'not configured'}`);
+      setLastCheck(new Date());
+
+    } catch (error: any) {
+      console.error('Health check failed:', error);
+      setStatus('error');
+      setMessage(`Backend error: ${error.message || 'Cannot connect'}`);
+    }
   }, []);
 
-  const statusColor =
-    loading ? "#fbbf24" : health?.status === "ok" ? "#10b981" : "#ef4444";
-  const statusText = loading ? "Checking..." : health?.status === "ok" ? "Healthy" : "Error";
+  useEffect(() => {
+    console.log('StatusBar mounted, starting health checks');
+    fetchHealth();
+    const interval = setInterval(fetchHealth, 30000);
+    return () => {
+      console.log('StatusBar unmounting, clearing interval');
+      clearInterval(interval);
+    };
+  }, [fetchHealth]);
+
+  const statusStyles = {
+    checking: 'bg-yellow-100 border-yellow-300 text-yellow-800',
+    healthy: 'bg-green-100 border-green-300 text-green-800',
+    error: 'bg-red-100 border-red-300 text-red-800'
+  };
+
+  const pulseColors = {
+    checking: 'bg-yellow-500',
+    healthy: 'bg-green-500',
+    error: 'bg-red-500'
+  };
 
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "16px",
-        padding: "12px 16px",
-        backgroundColor: "#f9fafb",
-        borderRadius: "8px",
-        border: "1px solid #e5e7eb",
-        marginBottom: "24px",
-      }}
-    >
-      {/* Status Pill */}
-      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-        <div
-          style={{
-            width: "12px",
-            height: "12px",
-            borderRadius: "50%",
-            backgroundColor: statusColor,
-            boxShadow: `0 0 8px ${statusColor}`,
-          }}
-        />
-        <span style={{ fontWeight: "600", fontSize: "14px", color: "#374151" }}>
-          {statusText}
-        </span>
-      </div>
-
-      {/* Redis Status */}
-      {health?.redis && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-            fontSize: "13px",
-            color: "#6b7280",
-          }}
+    <div className={`flex items-center gap-3 p-3 rounded-lg border ${statusStyles[status]}`}>
+      <div className={`w-3 h-3 rounded-full ${pulseColors[status]} animate-pulse`} />
+      <span className="text-sm font-medium flex-1">{message}</span>
+      {status === 'error' && (
+        <button
+          onClick={fetchHealth}
+          className="text-xs font-medium underline hover:no-underline"
         >
-          <span>Redis:</span>
-          <span
-            style={{
-              fontWeight: "600",
-              color: health.redis.connected ? "#10b981" : "#ef4444",
-            }}
-          >
-            {health.redis.connected ? "Connected" : "Disconnected"}
-          </span>
-          {health.redis.connected && health.redis.latency_ms !== undefined && (
-            <span style={{ color: "#9ca3af" }}>
-              ({health.redis.latency_ms}ms)
-            </span>
-          )}
-        </div>
+          Retry
+        </button>
       )}
-
-      {/* Last Updated */}
-      {health?.time && (
-        <div style={{ marginLeft: "auto", fontSize: "12px", color: "#9ca3af" }}>
-          {new Date(health.time).toLocaleTimeString()}
-        </div>
+      {lastCheck && status === 'healthy' && (
+        <span className="text-xs opacity-60">
+          Last: {lastCheck.toLocaleTimeString()}
+        </span>
       )}
-
-      {/* Error Message */}
-      {error && (
-        <div style={{ fontSize: "12px", color: "#ef4444", fontWeight: "500" }}>
-          ⚠️ {error}
-        </div>
-      )}
-
-      {/* Refresh Button */}
-      <button
-        onClick={fetchHealth}
-        disabled={loading}
-        style={{
-          padding: "6px 12px",
-          fontSize: "12px",
-          backgroundColor: loading ? "#e5e7eb" : "#3b82f6",
-          color: loading ? "#9ca3af" : "white",
-          border: "none",
-          borderRadius: "4px",
-          cursor: loading ? "not-allowed" : "pointer",
-          fontWeight: "500",
-        }}
-      >
-        {loading ? "⏳" : "🔄"}
-      </button>
     </div>
   );
 }

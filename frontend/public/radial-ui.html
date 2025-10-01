@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading Workflow Radial Menu</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: transparent;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            position: relative;
+            width: 600px;
+            height: 600px;
+        }
+
+        .center-hub {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-weight: 700;
+            font-size: 16px;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+            z-index: 10;
+            cursor: default;
+        }
+
+        .center-hub .icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+
+        .radial-segment {
+            position: absolute;
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-weight: 600;
+            font-size: 13px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .radial-segment:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .radial-segment .icon {
+            font-size: 36px;
+            margin-bottom: 8px;
+        }
+
+        .radial-segment .label {
+            line-height: 1.2;
+            padding: 0 8px;
+        }
+
+        /* Positioning for 5 workflows in circle */
+        .segment-1 { top: 30px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .segment-2 { top: 180px; left: 420px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .segment-3 { bottom: 30px; left: 380px; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+        .segment-4 { bottom: 30px; left: 80px; background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+        .segment-5 { top: 180px; left: 40px; background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); }
+
+        #workflow-info {
+            margin-top: 40px;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            min-height: 100px;
+            transition: all 0.3s ease;
+        }
+
+        #workflow-info h4 {
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 18px;
+        }
+
+        #workflow-info p {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="center-hub">
+            <div class="icon">🎯</div>
+            <div>AI Trader</div>
+        </div>
+
+        <div class="radial-segment segment-1" onclick="handleWorkflowClick(workflows[0])">
+            <div class="icon">🌅</div>
+            <div class="label">Morning<br>Routine</div>
+        </div>
+
+        <div class="radial-segment segment-2" onclick="handleWorkflowClick(workflows[1])">
+            <div class="icon">📊</div>
+            <div class="label">Active<br>Positions</div>
+        </div>
+
+        <div class="radial-segment segment-3" onclick="handleWorkflowClick(workflows[2])">
+            <div class="icon">⚡</div>
+            <div class="label">Execute<br>Trade</div>
+        </div>
+
+        <div class="radial-segment segment-4" onclick="handleWorkflowClick(workflows[3])">
+            <div class="icon">💰</div>
+            <div class="label">P&L<br>Dashboard</div>
+        </div>
+
+        <div class="radial-segment segment-5" onclick="handleWorkflowClick(workflows[4])">
+            <div class="icon">📰</div>
+            <div class="label">News<br>Review</div>
+        </div>
+    </div>
+
+    <div id="workflow-info">
+        <h4>Welcome to AI Trader</h4>
+        <p>Select a workflow from the radial menu above to begin trading operations.</p>
+    </div>
+
+    <script>
+        const workflows = [
+            {
+                id: 'morning-routine',
+                name: 'Morning\nRoutine',
+                icon: '🌅',
+                description: 'Complete pre-market checklist: system health, positions review, news scan, and risk assessment.',
+                color: '#f5576c'
+            },
+            {
+                id: 'active-positions',
+                name: 'Active\nPositions',
+                icon: '📊',
+                description: 'View all current positions with real-time P&L, entry prices, and position sizing.',
+                color: '#00f2fe'
+            },
+            {
+                id: 'execute',
+                name: 'Execute\nTrade',
+                icon: '⚡',
+                description: 'Place new orders with dry-run mode, position sizing, and risk management controls.',
+                color: '#38f9d7'
+            },
+            {
+                id: 'pnl-dashboard',
+                name: 'P&L\nDashboard',
+                icon: '💰',
+                description: 'Track daily, weekly, and monthly performance with detailed analytics and charts.',
+                color: '#fee140'
+            },
+            {
+                id: 'news-review',
+                name: 'News\nReview',
+                icon: '📰',
+                description: 'Scan market-moving news, earnings reports, and economic data relevant to your positions.',
+                color: '#330867'
+            }
+        ];
+
+        function handleWorkflowClick(workflow) {
+            // Update visual feedback
+            const infoDiv = document.getElementById('workflow-info');
+            infoDiv.innerHTML = `
+                <h4>${workflow.icon} ${workflow.name.replace('\n', ' ')} - Activated</h4>
+                <p>${workflow.description}</p>
+                <p style="margin-top: 12px; color: #00C851; font-weight: 600;">
+                    ✓ Loading workflow components...
+                </p>
+            `;
+            infoDiv.style.borderColor = workflow.color;
+
+            // Send message to parent window (Next.js app)
+            window.parent.postMessage({
+                type: 'workflow-selected',
+                workflowId: workflow.id,
+                workflowName: workflow.name
+            }, '*');
+
+            console.log('Sent workflow selection to parent:', workflow.id);
+        }
+    </script>
+</body>
+</html>
