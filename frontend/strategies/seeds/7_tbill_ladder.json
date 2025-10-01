@@ -1,0 +1,70 @@
+{
+  "strategy_id": "tbill_ladder_v1",
+  "name": "T-Bill/TIPS Ladder (No Options)",
+  "goal": "Cash parking and stability sleeve with short-duration government securities",
+  "universe": {
+    "tickers": ["BIL", "SHV", "SGOV", "TIP"],
+    "filters": {
+      "exclude_otc": false,
+      "halted": false
+    }
+  },
+  "entry": {
+    "time_window": {
+      "start": "09:45",
+      "end": "15:45",
+      "tz": "America/New_York"
+    },
+    "liquidity_checks": false
+  },
+  "position": {
+    "legs": [
+      {
+        "type": "STOCK",
+        "side": "BUY",
+        "qty": 100
+      }
+    ]
+  },
+  "sizing": {
+    "allocation_type": "cash",
+    "per_trade_cash": 10000,
+    "max_concurrent_positions": 4,
+    "portfolio_heat_max": 0.05
+  },
+  "exits": {
+    "profit_target_pct": 0.02,
+    "oco_brackets": false
+  },
+  "risk": {
+    "circuit_breakers": {
+      "market": {
+        "vix_gt": 50,
+        "suspend_new_trades": true
+      }
+    },
+    "slippage_budget_pct": 0.10,
+    "max_order_reprices": 2
+  },
+  "automation": {
+    "scan_time": "10:00",
+    "propose_time": "10:15",
+    "approval_deadline": "10:30",
+    "execution_mode": "autopilot",
+    "autopilot_if_win_rate_gt": 0.95
+  },
+  "user_overrides": {
+    "editable_fields": [
+      "per_trade_cash"
+    ],
+    "allow_override_strikes": false,
+    "allow_override_qty": true,
+    "allow_override_dte": false
+  },
+  "broker_routing": {
+    "order_type": "NET_MULTI",
+    "limit_price": "mid_with_tolerance",
+    "tolerance": 0.01,
+    "time_in_force": "DAY"
+  }
+}

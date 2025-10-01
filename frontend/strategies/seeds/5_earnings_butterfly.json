@@ -1,0 +1,112 @@
+{
+  "strategy_id": "earnings_butterfly_v1",
+  "name": "Earnings Butterfly – Debit (Selective)",
+  "goal": "Defined-risk volatility contraction play on earnings",
+  "universe": {
+    "filters": {
+      "price_between": [20, 500],
+      "min_option_oi_per_strike": 1000,
+      "max_option_spread": 0.10,
+      "earnings_within_days": 3
+    },
+    "ranking": [
+      {
+        "feature": "iv_percentile_1y",
+        "weight": 0.6,
+        "direction": "desc"
+      },
+      {
+        "feature": "option_liquidity_score",
+        "weight": 0.4,
+        "direction": "desc"
+      }
+    ],
+    "max_candidates": 2,
+    "target_classes": ["current", "invested"]
+  },
+  "entry": {
+    "indicators": {
+      "ivp_min": 65,
+      "iv_hv_ratio_gt": 1.5
+    },
+    "time_window": {
+      "start": "09:40",
+      "end": "15:00",
+      "tz": "America/New_York"
+    },
+    "liquidity_checks": true
+  },
+  "position": {
+    "legs": [
+      {
+        "type": "CALL",
+        "side": "BUY",
+        "dte": 7,
+        "delta": 0.50
+      },
+      {
+        "type": "CALL",
+        "side": "SELL",
+        "dte": 7,
+        "offset_strikes": 2.5,
+        "qty": 2
+      },
+      {
+        "type": "CALL",
+        "side": "BUY",
+        "dte": 7,
+        "offset_strikes": 5.0
+      }
+    ]
+  },
+  "sizing": {
+    "allocation_type": "cash_max_loss",
+    "risk_per_trade_pct": 0.02,
+    "max_concurrent_positions": 3,
+    "portfolio_heat_max": 0.10
+  },
+  "exits": {
+    "profit_target_pct": 0.40,
+    "max_loss_pct": 0.80,
+    "time_exit_dte": 1,
+    "oco_brackets": true
+  },
+  "risk": {
+    "circuit_breakers": {
+      "market": {
+        "vix_gt": 35,
+        "suspend_new_trades": true
+      },
+      "liq": {
+        "spread_widen_gt": 0.15,
+        "cancel_unfilled": true
+      }
+    },
+    "slippage_budget_pct": 0.60,
+    "max_order_reprices": 5
+  },
+  "automation": {
+    "scan_time": "09:30",
+    "propose_time": "09:45",
+    "approval_deadline": "10:00",
+    "execution_mode": "requires_approval"
+  },
+  "user_overrides": {
+    "editable_fields": [
+      "risk_per_trade_pct",
+      "delta",
+      "dte",
+      "profit_target_pct",
+      "max_loss_pct"
+    ],
+    "allow_override_strikes": true,
+    "allow_override_qty": false,
+    "allow_override_dte": true
+  },
+  "broker_routing": {
+    "order_type": "NET_MULTI",
+    "limit_price": "mid_with_tolerance",
+    "tolerance": 0.05,
+    "time_in_force": "DAY"
+  }
+}

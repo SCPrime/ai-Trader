@@ -1,0 +1,91 @@
+{
+  "strategy_id": "core_cc_sleeve_v1",
+  "name": "Core Covered Call Sleeve – ETFs",
+  "goal": "Stabilize and grow capital with systematic covered calls",
+  "universe": {
+    "tickers": ["VTI", "SPY"],
+    "filters": {
+      "min_option_oi_per_strike": 3000,
+      "max_option_spread": 0.05
+    }
+  },
+  "entry": {
+    "time_window": {
+      "start": "09:45",
+      "end": "15:30",
+      "tz": "America/New_York"
+    },
+    "indicators": {
+      "ivr_min": 15
+    },
+    "liquidity_checks": true
+  },
+  "position": {
+    "legs": [
+      {
+        "type": "STOCK",
+        "side": "BUY",
+        "qty": 100
+      },
+      {
+        "type": "CALL",
+        "side": "SELL",
+        "dte": 14,
+        "delta": 0.25
+      }
+    ],
+    "roll_rules": {
+      "short_call": {
+        "roll_if_dte_lt": 3,
+        "target_delta": 0.25,
+        "max_rolls_per_position": 12
+      }
+    }
+  },
+  "sizing": {
+    "allocation_type": "cash",
+    "per_trade_cash": 20000,
+    "max_concurrent_positions": 5,
+    "portfolio_heat_max": 0.30
+  },
+  "exits": {
+    "profit_target_pct": 0.08,
+    "time_exit_before_earnings_days": 0,
+    "oco_brackets": true
+  },
+  "risk": {
+    "circuit_breakers": {
+      "market": {
+        "vix_gt": 35,
+        "suspend_new_trades": true
+      }
+    },
+    "slippage_budget_pct": 0.25,
+    "max_order_reprices": 3
+  },
+  "automation": {
+    "scan_time": "09:50",
+    "propose_time": "10:00",
+    "approval_deadline": "10:10",
+    "execution_mode": "autopilot",
+    "autopilot_if_win_rate_gt": 0.58,
+    "autopilot_if_sharpe_gt": 1.2,
+    "autopilot_max_dd_lt": -0.12
+  },
+  "user_overrides": {
+    "editable_fields": [
+      "per_trade_cash",
+      "delta",
+      "dte"
+    ],
+    "allow_override_strikes": true,
+    "allow_override_qty": true,
+    "allow_override_dte": true
+  },
+  "broker_routing": {
+    "order_type": "NET_MULTI",
+    "limit_price": "mid_with_tolerance",
+    "tolerance": 0.02,
+    "time_in_force": "DAY"
+  }
+}

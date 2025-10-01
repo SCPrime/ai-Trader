@@ -1,0 +1,92 @@
+{
+  "strategy_id": "pc_spread_sub4_v1",
+  "name": "Put Credit Spread – Sub-$4 (Fully Collateralized)",
+  "goal": "Defined-risk premium capture",
+  "universe": {
+    "filters": {
+      "price_between": [2.0, 4.0],
+      "min_stock_adv": 1000000,
+      "min_option_oi_per_strike": 500,
+      "max_option_spread": 0.05,
+      "earnings_within_days": 7
+    },
+    "target_classes": ["current", "invested", "future"]
+  },
+  "entry": {
+    "indicators": {
+      "ivp_min": 40,
+      "ivp_max": 95
+    },
+    "time_window": {
+      "start": "09:40",
+      "end": "11:00",
+      "tz": "America/New_York"
+    },
+    "liquidity_checks": true
+  },
+  "position": {
+    "legs": [
+      {
+        "type": "PUT",
+        "side": "SELL",
+        "dte": 28,
+        "delta": -0.25
+      },
+      {
+        "type": "PUT",
+        "side": "BUY",
+        "dte": 28,
+        "offset_strikes": -0.50
+      }
+    ]
+  },
+  "sizing": {
+    "allocation_type": "cash_max_loss",
+    "risk_per_trade_pct": 0.015,
+    "max_concurrent_positions": 8,
+    "portfolio_heat_max": 0.20
+  },
+  "exits": {
+    "profit_target_pct": 0.50,
+    "time_exit_dte": 7,
+    "max_loss_pct": 0.70,
+    "oco_brackets": true
+  },
+  "risk": {
+    "circuit_breakers": {
+      "market": {
+        "vix_gt": 28,
+        "suspend_new_trades": true
+      },
+      "news": {
+        "rating_at_or_below": -0.7,
+        "cooldown_min": 45
+      }
+    },
+    "slippage_budget_pct": 0.50,
+    "max_order_reprices": 5
+  },
+  "automation": {
+    "scan_time": "09:25",
+    "propose_time": "09:45",
+    "approval_deadline": "10:00",
+    "execution_mode": "requires_approval"
+  },
+  "user_overrides": {
+    "editable_fields": [
+      "risk_per_trade_pct",
+      "delta",
+      "dte",
+      "profit_target_pct"
+    ],
+    "allow_override_strikes": true,
+    "allow_override_qty": false,
+    "allow_override_dte": true
+  },
+  "broker_routing": {
+    "order_type": "NET_MULTI",
+    "limit_price": "mid_with_tolerance",
+    "tolerance": 0.03,
+    "time_in_force": "DAY"
+  }
+}

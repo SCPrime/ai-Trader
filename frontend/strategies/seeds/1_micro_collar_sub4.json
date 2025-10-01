@@ -1,0 +1,125 @@
+{
+  "strategy_id": "micro_collar_sub4_v1",
+  "name": "Micro Protective Collar – Sub-$4",
+  "goal": "Income with capped downside on cheap stocks",
+  "universe": {
+    "filters": {
+      "price_between": [1.0, 4.0],
+      "min_stock_adv": 1500000,
+      "min_option_oi_per_strike": 500,
+      "max_option_spread": 0.05,
+      "exclude_otc": true,
+      "earnings_within_days": 5,
+      "halted": false
+    },
+    "ranking": [
+      {
+        "feature": "option_liquidity_score",
+        "weight": 0.5,
+        "direction": "desc"
+      },
+      {
+        "feature": "iv_percentile_1y",
+        "weight": 0.3,
+        "direction": "desc"
+      },
+      {
+        "feature": "news_sentiment_24h",
+        "weight": 0.2,
+        "direction": "desc"
+      }
+    ],
+    "max_candidates": 3,
+    "target_classes": ["current", "invested", "future"]
+  },
+  "entry": {
+    "time_window": {
+      "start": "09:35",
+      "end": "10:30",
+      "tz": "America/New_York"
+    },
+    "liquidity_checks": true
+  },
+  "position": {
+    "legs": [
+      {
+        "type": "STOCK",
+        "side": "BUY",
+        "qty": 100
+      },
+      {
+        "type": "PUT",
+        "side": "BUY",
+        "dte": 35,
+        "delta": -0.20
+      },
+      {
+        "type": "CALL",
+        "side": "SELL",
+        "dte": 14,
+        "delta": 0.30
+      }
+    ],
+    "roll_rules": {
+      "short_call": {
+        "roll_if_dte_lt": 5,
+        "target_delta": 0.30,
+        "same_exp_weekly": true
+      }
+    }
+  },
+  "sizing": {
+    "allocation_type": "cash",
+    "per_trade_cash": 500,
+    "max_concurrent_positions": 6,
+    "portfolio_heat_max": 0.25
+  },
+  "exits": {
+    "profit_target_pct": 0.10,
+    "max_loss_pct": 0.08,
+    "time_exit_before_earnings_days": 2,
+    "oco_brackets": true
+  },
+  "risk": {
+    "circuit_breakers": {
+      "market": {
+        "vix_gt": 28,
+        "suspend_new_trades": true
+      },
+      "news": {
+        "rating_at_or_below": -0.7,
+        "cooldown_min": 60
+      },
+      "liq": {
+        "spread_widen_gt": 0.10,
+        "cancel_unfilled": true
+      }
+    },
+    "slippage_budget_pct": 0.40,
+    "max_order_reprices": 4
+  },
+  "automation": {
+    "scan_time": "09:20",
+    "propose_time": "09:40",
+    "approval_deadline": "09:58",
+    "execution_mode": "requires_approval"
+  },
+  "user_overrides": {
+    "editable_fields": [
+      "per_trade_cash",
+      "delta",
+      "dte",
+      "profit_target_pct",
+      "max_loss_pct"
+    ],
+    "allow_override_strikes": true,
+    "allow_override_qty": true,
+    "allow_override_dte": true
+  },
+  "broker_routing": {
+    "order_type": "NET_MULTI",
+    "limit_price": "mid_with_tolerance",
+    "tolerance": 0.03,
+    "time_in_force": "DAY"
+  }
+}
