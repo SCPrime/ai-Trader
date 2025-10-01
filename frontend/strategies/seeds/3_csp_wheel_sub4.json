@@ -37,7 +37,7 @@
   },
   "sizing": {
     "allocation_type": "cash",
-    "per_trade_cash": 3000,
+    "per_trade_cash": 2500,
     "max_concurrent_positions": 8,
     "portfolio_heat_max": 0.20
   },
