@@ -103,13 +103,13 @@ function formatCell(v: any) {
   return String(v);
 }
 
-// Minimal inline styles (works with your CSP)
-const card: React.CSSProperties = { padding: 16, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12 };
+// Dark theme inline styles
+const card: React.CSSProperties = { padding: 16, background: "#1f2937", border: "1px solid #374151", borderRadius: 12 };
 const cardHeader: React.CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 };
-const title: React.CSSProperties = { margin: 0, fontSize: 18, color: "#111827" };
-const muted: React.CSSProperties = { color: "#6b7280", fontSize: 13 };
+const title: React.CSSProperties = { margin: 0, fontSize: 18, color: "#f9fafb" };
+const muted: React.CSSProperties = { color: "#9ca3af", fontSize: 13 };
 const btnPrimary: React.CSSProperties = { padding: "8px 12px", borderRadius: 8, border: "1px solid #3b82f6", background: "#3b82f6", color: "#fff", cursor: "pointer" };
-const errorBox: React.CSSProperties = { padding: 12, border: "1px solid #ef4444", background: "#fef2f2", color: "#991b1b", borderRadius: 8, marginBottom: 12 };
-const tableCss: React.CSSProperties = { width: "100%", borderCollapse: "collapse", fontSize: 13 };
-const thCss: React.CSSProperties = { textAlign: "left", padding: "8px 10px", borderBottom: "1px solid #e5e7eb", whiteSpace: "nowrap", background: "#f9fafb" };
-const tdCss: React.CSSProperties = { padding: "8px 10px", borderBottom: "1px solid #f3f4f6", whiteSpace: "nowrap" };
+const errorBox: React.CSSProperties = { padding: 12, border: "1px solid #ef4444", background: "#7f1d1d", color: "#fecaca", borderRadius: 8, marginBottom: 12 };
+const tableCss: React.CSSProperties = { width: "100%", borderCollapse: "collapse", fontSize: 13, color: "#f9fafb" };
+const thCss: React.CSSProperties = { textAlign: "left", padding: "8px 10px", borderBottom: "1px solid #374151", whiteSpace: "nowrap", background: "#374151", color: "#f9fafb" };
+const tdCss: React.CSSProperties = { padding: "8px 10px", borderBottom: "1px solid #374151", whiteSpace: "nowrap" };
