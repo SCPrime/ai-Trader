@@ -4,10 +4,12 @@ import PositionsTable from '../components/PositionsTable';
 import MorningRoutine from '../components/MorningRoutine';
 import ExecuteTradeForm from '../components/ExecuteTradeForm';
 import ResearchDashboard from '../components/trading/ResearchDashboard';
+import Settings from '../components/Settings';
 
 export default function Dashboard() {
   const [selectedWorkflow, setSelectedWorkflow] = useState<string>('');
   const [hoveredWorkflow, setHoveredWorkflow] = useState<Workflow | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
 
   const getWorkflowById = (id: string) => {
     return workflows.find(w => w.id === id);
@@ -31,6 +33,11 @@ export default function Dashboard() {
 
         case 'research':
           return <ResearchDashboard />;
+
+        case 'settings':
+          setShowSettings(true);
+          setSelectedWorkflow(''); // Clear selection after opening modal
+          return null;
 
         case 'pnl-dashboard':
           return (
@@ -397,6 +404,9 @@ export default function Dashboard() {
           }
         }
       `}</style>
+
+      {/* Settings Modal */}
+      <Settings isOpen={showSettings} onClose={() => setShowSettings(false)} />
     </div>
   );
 }

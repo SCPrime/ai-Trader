@@ -79,6 +79,13 @@ const workflows: Workflow[] = [
     icon: '🔬',
     color: '#F97316',
     description: 'Stock analysis with charts, indicators, options chain, and AI strategy recommendations.'
+  },
+  {
+    id: 'settings',
+    name: 'Settings',
+    icon: '⚙️',
+    color: '#64748b',
+    description: 'Configure trading mode, notifications, and risk preferences.'
   }
 ];
 

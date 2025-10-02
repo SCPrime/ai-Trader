@@ -626,7 +626,7 @@ function validateBusinessRules(
     }
   }
 
-  // Autopilot requires performance gates
+  // Autopilot informational warnings (non-blocking)
   if (strategy.automation?.execution_mode === 'autopilot') {
     const hasGates =
       strategy.automation.autopilot_if_win_rate_gt !== undefined ||
@@ -636,8 +636,15 @@ function validateBusinessRules(
     if (!hasGates) {
       warnings.push({
         field: 'automation',
-        message: 'Autopilot mode without performance gates is risky',
+        message: 'Consider setting performance thresholds (win rate, Sharpe, max DD) for autopilot mode',
         code: 'AUTOPILOT_NO_GATES',
+      });
+    } else {
+      // Informational: performance thresholds are set
+      warnings.push({
+        field: 'automation',
+        message: `Autopilot performance thresholds configured. Strategy will show performance tracking info based on trade history.`,
+        code: 'AUTOPILOT_INFO',
       });
     }
   }
