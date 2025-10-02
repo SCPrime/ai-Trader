@@ -1,254 +1,289 @@
-'use client';
-
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 
-interface Workflow {
-  id: string;
-  name: string;
-  icon: string;
-  color: string;
-  description: string;
-}
-
-interface RadialMenuProps {
-  onWorkflowSelect: (workflowId: string) => void;
-  onWorkflowHover?: (workflow: Workflow) => void;
-}
-
-const workflows: Workflow[] = [
-  {
-    id: 'morning-routine',
-    name: 'Morning\nRoutine',
-    icon: '☀️',
-    color: '#00ACC1',
-    description: 'Start your trading day with market overview, pre-market movers, and economic calendar review.'
-  },
-  {
-    id: 'news-review',
-    name: 'News\nReview',
-    icon: '📰',
-    color: '#7E57C2',
-    description: 'Real-time market news aggregation with AI-powered sentiment analysis and breaking news alerts.'
-  },
-  {
-    id: 'proposals',
-    name: 'Proposals',
-    icon: '📋',
-    color: '#0097A7',
-    description: 'Review and approve AI-generated trade proposals with risk metrics and deadline tracking.'
-  },
-  {
-    id: 'active-positions',
-    name: 'Positions',
-    icon: '📊',
-    color: '#00C851',
-    description: 'Monitor all active positions with real-time P&L, risk metrics, and position management tools.'
-  },
-  {
-    id: 'pnl-dashboard',
-    name: 'P&L\nDashboard',
-    icon: '💰',
-    color: '#FF8800',
-    description: 'Comprehensive profit and loss analysis with daily, weekly, and monthly performance metrics.'
-  },
-  {
-    id: 'strategy-builder',
-    name: 'Strategy\nBuilder',
-    icon: '🎯',
-    color: '#5E35B1',
-    description: 'Design, test, and refine custom trading strategies with drag-and-drop rule builder.'
-  },
-  {
-    id: 'backtesting',
-    name: 'Backtesting',
-    icon: '📈',
-    color: '#00BCD4',
-    description: 'Test strategies against historical data to validate performance before live deployment.'
-  },
-  {
-    id: 'execute',
-    name: 'Execute',
-    icon: '⚡',
-    color: '#FF4444',
-    description: 'Execute trades with advanced order types, smart routing, and risk management controls.'
-  },
-  {
-    id: 'research',
-    name: 'Research',
-    icon: '🔬',
-    color: '#F97316',
-    description: 'Stock analysis with charts, indicators, options chain, and AI strategy recommendations.'
-  },
-  {
-    id: 'settings',
-    name: 'Settings',
-    icon: '⚙️',
-    color: '#64748b',
-    description: 'Configure trading mode, notifications, and risk preferences.'
-  }
+const workflows = [
+  { id: 'morning-routine', name: 'MORNING\nROUTINE', color: '#00ACC1' },
+  { id: 'news-review', name: 'NEWS\nREVIEW', color: '#7E57C2' },
+  { id: 'proposals', name: 'AI\nRECS', color: '#0097A7' },
+  { id: 'active-positions', name: 'ACTIVE\nPOSITIONS', color: '#00C851' },
+  { id: 'pnl-dashboard', name: 'P&L\nDASHBOARD', color: '#FF8800' },
+  { id: 'strategy-builder', name: 'STRATEGY\nBUILDER', color: '#5E35B1' },
+  { id: 'backtesting', name: 'BACK\nTESTING', color: '#00BCD4' },
+  { id: 'execute', name: 'EXECUTE', color: '#FF4444' },
+  { id: 'research', name: 'RESEARCH', color: '#F97316' },
+  { id: 'settings', name: 'SETTINGS', color: '#64748b' }
 ];
 
-export default function RadialMenu({ onWorkflowSelect, onWorkflowHover }: RadialMenuProps) {
-  const svgRef = useRef<SVGSVGElement>(null);
+export default function RadialMenu() {
+  const svgRef = useRef(null);
+  const [selectedWorkflow, setSelectedWorkflow] = useState(null);
+  const [hoveredWorkflow, setHoveredWorkflow] = useState(null);
+  const [marketData] = useState({
+    nasdaq: { value: 18234.56, change: 1.2 },
+    nyse: { value: 16890.34, change: -0.3 }
+  });
+
+  const handleWorkflowClick = (workflowId) => {
+    setSelectedWorkflow(workflowId);
+  };
+
+  const handleCenterClick = () => {
+    setSelectedWorkflow(null);
+  };
 
   useEffect(() => {
     if (!svgRef.current) return;
 
-    const width = 600;
-    const height = 600;
-    const outerRadius = 220;
-    const innerRadius = 90;
-    const centerX = width / 2;
-    const centerY = height / 2;
+    const width = 800;
+    const height = 800;
+    const radius = Math.min(width, height) / 2;
+    const innerRadius = radius * 0.28;
+    const outerRadius = radius * 0.92;
 
-    // Clear previous render
-    d3.select(svgRef.current).selectAll('*').remove();
+    const svg = d3.select(svgRef.current);
+    svg.selectAll('*').remove();
 
-    const svg = d3.select(svgRef.current)
+    const defs = svg.append('defs');
+
+    const centerGradient = defs.append('radialGradient')
+      .attr('id', 'centerGradient');
+    centerGradient.append('stop')
+      .attr('offset', '0%')
+      .attr('stop-color', '#0f172a');
+    centerGradient.append('stop')
+      .attr('offset', '100%')
+      .attr('stop-color', '#1e293b');
+
+    const aiGradient = defs.append('linearGradient')
+      .attr('id', 'aiGradient')
+      .attr('x1', '0%')
+      .attr('y1', '0%')
+      .attr('x2', '200%')
+      .attr('y2', '0%');
+    aiGradient.append('stop')
+      .attr('offset', '0%')
+      .attr('stop-color', '#10b981');
+    aiGradient.append('stop')
+      .attr('offset', '25%')
+      .attr('stop-color', '#34d399');
+    aiGradient.append('stop')
+      .attr('offset', '50%')
+      .attr('stop-color', '#6ee7b7');
+    aiGradient.append('stop')
+      .attr('offset', '75%')
+      .attr('stop-color', '#34d399');
+    aiGradient.append('stop')
+      .attr('offset', '100%')
+      .attr('stop-color', '#10b981');
+
+    const g = svg
       .attr('width', width)
       .attr('height', height)
-      .attr('viewBox', `0 0 ${width} ${height}`)
-      .attr('role', 'navigation')
-      .attr('aria-label', 'Trading workflow navigation');
+      .append('g')
+      .attr('transform', `translate(${width / 2}, ${height / 2})`);
 
-    const pie = d3.pie<Workflow>()
+    const pie = d3.pie()
       .value(1)
       .sort(null)
       .startAngle(-Math.PI / 2)
-      .padAngle(0.02);
+      .padAngle(0.004);
 
-    const arc = d3.arc<d3.PieArcDatum<Workflow>>()
+    const arc = d3.arc()
       .innerRadius(innerRadius)
-      .outerRadius(outerRadius);
+      .outerRadius(outerRadius)
+      .cornerRadius(1);
 
-    const arcHover = d3.arc<d3.PieArcDatum<Workflow>>()
+    const hoverArc = d3.arc()
       .innerRadius(innerRadius)
-      .outerRadius(outerRadius + 15);
+      .outerRadius(outerRadius + 5)
+      .cornerRadius(1);
 
-    const labelArc = d3.arc<d3.PieArcDatum<Workflow>>()
-      .innerRadius((innerRadius + outerRadius) / 2)
-      .outerRadius((innerRadius + outerRadius) / 2);
-
-    const g = svg.append('g')
-      .attr('transform', `translate(${centerX}, ${centerY})`);
-
-    // Create segments
     const segments = g.selectAll('.segment')
       .data(pie(workflows))
       .enter()
       .append('g')
-      .attr('class', 'segment-group');
+      .attr('class', 'segment')
+      .style('cursor', 'pointer');
 
     segments.append('path')
-      .attr('class', 'segment')
       .attr('d', arc)
       .attr('fill', d => d.data.color)
-      .attr('stroke', 'rgba(255, 255, 255, 0.1)')
-      .attr('stroke-width', 2)
-      .style('cursor', 'pointer')
-      .style('transition', 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)')
+      .attr('stroke', '#000000')
+      .attr('stroke-width', 1.5)
+      .style('filter', 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4))')
       .on('mouseenter', function(event, d) {
         d3.select(this)
           .transition()
-          .duration(200)
-          .attr('d', arcHover)
-          .style('filter', 'brightness(1.2)');
-
-        if (onWorkflowHover) {
-          onWorkflowHover(d.data);
-        }
+          .duration(100)
+          .attr('d', hoverArc);
+        setHoveredWorkflow(d.data);
       })
       .on('mouseleave', function() {
         d3.select(this)
           .transition()
-          .duration(200)
-          .attr('d', arc)
-          .style('filter', 'brightness(1)');
+          .duration(100)
+          .attr('d', arc);
+        setHoveredWorkflow(null);
       })
-      .on('click', function(event, d) {
-        console.log('RadialMenu: Workflow clicked:', d.data.id);
-        onWorkflowSelect(d.data.id);
-      });
+      .on('click', (event, d) => handleWorkflowClick(d.data.id));
 
-    // Add icons
     segments.append('text')
-      .attr('class', 'segment-icon')
       .attr('transform', d => {
-        const pos = labelArc.centroid(d);
-        return `translate(${pos[0]}, ${pos[1] - 15})`;
+        const [x, y] = arc.centroid(d);
+        return `translate(${x}, ${y})`;
       })
       .attr('text-anchor', 'middle')
-      .attr('font-size', '28px')
+      .attr('font-size', '22px')
+      .attr('font-weight', '900')
+      .attr('font-style', 'italic')
       .attr('fill', 'white')
-      .style('pointer-events', 'none')
-      .style('text-shadow', '0 2px 4px rgba(0, 0, 0, 0.3)')
-      .text(d => d.data.icon);
+      .attr('letter-spacing', '1.5px')
+      .style('text-shadow', '0 3px 8px rgba(0, 0, 0, 0.9)')
+      .each(function(d) {
+        const lines = d.data.name.split('\n');
+        const text = d3.select(this);
 
-    // Add labels (split by \n)
-    segments.each(function(d) {
-      const lines = d.data.name.split('\n');
-      const pos = labelArc.centroid(d);
-
-      lines.forEach((line, i) => {
-        d3.select(this)
-          .append('text')
-          .attr('class', 'segment-label')
-          .attr('transform', `translate(${pos[0]}, ${pos[1] + 15 + i * 16})`)
-          .attr('text-anchor', 'middle')
-          .attr('font-size', '13px')
-          .attr('font-weight', 600)
-          .attr('fill', 'white')
-          .style('pointer-events', 'none')
-          .style('user-select', 'none')
-          .style('text-shadow', '0 2px 4px rgba(0, 0, 0, 0.3)')
-          .text(line);
+        lines.forEach((line, i) => {
+          text.append('tspan')
+            .attr('x', 0)
+            .attr('dy', i === 0 ? '-0.4em' : '1.3em')
+            .text(line);
+        });
       });
-    });
 
-    // Center circle
-    g.append('circle')
-      .attr('class', 'center-circle')
-      .attr('r', innerRadius - 5)
-      .attr('cx', 0)
-      .attr('cy', 0)
-      .attr('fill', '#1e293b')
-      .attr('stroke', 'rgba(255, 255, 255, 0.2)')
-      .attr('stroke-width', 3)
-      .style('filter', 'drop-shadow(0 0 20px rgba(0, 172, 193, 0.3))');
+    const centerGroup = g.append('g')
+      .style('cursor', 'pointer')
+      .on('click', handleCenterClick);
 
-    g.append('text')
-      .attr('class', 'center-text')
-      .attr('dy', -5)
+    centerGroup.append('circle')
+      .attr('r', innerRadius - 10)
+      .attr('fill', 'url(#centerGradient)')
+      .attr('stroke', '#059669')
+      .attr('stroke-width', 2)
+      .style('filter', 'drop-shadow(0 0 15px rgba(5, 150, 105, 0.3))');
+
+    const logoGroup = centerGroup.append('g')
+      .attr('transform', 'translate(0, -60)');
+
+    logoGroup.append('text')
+      .attr('x', -50)
+      .attr('y', 0)
+      .attr('font-size', '36px')
+      .attr('font-weight', '900')
+      .attr('font-style', 'italic')
+      .attr('fill', '#047857')
+      .attr('letter-spacing', '10px')
+      .style('text-shadow', '0 0 10px rgba(5, 150, 105, 0.3)')
+      .text('P');
+
+    logoGroup.append('text')
+      .attr('x', -10)
+      .attr('y', 0)
+      .attr('font-size', '36px')
+      .attr('font-weight', '900')
+      .attr('font-style', 'italic')
+      .attr('fill', 'url(#aiGradient)')
+      .attr('letter-spacing', '10px')
+      .style('text-shadow', '0 0 20px rgba(16, 185, 129, 0.5)')
+      .style('filter', 'drop-shadow(0 0 15px rgba(52, 211, 153, 0.9))')
+      .text('ai');
+
+    logoGroup.append('text')
+      .attr('x', 30)
+      .attr('y', 0)
+      .attr('font-size', '36px')
+      .attr('font-weight', '900')
+      .attr('font-style', 'italic')
+      .attr('fill', '#34d399')
+      .attr('letter-spacing', '10px')
+      .style('text-shadow', '0 0 10px rgba(52, 211, 153, 0.3)')
+      .text('D');
+
+    const nasdaq = centerGroup.append('g')
+      .attr('transform', 'translate(0, -10)');
+
+    nasdaq.append('text')
       .attr('text-anchor', 'middle')
-      .attr('font-size', '18px')
-      .attr('font-weight', 600)
-      .attr('fill', '#e2e8f0')
-      .style('pointer-events', 'none')
-      .text('AI Trading');
+      .attr('font-size', '11px')
+      .attr('font-weight', '800')
+      .attr('fill', '#cbd5e1')
+      .attr('letter-spacing', '2.5px')
+      .text('NASDAQ');
 
-    g.append('text')
-      .attr('class', 'center-text')
-      .attr('dy', 18)
+    nasdaq.append('text')
       .attr('text-anchor', 'middle')
-      .attr('font-size', '14px')
-      .attr('fill', '#94a3b8')
-      .style('pointer-events', 'none')
-      .text('Platform');
+      .attr('dy', '20')
+      .attr('font-size', '22px')
+      .attr('font-weight', '900')
+      .attr('fill', '#f1f5f9')
+      .style('text-shadow', '0 2px 4px rgba(0, 0, 0, 0.5)')
+      .text(marketData.nasdaq.value.toLocaleString('en-US', { minimumFractionDigits: 2 }));
 
-  }, [onWorkflowSelect, onWorkflowHover]);
+    nasdaq.append('text')
+      .attr('text-anchor', 'middle')
+      .attr('dy', '36')
+      .attr('font-size', '13px')
+      .attr('font-weight', '800')
+      .attr('fill', marketData.nasdaq.change >= 0 ? '#10b981' : '#ef4444')
+      .style('text-shadow', '0 0 8px ' + (marketData.nasdaq.change >= 0 ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)'))
+      .text(`${marketData.nasdaq.change >= 0 ? '▲' : '▼'} ${Math.abs(marketData.nasdaq.change)}%`);
+
+    const nyse = centerGroup.append('g')
+      .attr('transform', 'translate(0, 40)');
+
+    nyse.append('text')
+      .attr('text-anchor', 'middle')
+      .attr('font-size', '11px')
+      .attr('font-weight', '800')
+      .attr('fill', '#cbd5e1')
+      .attr('letter-spacing', '2.5px')
+      .text('NYSE');
+
+    nyse.append('text')
+      .attr('text-anchor', 'middle')
+      .attr('dy', '20')
+      .attr('font-size', '22px')
+      .attr('font-weight', '900')
+      .attr('fill', '#f1f5f9')
+      .style('text-shadow', '0 2px 4px rgba(0, 0, 0, 0.5)')
+      .text(marketData.nyse.value.toLocaleString('en-US', { minimumFractionDigits: 2 }));
+
+    nyse.append('text')
+      .attr('text-anchor', 'middle')
+      .attr('dy', '36')
+      .attr('font-size', '13px')
+      .attr('font-weight', '800')
+      .attr('fill', marketData.nyse.change >= 0 ? '#10b981' : '#ef4444')
+      .style('text-shadow', '0 0 8px ' + (marketData.nyse.change >= 0 ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)'))
+      .text(`${marketData.nyse.change >= 0 ? '▲' : '▼'} ${Math.abs(marketData.nyse.change)}%`);
+
+  }, [marketData]);
 
   return (
-    <div style={{
-      width: '100%',
-      maxWidth: '600px',
-      margin: '0 auto',
-      filter: 'drop-shadow(0 10px 30px rgba(0, 0, 0, 0.5))'
-    }}>
-      <svg ref={svgRef} style={{ width: '100%', height: 'auto' }} />
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-8">
+      <div className="mb-8 text-center">
+        <h1 className="text-9xl font-black mb-3 drop-shadow-2xl" style={{ fontStyle: 'italic' }}>
+          <span className="text-emerald-800" style={{ letterSpacing: '0.15em' }}>P</span>
+          <span className="inline-block text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-green-300 to-emerald-400 animate-pulse" style={{
+            letterSpacing: '0.12em',
+            filter: 'drop-shadow(0 0 30px rgba(16,185,129,0.5))'
+          }}>ai</span>
+          <span className="text-emerald-400" style={{ letterSpacing: '0.15em' }}>D</span>
+        </h1>
+        <p className="text-emerald-400 text-xl font-black tracking-[0.5em] uppercase drop-shadow-lg" style={{ fontStyle: 'italic' }}>
+          10-STAGE WORKFLOW
+        </p>
+      </div>
+
+      <svg ref={svgRef} className="drop-shadow-2xl" />
+
+      {hoveredWorkflow && (
+        <div className="mt-10 backdrop-blur-xl bg-gradient-to-br from-slate-800/60 to-slate-900/60 rounded-2xl border-2 border-emerald-500/50 px-10 py-6 max-w-lg shadow-2xl">
+          <h3 className="text-3xl font-black text-white mb-2 tracking-wide" style={{ fontStyle: 'italic' }}>
+            {hoveredWorkflow.name.replace('\n', ' ')}
+          </h3>
+        </div>
+      )}
     </div>
   );
 }
-
-export { workflows };
-export type { Workflow };
