@@ -1,14 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { validateStrategy } from '@/strategies/validator';
+import type { Strategy, ValidationResult, ValidationError, ValidationWarning } from '@/strategies/schema';
 
 /**
  * Strategy Builder Component
  *
- * Form-only UI for creating and editing Allessandra strategies.
- * Includes Basic Info, Universe Filters, Position Structure, Sizing, and Exits.
+ * Complete UI for creating and editing Allessandra strategies.
+ * Includes validation via validator.ts and save/load functionality.
  *
- * INCREMENT 8: UI only - no save logic
+ * INCREMENT 9: Added validator integration, save flow, and version management
  */
 
 type TemplateType =
@@ -70,12 +72,20 @@ interface StrategyBuilderProps {
   isOpen: boolean;
   onClose: () => void;
   initialData?: Partial<StrategyFormData>;
+  strategyId?: string; // For editing existing strategies
+}
+
+interface StrategyVersion {
+  version: number;
+  updated_at: string;
+  changes_summary?: string;
 }
 
 export default function StrategyBuilder({
   isOpen,
   onClose,
   initialData,
+  strategyId,
 }: StrategyBuilderProps) {
   const [formData, setFormData] = useState<StrategyFormData>({
     // Basic Info
@@ -108,7 +118,15 @@ export default function StrategyBuilder({
     useOCOBrackets: initialData?.useOCOBrackets ?? false,
   });
 
-  const [errors, setErrors] = useState<ValidationErrors>({});
+  const [clientErrors, setClientErrors] = useState<ValidationErrors>({});
+  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
+  const [showWarnings, setShowWarnings] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [versions, setVersions] = useState<StrategyVersion[]>([]);
+  const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
+
   const [expandedSections, setExpandedSections] = useState({
     basicInfo: true,
     universe: false,
@@ -116,6 +134,77 @@ export default function StrategyBuilder({
     sizing: false,
     exits: false,
   });
+
+  // Load versions when editing existing strategy
+  useEffect(() => {
+    if (strategyId) {
+      loadVersions(strategyId);
+    }
+  }, [strategyId]);
+
+  const loadVersions = async (id: string) => {
+    try {
+      const response = await fetch(`/api/strategies/${id}/versions`);
+      if (response.ok) {
+        const data = await response.json();
+        setVersions(data.versions || []);
+      }
+    } catch (error) {
+      console.error('Failed to load versions:', error);
+    }
+  };
+
+  const loadVersion = async (version: number) => {
+    if (!strategyId) return;
+
+    try {
+      const response = await fetch(`/api/strategies/${strategyId}/versions`);
+      if (response.ok) {
+        const data = await response.json();
+        const versionData = data.versions.find((v: any) => v.version === version);
+        if (versionData) {
+          // Convert Strategy JSON to form data
+          convertStrategyToFormData(versionData.strategy_json);
+          setSelectedVersion(version);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load version:', error);
+    }
+  };
+
+  const convertStrategyToFormData = (strategy: Strategy) => {
+    // Convert Strategy DSL to form data
+    // This is a simplified version - full implementation would map all fields
+    setFormData({
+      name: strategy.name,
+      goal: strategy.goal,
+      template: 'custom',
+      priceMin: strategy.universe.filters.price_between?.[0] || 0,
+      priceMax: strategy.universe.filters.price_between?.[1] || 1000,
+      minStockVolume: strategy.universe.filters.min_stock_adv || 1000000,
+      minOptionOI: strategy.universe.filters.min_option_oi_per_strike || 100,
+      maxOptionSpread: strategy.universe.filters.max_option_spread || 0.10,
+      excludeOTC: strategy.universe.filters.exclude_otc ?? true,
+      earningsBlackoutDays: strategy.universe.filters.earnings_within_days || 7,
+      legs: strategy.position.legs.map((leg, idx) => ({
+        id: `leg_${idx}`,
+        type: leg.type,
+        side: leg.side,
+        dte: leg.dte,
+        delta: leg.delta,
+        quantity: leg.qty || 1,
+      })),
+      allocationType: strategy.sizing.allocation_type,
+      perTradeCash: strategy.sizing.per_trade_cash || 5000,
+      maxConcurrentPositions: strategy.sizing.max_concurrent_positions,
+      portfolioHeatMax: (strategy.sizing.portfolio_heat_max || 0) * 100,
+      profitTargetPct: (strategy.exits.profit_target_pct || 0) * 100,
+      maxLossPct: (strategy.exits.max_loss_pct || 0) * 100,
+      timeExitDTE: strategy.exits.time_exit_dte || 7,
+      useOCOBrackets: strategy.exits.oco_brackets ?? false,
+    });
+  };
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections(prev => ({
@@ -126,14 +215,18 @@ export default function StrategyBuilder({
 
   const updateField = (field: keyof StrategyFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    // Clear error for this field
-    if (errors[field]) {
-      setErrors(prev => {
+    // Clear client error for this field
+    if (clientErrors[field]) {
+      setClientErrors(prev => {
         const newErrors = { ...prev };
         delete newErrors[field];
         return newErrors;
       });
     }
+    // Clear validation result when form changes
+    setValidationResult(null);
+    setSaveSuccess(false);
+    setSaveError(null);
   };
 
   const addLeg = () => {
@@ -149,7 +242,10 @@ export default function StrategyBuilder({
   };
 
   const removeLeg = (id: string) => {
-    updateField('legs', formData.legs.filter(leg => leg.id !== id));
+    updateField(
+      'legs',
+      formData.legs.filter(leg => leg.id !== id)
+    );
   };
 
   const updateLeg = (id: string, field: keyof Leg, value: any) => {
@@ -166,29 +262,27 @@ export default function StrategyBuilder({
     const templates: Record<TemplateType, Leg[]> = {
       collar: [
         { id: 'leg_1', type: 'STOCK', side: 'BUY', quantity: 100 },
-        { id: 'leg_2', type: 'PUT', side: 'BUY', dte: 35, delta: -0.20, quantity: 1 },
-        { id: 'leg_3', type: 'CALL', side: 'SELL', dte: 14, delta: 0.30, quantity: 1 },
+        { id: 'leg_2', type: 'PUT', side: 'BUY', dte: 35, delta: -0.2, quantity: 1 },
+        { id: 'leg_3', type: 'CALL', side: 'SELL', dte: 14, delta: 0.3, quantity: 1 },
       ],
       put_spread: [
         { id: 'leg_1', type: 'PUT', side: 'SELL', dte: 28, delta: -0.25, quantity: 1 },
-        { id: 'leg_2', type: 'PUT', side: 'BUY', dte: 28, delta: -0.10, quantity: 1 },
+        { id: 'leg_2', type: 'PUT', side: 'BUY', dte: 28, delta: -0.1, quantity: 1 },
       ],
       call_spread: [
         { id: 'leg_1', type: 'CALL', side: 'SELL', dte: 28, delta: 0.25, quantity: 1 },
-        { id: 'leg_2', type: 'CALL', side: 'BUY', dte: 28, delta: 0.10, quantity: 1 },
+        { id: 'leg_2', type: 'CALL', side: 'BUY', dte: 28, delta: 0.1, quantity: 1 },
       ],
       iron_condor: [
-        { id: 'leg_1', type: 'PUT', side: 'SELL', dte: 30, delta: -0.20, quantity: 1 },
-        { id: 'leg_2', type: 'PUT', side: 'BUY', dte: 30, delta: -0.10, quantity: 1 },
-        { id: 'leg_3', type: 'CALL', side: 'SELL', dte: 30, delta: 0.20, quantity: 1 },
-        { id: 'leg_4', type: 'CALL', side: 'BUY', dte: 30, delta: 0.10, quantity: 1 },
+        { id: 'leg_1', type: 'PUT', side: 'SELL', dte: 30, delta: -0.2, quantity: 1 },
+        { id: 'leg_2', type: 'PUT', side: 'BUY', dte: 30, delta: -0.1, quantity: 1 },
+        { id: 'leg_3', type: 'CALL', side: 'SELL', dte: 30, delta: 0.2, quantity: 1 },
+        { id: 'leg_4', type: 'CALL', side: 'BUY', dte: 30, delta: 0.1, quantity: 1 },
       ],
-      csp: [
-        { id: 'leg_1', type: 'PUT', side: 'SELL', dte: 28, delta: -0.25, quantity: 1 },
-      ],
+      csp: [{ id: 'leg_1', type: 'PUT', side: 'SELL', dte: 28, delta: -0.25, quantity: 1 }],
       covered_call: [
         { id: 'leg_1', type: 'STOCK', side: 'BUY', quantity: 100 },
-        { id: 'leg_2', type: 'CALL', side: 'SELL', dte: 14, delta: 0.30, quantity: 1 },
+        { id: 'leg_2', type: 'CALL', side: 'SELL', dte: 14, delta: 0.3, quantity: 1 },
       ],
       custom: [],
     };
@@ -196,7 +290,7 @@ export default function StrategyBuilder({
     updateField('legs', templates[template]);
   };
 
-  const validate = (): boolean => {
+  const clientValidate = (): boolean => {
     const newErrors: ValidationErrors = {};
 
     // Basic Info validation
@@ -251,16 +345,187 @@ export default function StrategyBuilder({
       newErrors.timeExitDTE = 'Time exit DTE must be >= 0';
     }
 
-    setErrors(newErrors);
+    setClientErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
-    if (validate()) {
-      alert('✓ Strategy validation passed!\n\nSave logic will be implemented in next increment.');
-      console.log('Strategy data:', formData);
+  /**
+   * Convert form data to Strategy DSL JSON
+   */
+  const convertToStrategyJSON = (): Strategy => {
+    return {
+      strategy_id: strategyId || `strat_${Date.now()}`,
+      name: formData.name,
+      goal: formData.goal,
+      universe: {
+        filters: {
+          price_between: [formData.priceMin, formData.priceMax],
+          min_stock_adv: formData.minStockVolume,
+          min_option_oi_per_strike: formData.minOptionOI,
+          max_option_spread: formData.maxOptionSpread,
+          exclude_otc: formData.excludeOTC,
+          earnings_within_days: formData.earningsBlackoutDays,
+          halted: false,
+        },
+      },
+      entry: {
+        time_window: {
+          start: '09:35',
+          end: '10:30',
+          tz: 'America/New_York',
+        },
+        liquidity_checks: true,
+      },
+      position: {
+        legs: formData.legs.map(leg => ({
+          type: leg.type,
+          side: leg.side,
+          qty: leg.quantity,
+          dte: leg.dte,
+          delta: leg.delta,
+        })),
+      },
+      sizing: {
+        allocation_type: formData.allocationType,
+        per_trade_cash: formData.perTradeCash,
+        max_concurrent_positions: formData.maxConcurrentPositions,
+        portfolio_heat_max: formData.portfolioHeatMax / 100,
+      },
+      exits: {
+        profit_target_pct: formData.profitTargetPct / 100,
+        max_loss_pct: formData.maxLossPct / 100,
+        time_exit_dte: formData.timeExitDTE,
+        oco_brackets: formData.useOCOBrackets,
+      },
+      risk: {
+        circuit_breakers: {
+          market: {
+            vix_gt: 28,
+            suspend_new_trades: true,
+          },
+        },
+        slippage_budget_pct: 0.4,
+        max_order_reprices: 4,
+      },
+      automation: {
+        scan_time: '09:20',
+        propose_time: '09:40',
+        approval_deadline: '09:58',
+        execution_mode: 'requires_approval',
+      },
+      broker_routing: {
+        order_type: 'NET_MULTI',
+        limit_price: 'mid_with_tolerance',
+        tolerance: 0.03,
+        time_in_force: 'DAY',
+      },
+    };
+  };
+
+  /**
+   * Validate using the DSL validator
+   */
+  const handleValidate = () => {
+    // First run client-side validation
+    if (!clientValidate()) {
+      return;
+    }
+
+    // Convert to Strategy JSON
+    const strategyJSON = convertToStrategyJSON();
+
+    // Run validator
+    const result = validateStrategy(strategyJSON);
+    setValidationResult(result);
+
+    if (result.warnings.length > 0) {
+      setShowWarnings(true);
+    }
+
+    if (!result.valid) {
+      alert(
+        `❌ Validation Failed\n\n${result.errors.length} error(s) found:\n${result.errors
+          .map(e => `• ${e.field}: ${e.message}`)
+          .join('\n')}`
+      );
+    } else if (result.warnings.length > 0) {
+      alert(
+        `⚠️ Validation Passed with Warnings\n\n${result.warnings
+          .map(w => `• ${w.field}: ${w.message}`)
+          .join('\n')}\n\nYou can still save, but consider addressing these warnings.`
+      );
     } else {
-      alert('❌ Please fix validation errors before saving.');
+      alert('✅ Validation Passed!\n\nNo errors or warnings found. Ready to save.');
+    }
+  };
+
+  /**
+   * Save strategy via API
+   */
+  const handleSave = async (forceWithWarnings = false) => {
+    // Validate first
+    if (!validationResult) {
+      handleValidate();
+      return;
+    }
+
+    // Block save if there are errors
+    if (!validationResult.valid) {
+      alert('Cannot save strategy with validation errors. Please fix all errors first.');
+      return;
+    }
+
+    // Show warnings if not forcing
+    if (!forceWithWarnings && validationResult.warnings.length > 0) {
+      const proceed = confirm(
+        `⚠️ Save with Warnings?\n\n${validationResult.warnings
+          .map(w => `• ${w.field}: ${w.message}`)
+          .join('\n')}\n\nDo you want to save anyway?`
+      );
+      if (!proceed) return;
+    }
+
+    setIsSaving(true);
+    setSaveError(null);
+    setSaveSuccess(false);
+
+    try {
+      const strategyJSON = convertToStrategyJSON();
+
+      const response = await fetch('/api/strategies', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(strategyJSON),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setSaveSuccess(true);
+        alert(
+          `✅ Strategy Saved!\n\nStrategy ID: ${data.strategyId}\nVersion: ${data.version}\n\nYou can now use this strategy for backtesting or live trading.`
+        );
+
+        // Reload versions if editing
+        if (strategyId) {
+          loadVersions(strategyId);
+        }
+
+        // Close modal after short delay
+        setTimeout(() => {
+          onClose();
+        }, 1500);
+      } else {
+        setSaveError(data.error || 'Failed to save strategy');
+        alert(`❌ Save Failed\n\n${data.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      setSaveError(String(error));
+      alert(`❌ Save Failed\n\n${String(error)}`);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -273,9 +538,7 @@ export default function StrategyBuilder({
         <div className="px-6 py-4 border-b border-white/10 bg-gradient-to-r from-cyan-500/20 to-purple-500/20">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-white mb-1">
-                🛠️ Strategy Builder
-              </h2>
+              <h2 className="text-2xl font-bold text-white mb-1">🛠️ Strategy Builder</h2>
               <p className="text-sm text-slate-300">
                 Design custom options strategies with Allessandra DSL
               </p>
@@ -287,10 +550,96 @@ export default function StrategyBuilder({
               ✕ Close
             </button>
           </div>
+
+          {/* Version Selector */}
+          {versions.length > 0 && (
+            <div className="mt-3 flex items-center gap-3">
+              <span className="text-sm text-slate-400">Load Version:</span>
+              <select
+                value={selectedVersion || ''}
+                onChange={e => loadVersion(Number(e.target.value))}
+                className="px-3 py-1 bg-slate-900 border border-white/20 rounded text-sm text-white"
+              >
+                <option value="">Current</option>
+                {versions.map(v => (
+                  <option key={v.version} value={v.version}>
+                    v{v.version} - {new Date(v.updated_at).toLocaleDateString()}
+                    {v.changes_summary && ` (${v.changes_summary})`}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Validation Status */}
+          {validationResult && (
+            <div className="mt-3 flex items-center gap-2">
+              {validationResult.valid ? (
+                <span className="text-sm text-green-400">✓ Validation Passed</span>
+              ) : (
+                <span className="text-sm text-red-400">
+                  ✗ {validationResult.errors.length} Error(s)
+                </span>
+              )}
+              {validationResult.warnings.length > 0 && (
+                <span className="text-sm text-yellow-400">
+                  ⚠ {validationResult.warnings.length} Warning(s)
+                </span>
+              )}
+            </div>
+          )}
+
+          {saveSuccess && (
+            <div className="mt-3 px-3 py-2 bg-green-500/20 border border-green-500/30 rounded text-sm text-green-400">
+              ✓ Strategy saved successfully!
+            </div>
+          )}
+
+          {saveError && (
+            <div className="mt-3 px-3 py-2 bg-red-500/20 border border-red-500/30 rounded text-sm text-red-400">
+              ✗ {saveError}
+            </div>
+          )}
         </div>
 
         {/* Form Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          {/* Validation Errors Display */}
+          {validationResult && !validationResult.valid && (
+            <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
+              <div className="text-sm font-semibold text-red-400 mb-2">Validation Errors:</div>
+              <ul className="space-y-1 text-xs text-red-300">
+                {validationResult.errors.map((err, idx) => (
+                  <li key={idx}>
+                    • <span className="font-semibold">{err.field}</span>: {err.message}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Validation Warnings Display */}
+          {validationResult && validationResult.warnings.length > 0 && showWarnings && (
+            <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm font-semibold text-yellow-400">Validation Warnings:</div>
+                <button
+                  onClick={() => setShowWarnings(false)}
+                  className="text-xs text-slate-400 hover:text-white"
+                >
+                  Hide
+                </button>
+              </div>
+              <ul className="space-y-1 text-xs text-yellow-300">
+                {validationResult.warnings.map((warn, idx) => (
+                  <li key={idx}>
+                    • <span className="font-semibold">{warn.field}</span>: {warn.message}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {/* A) Basic Info Section */}
           <div className="bg-slate-900/60 border border-white/10 rounded-xl overflow-hidden">
             <button
@@ -317,12 +666,14 @@ export default function StrategyBuilder({
                     onChange={e => updateField('name', e.target.value)}
                     placeholder="e.g., Iron Condor SPY 30DTE"
                     className={`w-full px-4 py-2 bg-slate-800 border rounded-lg text-white outline-none focus:ring-2 transition-all ${
-                      errors.name
+                      clientErrors.name
                         ? 'border-red-500 focus:ring-red-500/50'
                         : 'border-white/20 focus:ring-cyan-500/50'
                     }`}
                   />
-                  {errors.name && <p className="mt-1 text-sm text-red-400">{errors.name}</p>}
+                  {clientErrors.name && (
+                    <p className="mt-1 text-sm text-red-400">{clientErrors.name}</p>
+                  )}
                 </div>
 
                 {/* Goal/Description */}
@@ -336,12 +687,14 @@ export default function StrategyBuilder({
                     placeholder="Describe the strategy's objective and ideal market conditions..."
                     rows={3}
                     className={`w-full px-4 py-2 bg-slate-800 border rounded-lg text-white outline-none focus:ring-2 transition-all resize-none ${
-                      errors.goal
+                      clientErrors.goal
                         ? 'border-red-500 focus:ring-red-500/50'
                         : 'border-white/20 focus:ring-cyan-500/50'
                     }`}
                   />
-                  {errors.goal && <p className="mt-1 text-sm text-red-400">{errors.goal}</p>}
+                  {clientErrors.goal && (
+                    <p className="mt-1 text-sm text-red-400">{clientErrors.goal}</p>
+                  )}
                 </div>
 
                 {/* Template Selector */}
@@ -374,7 +727,7 @@ export default function StrategyBuilder({
             onToggle={() => toggleSection('universe')}
             formData={formData}
             updateField={updateField}
-            errors={errors}
+            errors={clientErrors}
           />
 
           {/* C) Position Structure Section */}
@@ -385,7 +738,7 @@ export default function StrategyBuilder({
             addLeg={addLeg}
             removeLeg={removeLeg}
             updateLeg={updateLeg}
-            errors={errors}
+            errors={clientErrors}
           />
 
           {/* D) Sizing Section */}
@@ -394,7 +747,7 @@ export default function StrategyBuilder({
             onToggle={() => toggleSection('sizing')}
             formData={formData}
             updateField={updateField}
-            errors={errors}
+            errors={clientErrors}
           />
 
           {/* E) Exits Section */}
@@ -403,16 +756,17 @@ export default function StrategyBuilder({
             onToggle={() => toggleSection('exits')}
             formData={formData}
             updateField={updateField}
-            errors={errors}
+            errors={clientErrors}
           />
         </div>
 
         {/* Footer Actions */}
         <div className="px-6 py-4 border-t border-white/10 bg-slate-900/50 flex items-center justify-between">
           <div className="text-sm text-slate-400">
-            {Object.keys(errors).length > 0 && (
+            {Object.keys(clientErrors).length > 0 && (
               <span className="text-red-400">
-                ⚠️ {Object.keys(errors).length} validation error{Object.keys(errors).length !== 1 ? 's' : ''}
+                ⚠️ {Object.keys(clientErrors).length} validation error
+                {Object.keys(clientErrors).length !== 1 ? 's' : ''}
               </span>
             )}
           </div>
@@ -424,10 +778,17 @@ export default function StrategyBuilder({
               Cancel
             </button>
             <button
-              onClick={handleSubmit}
-              className="px-5 py-2 bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600 text-white font-semibold rounded-lg transition-all"
+              onClick={handleValidate}
+              className="px-5 py-2 bg-purple-500 hover:bg-purple-600 text-white font-semibold rounded-lg transition-all"
             >
-              Validate Strategy
+              🔍 Validate
+            </button>
+            <button
+              onClick={() => handleSave(false)}
+              disabled={isSaving}
+              className="px-5 py-2 bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600 text-white font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSaving ? '💾 Saving...' : '💾 Save Strategy'}
             </button>
           </div>
         </div>
@@ -436,7 +797,7 @@ export default function StrategyBuilder({
   );
 }
 
-// Sub-components for each section
+// Sub-components for each section (unchanged from INCREMENT 8)
 
 function UniverseFiltersSection({
   expanded,
@@ -511,7 +872,9 @@ function UniverseFiltersSection({
                 errors.minStockVolume ? 'border-red-500' : 'border-white/20'
               }`}
             />
-            {errors.minStockVolume && <p className="mt-1 text-sm text-red-400">{errors.minStockVolume}</p>}
+            {errors.minStockVolume && (
+              <p className="mt-1 text-sm text-red-400">{errors.minStockVolume}</p>
+            )}
           </div>
 
           {/* Option Metrics */}
@@ -528,7 +891,9 @@ function UniverseFiltersSection({
                   errors.minOptionOI ? 'border-red-500' : 'border-white/20'
                 }`}
               />
-              {errors.minOptionOI && <p className="mt-1 text-sm text-red-400">{errors.minOptionOI}</p>}
+              {errors.minOptionOI && (
+                <p className="mt-1 text-sm text-red-400">{errors.minOptionOI}</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -543,7 +908,9 @@ function UniverseFiltersSection({
                   errors.maxOptionSpread ? 'border-red-500' : 'border-white/20'
                 }`}
               />
-              {errors.maxOptionSpread && <p className="mt-1 text-sm text-red-400">{errors.maxOptionSpread}</p>}
+              {errors.maxOptionSpread && (
+                <p className="mt-1 text-sm text-red-400">{errors.maxOptionSpread}</p>
+              )}
             </div>
           </div>
 
@@ -765,7 +1132,9 @@ function SizingSection({
                 errors.perTradeCash ? 'border-red-500' : 'border-white/20'
               }`}
             />
-            {errors.perTradeCash && <p className="mt-1 text-sm text-red-400">{errors.perTradeCash}</p>}
+            {errors.perTradeCash && (
+              <p className="mt-1 text-sm text-red-400">{errors.perTradeCash}</p>
+            )}
           </div>
 
           {/* Max Concurrent Positions */}
@@ -781,7 +1150,9 @@ function SizingSection({
                 errors.maxConcurrentPositions ? 'border-red-500' : 'border-white/20'
               }`}
             />
-            {errors.maxConcurrentPositions && <p className="mt-1 text-sm text-red-400">{errors.maxConcurrentPositions}</p>}
+            {errors.maxConcurrentPositions && (
+              <p className="mt-1 text-sm text-red-400">{errors.maxConcurrentPositions}</p>
+            )}
           </div>
 
           {/* Portfolio Heat Max */}
@@ -797,7 +1168,9 @@ function SizingSection({
                 errors.portfolioHeatMax ? 'border-red-500' : 'border-white/20'
               }`}
             />
-            {errors.portfolioHeatMax && <p className="mt-1 text-sm text-red-400">{errors.portfolioHeatMax}</p>}
+            {errors.portfolioHeatMax && (
+              <p className="mt-1 text-sm text-red-400">{errors.portfolioHeatMax}</p>
+            )}
           </div>
         </div>
       )}
@@ -846,7 +1219,9 @@ function ExitsSection({
                 errors.profitTargetPct ? 'border-red-500' : 'border-white/20'
               }`}
             />
-            {errors.profitTargetPct && <p className="mt-1 text-sm text-red-400">{errors.profitTargetPct}</p>}
+            {errors.profitTargetPct && (
+              <p className="mt-1 text-sm text-red-400">{errors.profitTargetPct}</p>
+            )}
           </div>
 
           {/* Max Loss */}
@@ -862,7 +1237,9 @@ function ExitsSection({
                 errors.maxLossPct ? 'border-red-500' : 'border-white/20'
               }`}
             />
-            {errors.maxLossPct && <p className="mt-1 text-sm text-red-400">{errors.maxLossPct}</p>}
+            {errors.maxLossPct && (
+              <p className="mt-1 text-sm text-red-400">{errors.maxLossPct}</p>
+            )}
           </div>
 
           {/* Time Exit DTE */}
@@ -878,7 +1255,9 @@ function ExitsSection({
                 errors.timeExitDTE ? 'border-red-500' : 'border-white/20'
               }`}
             />
-            {errors.timeExitDTE && <p className="mt-1 text-sm text-red-400">{errors.timeExitDTE}</p>}
+            {errors.timeExitDTE && (
+              <p className="mt-1 text-sm text-red-400">{errors.timeExitDTE}</p>
+            )}
           </div>
 
           {/* OCO Brackets */}
