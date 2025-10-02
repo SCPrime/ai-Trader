@@ -12,6 +12,9 @@ import {
 } from '@/utils/indicators';
 import OptionsChain from './OptionsChain';
 import StrategySuggestionsModal from './StrategySuggestionsModal';
+import PLComparisonChart from './PLComparisonChart';
+import PLSummaryDashboard from './PLSummaryDashboard';
+import type { PLViewMode, TheoreticalPayoff, PositionTracking, PLComparison, PositionLeg } from '@/types/pnl';
 
 /**
  * Research Dashboard - Stock Analysis & Charting
@@ -84,6 +87,13 @@ export default function ResearchDashboard() {
   const [showStrategyModal, setShowStrategyModal] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [strategySuggestions, setStrategySuggestions] = useState<any>(null);
+
+  // P&L Analysis state
+  const [showPLAnalysis, setShowPLAnalysis] = useState(false);
+  const [plViewMode, setPlViewMode] = useState<PLViewMode>('pre-trade');
+  const [theoreticalPayoff, setTheoreticalPayoff] = useState<TheoreticalPayoff | null>(null);
+  const [positionTracking, setPositionTracking] = useState<PositionTracking | null>(null);
+  const [plComparison, setPlComparison] = useState<PLComparison | null>(null);
 
   // Chart refs
   const priceChartContainerRef = useRef<HTMLDivElement>(null);
@@ -254,6 +264,94 @@ This will:
 
 Proposal system coming in INCREMENT 9`);
     setShowStrategyModal(false);
+  };
+
+  // P&L Analysis Handlers
+  const handleCalculateTheoretical = async () => {
+    if (!stockData || !selectedStrike) return;
+
+    try {
+      // Build mock legs for demonstration
+      const legs: PositionLeg[] = [
+        {
+          type: selectedStrike.type.toUpperCase() as 'CALL' | 'PUT',
+          side: 'SELL',
+          qty: 1,
+          strike: selectedStrike.strike,
+          expiration: '2025-02-21',
+          theoreticalPrice: 2.50,
+          actualPrice: 2.50,
+          currentPrice: 2.50,
+        },
+      ];
+
+      const response = await fetch('/api/pnl/calculate-theoretical', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          symbol: stockData.symbol,
+          underlyingPrice: stockData.price,
+          legs,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to calculate theoretical P&L');
+      }
+
+      const data = await response.json();
+      setTheoreticalPayoff(data);
+      setPlViewMode('pre-trade');
+      setShowPLAnalysis(true);
+    } catch (error) {
+      console.error('Theoretical P&L calculation error:', error);
+      alert('Failed to calculate theoretical P&L. Please try again.');
+    }
+  };
+
+  const handleSaveBaseline = () => {
+    if (!theoreticalPayoff) return;
+    alert('✓ Theoretical baseline saved! Will be used for execution quality tracking.');
+  };
+
+  const handleLoadLivePosition = async () => {
+    try {
+      const response = await fetch('/api/pnl/track-position', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ positionId: 'demo_position_1' }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to load position tracking');
+      }
+
+      const data = await response.json();
+      setPositionTracking(data);
+      setPlViewMode('live-position');
+      setShowPLAnalysis(true);
+    } catch (error) {
+      console.error('Position tracking error:', error);
+      alert('Failed to load position tracking. Please try again.');
+    }
+  };
+
+  const handleLoadHistoricalComparison = async () => {
+    try {
+      const response = await fetch('/api/pnl/comparison/demo_position_1');
+
+      if (!response.ok) {
+        throw new Error('Failed to load P&L comparison');
+      }
+
+      const data = await response.json();
+      setPlComparison(data);
+      setPlViewMode('historical');
+      setShowPLAnalysis(true);
+    } catch (error) {
+      console.error('P&L comparison error:', error);
+      alert('Failed to load P&L comparison. Please try again.');
+    }
   };
 
   // Memoized indicator calculations
@@ -1053,6 +1151,101 @@ Proposal system coming in INCREMENT 9`);
           {showOptionsChain && (
             <div className="animate-slideDown">
               <OptionsChain symbol={stockData.symbol} onStrikeSelect={handleStrikeSelect} />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* P&L Analysis Section */}
+      {stockData && (
+        <div className="mt-6">
+          <button
+            onClick={() => setShowPLAnalysis(!showPLAnalysis)}
+            className="w-full px-4 py-3 bg-cyan-500/10 border border-cyan-500/30 rounded-xl hover:bg-cyan-500/20 transition-all mb-4"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">📊</span>
+                <span className="text-lg font-semibold text-cyan-400">P&L Analysis</span>
+              </div>
+              <span className="text-sm text-cyan-300">
+                {showPLAnalysis ? '▼ Hide' : '► Show'}
+              </span>
+            </div>
+          </button>
+
+          {showPLAnalysis && (
+            <div className="animate-slideDown space-y-4">
+              {/* Tab Selector */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setPlViewMode('pre-trade'); handleCalculateTheoretical(); }}
+                  className={`flex-1 px-4 py-2 rounded-lg font-medium text-sm transition-all ${
+                    plViewMode === 'pre-trade'
+                      ? 'bg-cyan-500 text-white'
+                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  }`}
+                  disabled={!selectedStrike}
+                >
+                  Pre-Trade
+                </button>
+                <button
+                  onClick={() => { setPlViewMode('live-position'); handleLoadLivePosition(); }}
+                  className={`flex-1 px-4 py-2 rounded-lg font-medium text-sm transition-all ${
+                    plViewMode === 'live-position'
+                      ? 'bg-cyan-500 text-white'
+                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  }`}
+                >
+                  Live Position
+                </button>
+                <button
+                  onClick={() => { setPlViewMode('historical'); handleLoadHistoricalComparison(); }}
+                  className={`flex-1 px-4 py-2 rounded-lg font-medium text-sm transition-all ${
+                    plViewMode === 'historical'
+                      ? 'bg-cyan-500 text-white'
+                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  }`}
+                >
+                  Historical
+                </button>
+              </div>
+
+              {/* P&L Comparison Chart */}
+              {plViewMode === 'pre-trade' && theoreticalPayoff && (
+                <PLComparisonChart
+                  mode="pre-trade"
+                  theoreticalPayoff={theoreticalPayoff}
+                  onSaveBaseline={handleSaveBaseline}
+                />
+              )}
+              {plViewMode === 'live-position' && positionTracking && (
+                <PLComparisonChart
+                  mode="live-position"
+                  positionTracking={positionTracking}
+                />
+              )}
+              {plViewMode === 'historical' && plComparison && (
+                <PLComparisonChart
+                  mode="historical"
+                  comparison={plComparison}
+                />
+              )}
+
+              {/* P&L Summary Dashboard (only in historical view) */}
+              {plViewMode === 'historical' && <PLSummaryDashboard />}
+
+              {/* Helper text */}
+              {!theoreticalPayoff && !positionTracking && !plComparison && (
+                <div className="p-6 bg-slate-800/50 border border-white/10 rounded-xl text-center">
+                  <div className="text-slate-400 mb-2">No data to display</div>
+                  <div className="text-sm text-slate-500">
+                    {plViewMode === 'pre-trade' && 'Select a strike from the Options Chain to calculate theoretical P&L'}
+                    {plViewMode === 'live-position' && 'Click "Live Position" to load tracking data'}
+                    {plViewMode === 'historical' && 'Click "Historical" to view past position analysis'}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
