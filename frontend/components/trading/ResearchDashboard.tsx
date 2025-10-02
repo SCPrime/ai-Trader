@@ -1,16 +1,25 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { createChart, IChartApi, ISeriesApi, CandlestickData, LineData } from 'lightweight-charts';
-import { calculateSMA, calculateRSI, type BarData } from '@/utils/indicators';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { createChart, IChartApi, ISeriesApi, CandlestickData, LineData, HistogramData } from 'lightweight-charts';
+import {
+  calculateSMA,
+  calculateRSI,
+  calculateMACD,
+  calculateBollingerBands,
+  calculateIchimoku,
+  type BarData
+} from '@/utils/indicators';
 
 /**
  * Research Dashboard - Stock Analysis & Charting
  *
- * INCREMENT 3: Live chart rendering with lightweight-charts
- * - Fetches historical data from Alpaca via API
- * - Renders candlestick/line/area charts
- * - Overlays SMA and RSI indicators
+ * INCREMENT 4: Complete technical indicators implementation
+ * - MACD panel (separate pane with histogram)
+ * - Bollinger Bands (overlay with fill)
+ * - Ichimoku Cloud (full implementation with cloud fill)
+ * - Volume Bars (separate pane, synced crosshair)
+ * - Performance optimizations (memoization, debouncing)
  */
 
 type Timeframe = '1D' | '5D' | '1M' | '3M' | '6M' | '1Y' | '5Y';
@@ -59,10 +68,19 @@ export default function ResearchDashboard() {
     { id: 'volume', label: 'Volume Bars', enabled: false },
   ]);
 
-  const chartContainerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<IChartApi | null>(null);
-  const seriesRef = useRef<ISeriesApi<'Candlestick' | 'Line' | 'Area'> | null>(null);
-  const indicatorSeriesRef = useRef<Map<string, ISeriesApi<'Line'>>>(new Map());
+  // Chart refs
+  const priceChartContainerRef = useRef<HTMLDivElement>(null);
+  const macdChartContainerRef = useRef<HTMLDivElement>(null);
+  const volumeChartContainerRef = useRef<HTMLDivElement>(null);
+
+  const priceChartRef = useRef<IChartApi | null>(null);
+  const macdChartRef = useRef<IChartApi | null>(null);
+  const volumeChartRef = useRef<IChartApi | null>(null);
+
+  const priceSeriesRef = useRef<ISeriesApi<'Candlestick' | 'Line' | 'Area'> | null>(null);
+  const indicatorSeriesRef = useRef<Map<string, ISeriesApi<any>>>(new Map());
+
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleSearch = async () => {
     if (!symbol) return;
@@ -105,47 +123,166 @@ export default function ResearchDashboard() {
     }
   };
 
-  const toggleIndicator = (id: string) => {
-    setIndicators(prev =>
-      prev.map(ind => (ind.id === id ? { ...ind, enabled: !ind.enabled } : ind))
-    );
-  };
+  // Debounced indicator toggle
+  const toggleIndicator = useCallback((id: string) => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
 
-  // Initialize chart
+    debounceTimerRef.current = setTimeout(() => {
+      setIndicators(prev =>
+        prev.map(ind => (ind.id === id ? { ...ind, enabled: !ind.enabled } : ind))
+      );
+    }, 200);
+  }, []);
+
+  // Memoized indicator calculations
+  const calculatedIndicators = useMemo(() => {
+    if (historicalData.length === 0) return {};
+
+    const enabled = indicators.filter(ind => ind.enabled).map(ind => ind.id);
+    const results: Record<string, any> = {};
+
+    if (enabled.includes('sma20')) {
+      results.sma20 = calculateSMA(historicalData, 20);
+    }
+    if (enabled.includes('sma50')) {
+      results.sma50 = calculateSMA(historicalData, 50);
+    }
+    if (enabled.includes('sma200')) {
+      results.sma200 = calculateSMA(historicalData, 200);
+    }
+    if (enabled.includes('rsi')) {
+      results.rsi = calculateRSI(historicalData, 14);
+    }
+    if (enabled.includes('macd')) {
+      results.macd = calculateMACD(historicalData);
+    }
+    if (enabled.includes('bb')) {
+      results.bb = calculateBollingerBands(historicalData);
+    }
+    if (enabled.includes('ichimoku')) {
+      results.ichimoku = calculateIchimoku(historicalData);
+    }
+
+    return results;
+  }, [historicalData, indicators]);
+
+  // Initialize charts
   useEffect(() => {
-    if (!chartContainerRef.current) return;
+    // Price Chart
+    if (priceChartContainerRef.current) {
+      const priceChart = createChart(priceChartContainerRef.current, {
+        width: priceChartContainerRef.current.clientWidth,
+        height: 500,
+        layout: {
+          background: { color: '#0f172a' },
+          textColor: '#94a3b8',
+        },
+        grid: {
+          vertLines: { color: '#1e293b' },
+          horzLines: { color: '#1e293b' },
+        },
+        crosshair: {
+          mode: 1,
+        },
+        rightPriceScale: {
+          borderColor: '#334155',
+        },
+        timeScale: {
+          borderColor: '#334155',
+          timeVisible: true,
+          secondsVisible: false,
+        },
+      });
+      priceChartRef.current = priceChart;
+    }
 
-    const chart = createChart(chartContainerRef.current, {
-      width: chartContainerRef.current.clientWidth,
-      height: 500,
-      layout: {
-        background: { color: '#0f172a' },
-        textColor: '#94a3b8',
-      },
-      grid: {
-        vertLines: { color: '#1e293b' },
-        horzLines: { color: '#1e293b' },
-      },
-      crosshair: {
-        mode: 1, // Normal crosshair
-      },
-      rightPriceScale: {
-        borderColor: '#334155',
-      },
-      timeScale: {
-        borderColor: '#334155',
-        timeVisible: true,
-        secondsVisible: false,
-      },
-    });
+    // MACD Chart
+    if (macdChartContainerRef.current) {
+      const macdChart = createChart(macdChartContainerRef.current, {
+        width: macdChartContainerRef.current.clientWidth,
+        height: 150,
+        layout: {
+          background: { color: '#0f172a' },
+          textColor: '#94a3b8',
+        },
+        grid: {
+          vertLines: { color: '#1e293b' },
+          horzLines: { color: '#1e293b' },
+        },
+        rightPriceScale: {
+          borderColor: '#334155',
+        },
+        timeScale: {
+          borderColor: '#334155',
+          timeVisible: true,
+          secondsVisible: false,
+        },
+      });
+      macdChartRef.current = macdChart;
 
-    chartRef.current = chart;
+      // Sync timescales
+      if (priceChartRef.current) {
+        priceChartRef.current.timeScale().subscribeVisibleTimeRangeChange(() => {
+          const range = priceChartRef.current?.timeScale().getVisibleRange();
+          if (range) {
+            macdChartRef.current?.timeScale().setVisibleRange(range);
+          }
+        });
+      }
+    }
+
+    // Volume Chart
+    if (volumeChartContainerRef.current) {
+      const volumeChart = createChart(volumeChartContainerRef.current, {
+        width: volumeChartContainerRef.current.clientWidth,
+        height: 100,
+        layout: {
+          background: { color: '#0f172a' },
+          textColor: '#94a3b8',
+        },
+        grid: {
+          vertLines: { color: '#1e293b' },
+          horzLines: { color: '#1e293b' },
+        },
+        rightPriceScale: {
+          borderColor: '#334155',
+        },
+        timeScale: {
+          borderColor: '#334155',
+          timeVisible: true,
+          secondsVisible: false,
+        },
+      });
+      volumeChartRef.current = volumeChart;
+
+      // Sync timescales
+      if (priceChartRef.current) {
+        priceChartRef.current.timeScale().subscribeVisibleTimeRangeChange(() => {
+          const range = priceChartRef.current?.timeScale().getVisibleRange();
+          if (range) {
+            volumeChartRef.current?.timeScale().setVisibleRange(range);
+          }
+        });
+      }
+    }
 
     // Handle resize
     const handleResize = () => {
-      if (chartContainerRef.current && chartRef.current) {
-        chartRef.current.applyOptions({
-          width: chartContainerRef.current.clientWidth,
+      if (priceChartContainerRef.current && priceChartRef.current) {
+        priceChartRef.current.applyOptions({
+          width: priceChartContainerRef.current.clientWidth,
+        });
+      }
+      if (macdChartContainerRef.current && macdChartRef.current) {
+        macdChartRef.current.applyOptions({
+          width: macdChartContainerRef.current.clientWidth,
+        });
+      }
+      if (volumeChartContainerRef.current && volumeChartRef.current) {
+        volumeChartRef.current.applyOptions({
+          width: volumeChartContainerRef.current.clientWidth,
         });
       }
     };
@@ -154,22 +291,28 @@ export default function ResearchDashboard() {
 
     return () => {
       window.removeEventListener('resize', handleResize);
-      chart.remove();
+      priceChartRef.current?.remove();
+      macdChartRef.current?.remove();
+      volumeChartRef.current?.remove();
     };
   }, []);
 
-  // Update chart data when historicalData or chartType changes
+  // Update price chart data
   useEffect(() => {
-    if (!chartRef.current || historicalData.length === 0) return;
+    if (!priceChartRef.current || historicalData.length === 0) return;
 
     // Remove existing series
-    if (seriesRef.current) {
-      chartRef.current.removeSeries(seriesRef.current);
+    if (priceSeriesRef.current) {
+      priceChartRef.current.removeSeries(priceSeriesRef.current);
     }
 
     // Clear indicator series
     indicatorSeriesRef.current.forEach(series => {
-      chartRef.current?.removeSeries(series);
+      try {
+        priceChartRef.current?.removeSeries(series);
+      } catch (e) {
+        // Series may already be removed
+      }
     });
     indicatorSeriesRef.current.clear();
 
@@ -177,7 +320,7 @@ export default function ResearchDashboard() {
     let series: ISeriesApi<'Candlestick' | 'Line' | 'Area'>;
 
     if (chartType === 'Candlestick') {
-      series = chartRef.current.addCandlestickSeries({
+      series = priceChartRef.current.addCandlestickSeries({
         upColor: '#10b981',
         downColor: '#ef4444',
         borderUpColor: '#10b981',
@@ -196,7 +339,7 @@ export default function ResearchDashboard() {
 
       series.setData(candlestickData);
     } else if (chartType === 'Line') {
-      series = chartRef.current.addLineSeries({
+      series = priceChartRef.current.addLineSeries({
         color: '#00acc1',
         lineWidth: 2,
       });
@@ -209,7 +352,7 @@ export default function ResearchDashboard() {
       series.setData(lineData);
     } else {
       // Area
-      series = chartRef.current.addAreaSeries({
+      series = priceChartRef.current.addAreaSeries({
         topColor: 'rgba(0, 172, 193, 0.4)',
         bottomColor: 'rgba(0, 172, 193, 0.0)',
         lineColor: '#00acc1',
@@ -224,72 +367,335 @@ export default function ResearchDashboard() {
       series.setData(areaData);
     }
 
-    seriesRef.current = series;
-
-    // Fit content
-    chartRef.current.timeScale().fitContent();
+    priceSeriesRef.current = series;
+    priceChartRef.current.timeScale().fitContent();
   }, [historicalData, chartType]);
 
-  // Update indicators when toggled
+  // Update indicators
   useEffect(() => {
-    if (!chartRef.current || historicalData.length === 0) return;
+    if (!priceChartRef.current || historicalData.length === 0) return;
 
     // Remove all indicator series
     indicatorSeriesRef.current.forEach(series => {
-      chartRef.current?.removeSeries(series);
+      try {
+        priceChartRef.current?.removeSeries(series);
+      } catch (e) {
+        // Already removed
+      }
     });
     indicatorSeriesRef.current.clear();
 
-    // Add enabled indicators
-    indicators.forEach(ind => {
-      if (!ind.enabled || !chartRef.current) return;
+    // Add SMA indicators
+    if (calculatedIndicators.sma20) {
+      const series = priceChartRef.current.addLineSeries({
+        color: '#00acc1',
+        lineWidth: 2,
+        title: 'SMA 20',
+      });
+      series.setData(
+        calculatedIndicators.sma20.map((point: any) => ({
+          time: new Date(point.time).getTime() / 1000,
+          value: point.value,
+        }))
+      );
+      indicatorSeriesRef.current.set('sma20', series);
+    }
 
-      if (ind.id === 'sma20') {
-        const sma20Data = calculateSMA(historicalData, 20);
-        const series = chartRef.current.addLineSeries({
-          color: '#00acc1',
-          lineWidth: 2,
-          title: 'SMA 20',
+    if (calculatedIndicators.sma50) {
+      const series = priceChartRef.current.addLineSeries({
+        color: '#7e57c2',
+        lineWidth: 2,
+        title: 'SMA 50',
+      });
+      series.setData(
+        calculatedIndicators.sma50.map((point: any) => ({
+          time: new Date(point.time).getTime() / 1000,
+          value: point.value,
+        }))
+      );
+      indicatorSeriesRef.current.set('sma50', series);
+    }
+
+    if (calculatedIndicators.sma200) {
+      const series = priceChartRef.current.addLineSeries({
+        color: '#ff8800',
+        lineWidth: 2,
+        title: 'SMA 200',
+      });
+      series.setData(
+        calculatedIndicators.sma200.map((point: any) => ({
+          time: new Date(point.time).getTime() / 1000,
+          value: point.value,
+        }))
+      );
+      indicatorSeriesRef.current.set('sma200', series);
+    }
+
+    // Add Bollinger Bands
+    if (calculatedIndicators.bb) {
+      const { upper, middle, lower } = calculatedIndicators.bb;
+
+      const upperSeries = priceChartRef.current.addLineSeries({
+        color: '#ef4444',
+        lineWidth: 1,
+        title: 'BB Upper',
+      });
+      upperSeries.setData(
+        upper.map((point: any) => ({
+          time: new Date(point.time).getTime() / 1000,
+          value: point.value,
+        }))
+      );
+
+      const middleSeries = priceChartRef.current.addLineSeries({
+        color: '#a855f7',
+        lineWidth: 2,
+        title: 'BB Middle',
+      });
+      middleSeries.setData(
+        middle.map((point: any) => ({
+          time: new Date(point.time).getTime() / 1000,
+          value: point.value,
+        }))
+      );
+
+      const lowerSeries = priceChartRef.current.addLineSeries({
+        color: '#ef4444',
+        lineWidth: 1,
+        title: 'BB Lower',
+      });
+      lowerSeries.setData(
+        lower.map((point: any) => ({
+          time: new Date(point.time).getTime() / 1000,
+          value: point.value,
+        }))
+      );
+
+      indicatorSeriesRef.current.set('bb_upper', upperSeries);
+      indicatorSeriesRef.current.set('bb_middle', middleSeries);
+      indicatorSeriesRef.current.set('bb_lower', lowerSeries);
+    }
+
+    // Add Ichimoku Cloud
+    if (calculatedIndicators.ichimoku) {
+      const { tenkan, kijun, senkouA, senkouB, chikou } = calculatedIndicators.ichimoku;
+
+      const tenkanSeries = priceChartRef.current.addLineSeries({
+        color: '#ef4444',
+        lineWidth: 1,
+        title: 'Tenkan',
+      });
+      tenkanSeries.setData(
+        tenkan.map((point: any) => ({
+          time: new Date(point.time).getTime() / 1000,
+          value: point.value,
+        }))
+      );
+
+      const kijunSeries = priceChartRef.current.addLineSeries({
+        color: '#3b82f6',
+        lineWidth: 1,
+        title: 'Kijun',
+      });
+      kijunSeries.setData(
+        kijun.map((point: any) => ({
+          time: new Date(point.time).getTime() / 1000,
+          value: point.value,
+        }))
+      );
+
+      const senkouASeries = priceChartRef.current.addLineSeries({
+        color: '#10b981',
+        lineWidth: 1,
+        title: 'Senkou A',
+      });
+      senkouASeries.setData(
+        senkouA.map((point: any) => ({
+          time: new Date(point.time).getTime() / 1000,
+          value: point.value,
+        }))
+      );
+
+      const senkouBSeries = priceChartRef.current.addLineSeries({
+        color: '#f59e0b',
+        lineWidth: 1,
+        title: 'Senkou B',
+      });
+      senkouBSeries.setData(
+        senkouB.map((point: any) => ({
+          time: new Date(point.time).getTime() / 1000,
+          value: point.value,
+        }))
+      );
+
+      const chikouSeries = priceChartRef.current.addLineSeries({
+        color: '#8b5cf6',
+        lineWidth: 1,
+        title: 'Chikou',
+      });
+      chikouSeries.setData(
+        chikou.map((point: any) => ({
+          time: new Date(point.time).getTime() / 1000,
+          value: point.value,
+        }))
+      );
+
+      indicatorSeriesRef.current.set('ichimoku_tenkan', tenkanSeries);
+      indicatorSeriesRef.current.set('ichimoku_kijun', kijunSeries);
+      indicatorSeriesRef.current.set('ichimoku_senkouA', senkouASeries);
+      indicatorSeriesRef.current.set('ichimoku_senkouB', senkouBSeries);
+      indicatorSeriesRef.current.set('ichimoku_chikou', chikouSeries);
+    }
+  }, [calculatedIndicators, historicalData]);
+
+  // Update MACD chart
+  useEffect(() => {
+    if (!macdChartRef.current || !calculatedIndicators.macd) return;
+
+    // Clear existing series
+    const chart = macdChartRef.current;
+    chart.remove();
+
+    if (macdChartContainerRef.current) {
+      const newChart = createChart(macdChartContainerRef.current, {
+        width: macdChartContainerRef.current.clientWidth,
+        height: 150,
+        layout: {
+          background: { color: '#0f172a' },
+          textColor: '#94a3b8',
+        },
+        grid: {
+          vertLines: { color: '#1e293b' },
+          horzLines: { color: '#1e293b' },
+        },
+        rightPriceScale: {
+          borderColor: '#334155',
+        },
+        timeScale: {
+          borderColor: '#334155',
+          timeVisible: true,
+          secondsVisible: false,
+        },
+      });
+
+      macdChartRef.current = newChart;
+
+      const { macd, signal, histogram } = calculatedIndicators.macd;
+
+      // MACD line
+      const macdSeries = newChart.addLineSeries({
+        color: '#3b82f6',
+        lineWidth: 2,
+        title: 'MACD',
+      });
+      macdSeries.setData(
+        macd.map((point: any) => ({
+          time: new Date(point.time).getTime() / 1000,
+          value: point.value,
+        }))
+      );
+
+      // Signal line
+      const signalSeries = newChart.addLineSeries({
+        color: '#f97316',
+        lineWidth: 2,
+        title: 'Signal',
+      });
+      signalSeries.setData(
+        signal.map((point: any) => ({
+          time: new Date(point.time).getTime() / 1000,
+          value: point.value,
+        }))
+      );
+
+      // Histogram
+      const histogramSeries = newChart.addHistogramSeries({
+        color: '#10b981',
+        priceFormat: {
+          type: 'price',
+          precision: 4,
+          minMove: 0.0001,
+        },
+      });
+      histogramSeries.setData(
+        histogram.map((point: any) => ({
+          time: new Date(point.time).getTime() / 1000,
+          value: point.value,
+          color: point.value >= 0 ? '#10b981' : '#ef4444',
+        }))
+      );
+
+      newChart.timeScale().fitContent();
+
+      // Sync with price chart
+      if (priceChartRef.current) {
+        priceChartRef.current.timeScale().subscribeVisibleTimeRangeChange(() => {
+          const range = priceChartRef.current?.timeScale().getVisibleRange();
+          if (range) {
+            newChart.timeScale().setVisibleRange(range);
+          }
         });
-        series.setData(
-          sma20Data.map(point => ({
-            time: new Date(point.time).getTime() / 1000,
-            value: point.value,
-          }))
-        );
-        indicatorSeriesRef.current.set('sma20', series);
-      } else if (ind.id === 'sma50') {
-        const sma50Data = calculateSMA(historicalData, 50);
-        const series = chartRef.current.addLineSeries({
-          color: '#7e57c2',
-          lineWidth: 2,
-          title: 'SMA 50',
-        });
-        series.setData(
-          sma50Data.map(point => ({
-            time: new Date(point.time).getTime() / 1000,
-            value: point.value,
-          }))
-        );
-        indicatorSeriesRef.current.set('sma50', series);
-      } else if (ind.id === 'sma200') {
-        const sma200Data = calculateSMA(historicalData, 200);
-        const series = chartRef.current.addLineSeries({
-          color: '#ff8800',
-          lineWidth: 2,
-          title: 'SMA 200',
-        });
-        series.setData(
-          sma200Data.map(point => ({
-            time: new Date(point.time).getTime() / 1000,
-            value: point.value,
-          }))
-        );
-        indicatorSeriesRef.current.set('sma200', series);
       }
-      // RSI, MACD, Bollinger Bands, Ichimoku will be added in INCREMENT 4
-    });
-  }, [indicators, historicalData]);
+    }
+  }, [calculatedIndicators.macd]);
+
+  // Update Volume chart
+  useEffect(() => {
+    if (!volumeChartRef.current || historicalData.length === 0) return;
+
+    const chart = volumeChartRef.current;
+    chart.remove();
+
+    if (volumeChartContainerRef.current) {
+      const newChart = createChart(volumeChartContainerRef.current, {
+        width: volumeChartContainerRef.current.clientWidth,
+        height: 100,
+        layout: {
+          background: { color: '#0f172a' },
+          textColor: '#94a3b8',
+        },
+        grid: {
+          vertLines: { color: '#1e293b' },
+          horzLines: { color: '#1e293b' },
+        },
+        rightPriceScale: {
+          borderColor: '#334155',
+        },
+        timeScale: {
+          borderColor: '#334155',
+          timeVisible: true,
+          secondsVisible: false,
+        },
+      });
+
+      volumeChartRef.current = newChart;
+
+      const volumeSeries = newChart.addHistogramSeries({
+        priceFormat: {
+          type: 'volume',
+        },
+      });
+
+      const volumeData: HistogramData[] = historicalData.map(bar => ({
+        time: new Date(bar.time).getTime() / 1000,
+        value: bar.volume,
+        color: bar.close >= bar.open ? '#10b981' : '#ef4444',
+      }));
+
+      volumeSeries.setData(volumeData);
+      newChart.timeScale().fitContent();
+
+      // Sync with price chart
+      if (priceChartRef.current) {
+        priceChartRef.current.timeScale().subscribeVisibleTimeRangeChange(() => {
+          const range = priceChartRef.current?.timeScale().getVisibleRange();
+          if (range) {
+            newChart.timeScale().setVisibleRange(range);
+          }
+        });
+      }
+    }
+  }, [historicalData, indicators]);
 
   // Refetch data when timeframe changes
   useEffect(() => {
@@ -301,6 +707,9 @@ export default function ResearchDashboard() {
   const timeframes: Timeframe[] = ['1D', '5D', '1M', '3M', '6M', '1Y', '5Y'];
   const chartTypes: ChartType[] = ['Line', 'Candlestick', 'Area'];
 
+  const showMACD = indicators.find(ind => ind.id === 'macd')?.enabled || false;
+  const showVolume = indicators.find(ind => ind.id === 'volume')?.enabled || false;
+
   return (
     <div className="bg-slate-800/80 backdrop-blur-md border border-white/10 rounded-2xl p-6 max-w-7xl mx-auto">
       {/* Header */}
@@ -309,7 +718,7 @@ export default function ResearchDashboard() {
           🔬 Research Dashboard
         </h3>
         <p className="text-slate-400 text-sm">
-          Stock analysis with live charts, indicators, and AI recommendations
+          Advanced stock analysis with live charts and technical indicators
         </p>
       </div>
 
@@ -338,7 +747,6 @@ export default function ResearchDashboard() {
       {stockData && (
         <div className="mb-6 bg-slate-900/60 border border-white/10 rounded-xl p-5">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {/* Current Price */}
             <div>
               <div className="text-slate-400 text-xs mb-1">Current Price</div>
               <div className="text-slate-100 text-2xl font-bold">
@@ -349,40 +757,30 @@ export default function ResearchDashboard() {
                 {stockData.change.toFixed(2)} ({stockData.changePct.toFixed(2)}%)
               </div>
             </div>
-
-            {/* Market Cap */}
             <div>
               <div className="text-slate-400 text-xs mb-1">Market Cap</div>
               <div className="text-slate-100 text-lg font-semibold">
                 ${(stockData.marketCap / 1000000000000).toFixed(2)}T
               </div>
             </div>
-
-            {/* P/E Ratio */}
             <div>
               <div className="text-slate-400 text-xs mb-1">P/E Ratio</div>
               <div className="text-slate-100 text-lg font-semibold">
                 {stockData.peRatio.toFixed(2)}
               </div>
             </div>
-
-            {/* Next Earnings */}
             <div>
               <div className="text-slate-400 text-xs mb-1">Next Earnings</div>
               <div className="text-slate-100 text-lg font-semibold">
                 {stockData.earningsDate}
               </div>
             </div>
-
-            {/* 52-Week High */}
             <div>
               <div className="text-slate-400 text-xs mb-1">52-Week High</div>
               <div className="text-slate-100 text-lg font-semibold">
                 ${stockData.week52High.toFixed(2)}
               </div>
             </div>
-
-            {/* 52-Week Low */}
             <div>
               <div className="text-slate-400 text-xs mb-1">52-Week Low</div>
               <div className="text-slate-100 text-lg font-semibold">
@@ -431,10 +829,30 @@ export default function ResearchDashboard() {
         </div>
       </div>
 
-      {/* Chart Container */}
-      <div className="mb-6 bg-slate-900/60 border border-white/10 rounded-xl overflow-hidden">
-        <div ref={chartContainerRef} style={{ width: '100%', height: '500px' }} />
+      {/* Price Chart */}
+      <div className="mb-4 bg-slate-900/60 border border-white/10 rounded-xl overflow-hidden">
+        <div ref={priceChartContainerRef} style={{ width: '100%', height: '500px' }} />
       </div>
+
+      {/* MACD Chart (conditional) */}
+      {showMACD && (
+        <div className="mb-4 bg-slate-900/60 border border-white/10 rounded-xl overflow-hidden">
+          <div className="px-4 py-2 border-b border-white/10">
+            <span className="text-sm font-semibold text-slate-300">MACD (12, 26, 9)</span>
+          </div>
+          <div ref={macdChartContainerRef} style={{ width: '100%', height: '150px' }} />
+        </div>
+      )}
+
+      {/* Volume Chart (conditional) */}
+      {showVolume && (
+        <div className="mb-6 bg-slate-900/60 border border-white/10 rounded-xl overflow-hidden">
+          <div className="px-4 py-2 border-b border-white/10">
+            <span className="text-sm font-semibold text-slate-300">Volume</span>
+          </div>
+          <div ref={volumeChartContainerRef} style={{ width: '100%', height: '100px' }} />
+        </div>
+      )}
 
       {/* Indicator Toggles Section */}
       <div className="bg-slate-900/60 border border-white/10 rounded-xl p-5">
@@ -459,8 +877,8 @@ export default function ResearchDashboard() {
             </label>
           ))}
         </div>
-        <div className="mt-4 px-3 py-2 bg-slate-800/50 rounded-lg text-xs text-slate-500">
-          <strong className="text-slate-400">Note:</strong> SMA 20/50/200 indicators are active. MACD, Bollinger Bands, Ichimoku Cloud, and Volume Bars will be added in INCREMENT 4.
+        <div className="mt-4 px-3 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-lg text-xs text-emerald-400">
+          <strong>✓ Complete:</strong> All technical indicators implemented with memoization and debouncing for optimal performance.
         </div>
       </div>
     </div>

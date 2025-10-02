@@ -263,3 +263,87 @@ export function calculateBollingerBands(
 
   return { upper, middle, lower };
 }
+
+/**
+ * Calculate Ichimoku Cloud
+ * @param data - Array of bar data
+ * @returns Object with all Ichimoku lines
+ */
+export function calculateIchimoku(data: BarData[]): {
+  tenkan: IndicatorPoint[];
+  kijun: IndicatorPoint[];
+  senkouA: IndicatorPoint[];
+  senkouB: IndicatorPoint[];
+  chikou: IndicatorPoint[];
+} {
+  const tenkanPeriod = 9;
+  const kijunPeriod = 26;
+  const senkouBPeriod = 52;
+  const displacement = 26;
+
+  const tenkan: IndicatorPoint[] = [];
+  const kijun: IndicatorPoint[] = [];
+  const senkouA: IndicatorPoint[] = [];
+  const senkouB: IndicatorPoint[] = [];
+  const chikou: IndicatorPoint[] = [];
+
+  // Helper function to calculate midpoint of high/low over period
+  const calcMidpoint = (startIdx: number, period: number): number => {
+    const slice = data.slice(startIdx, startIdx + period);
+    const high = Math.max(...slice.map(b => b.high));
+    const low = Math.min(...slice.map(b => b.low));
+    return (high + low) / 2;
+  };
+
+  // Calculate Tenkan-sen (Conversion Line)
+  for (let i = tenkanPeriod - 1; i < data.length; i++) {
+    tenkan.push({
+      time: data[i].time,
+      value: calcMidpoint(i - tenkanPeriod + 1, tenkanPeriod),
+    });
+  }
+
+  // Calculate Kijun-sen (Base Line)
+  for (let i = kijunPeriod - 1; i < data.length; i++) {
+    kijun.push({
+      time: data[i].time,
+      value: calcMidpoint(i - kijunPeriod + 1, kijunPeriod),
+    });
+  }
+
+  // Calculate Senkou Span A (Leading Span A) - displaced forward
+  for (let i = kijunPeriod - 1; i < data.length; i++) {
+    const tenkanValue = tenkan[i - (kijunPeriod - tenkanPeriod)]?.value || 0;
+    const kijunValue = kijun[i - kijunPeriod + 1]?.value || 0;
+
+    // Displace forward by 26 periods
+    const displacedIdx = i + displacement;
+    if (displacedIdx < data.length) {
+      senkouA.push({
+        time: data[displacedIdx].time,
+        value: (tenkanValue + kijunValue) / 2,
+      });
+    }
+  }
+
+  // Calculate Senkou Span B (Leading Span B) - displaced forward
+  for (let i = senkouBPeriod - 1; i < data.length; i++) {
+    const displacedIdx = i + displacement;
+    if (displacedIdx < data.length) {
+      senkouB.push({
+        time: data[displacedIdx].time,
+        value: calcMidpoint(i - senkouBPeriod + 1, senkouBPeriod),
+      });
+    }
+  }
+
+  // Calculate Chikou Span (Lagging Span) - displaced backward
+  for (let i = displacement; i < data.length; i++) {
+    chikou.push({
+      time: data[i - displacement].time,
+      value: data[i].close,
+    });
+  }
+
+  return { tenkan, kijun, senkouA, senkouB, chikou };
+}
