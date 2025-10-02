@@ -3,66 +3,66 @@
 import { useState } from 'react';
 
 /**
- * Research Dashboard - Stock Analysis & AI Strategy Handoff
+ * Research Dashboard - Stock Analysis & Charting
  *
- * Features:
- * - Stock lookup with candlestick charts
- * - Technical indicators (SMA, RSI, MACD, Bollinger Bands, Ichimoku, Volume)
- * - Options chain viewer
- * - AI handoff buttons: Suggest Strategy, Monitor Position, Convert to Automated
- * - Theoretical vs Actual P&L comparison charts
+ * INCREMENT 2: Basic structure with stock lookup, timeframe selector,
+ * chart type toggle, and indicator checkboxes
  */
+
+type Timeframe = '1D' | '5D' | '1M' | '3M' | '6M' | '1Y' | '5Y';
+type ChartType = 'Line' | 'Candlestick' | 'Area';
 
 interface StockData {
   symbol: string;
   price: number;
   change: number;
   changePct: number;
-  volume: number;
   marketCap: number;
+  peRatio: number;
+  earningsDate: string;
+  week52High: number;
+  week52Low: number;
 }
 
-interface IndicatorConfig {
-  name: string;
+interface Indicator {
+  id: string;
+  label: string;
   enabled: boolean;
-  color: string;
-  params?: Record<string, number>;
 }
 
 export default function ResearchDashboard() {
-  const [symbol, setSymbol] = useState('AAPL');
+  const [symbol, setSymbol] = useState('');
   const [loading, setLoading] = useState(false);
   const [stockData, setStockData] = useState<StockData | null>(null);
-  const [indicators, setIndicators] = useState<IndicatorConfig[]>([
-    { name: 'SMA 20', enabled: true, color: '#00ACC1', params: { period: 20 } },
-    { name: 'SMA 50', enabled: true, color: '#7E57C2', params: { period: 50 } },
-    { name: 'SMA 200', enabled: false, color: '#FF8800', params: { period: 200 } },
-    { name: 'RSI', enabled: true, color: '#00C851', params: { period: 14 } },
-    { name: 'MACD', enabled: true, color: '#0097A7' },
-    { name: 'Bollinger Bands', enabled: false, color: '#5E35B1' },
-    { name: 'Ichimoku Cloud', enabled: false, color: '#00BCD4' },
-    { name: 'Volume', enabled: true, color: '#94a3b8' },
+  const [timeframe, setTimeframe] = useState<Timeframe>('3M');
+  const [chartType, setChartType] = useState<ChartType>('Candlestick');
+  const [indicators, setIndicators] = useState<Indicator[]>([
+    { id: 'sma20', label: 'SMA 20', enabled: false },
+    { id: 'sma50', label: 'SMA 50', enabled: false },
+    { id: 'sma200', label: 'SMA 200', enabled: false },
+    { id: 'rsi', label: 'RSI (14)', enabled: false },
+    { id: 'macd', label: 'MACD', enabled: false },
+    { id: 'bb', label: 'Bollinger Bands', enabled: false },
+    { id: 'ichimoku', label: 'Ichimoku Cloud', enabled: false },
+    { id: 'volume', label: 'Volume Bars', enabled: false },
   ]);
 
-  const toggleIndicator = (name: string) => {
-    setIndicators(prev =>
-      prev.map(ind => (ind.name === name ? { ...ind, enabled: !ind.enabled } : ind))
-    );
-  };
-
-  const handleSymbolSearch = async () => {
+  const handleSearch = async () => {
     if (!symbol) return;
     setLoading(true);
     try {
-      // TODO: Replace with actual API call
+      // TODO: Replace with actual API call in INCREMENT 3
       await new Promise(resolve => setTimeout(resolve, 500));
       setStockData({
         symbol: symbol.toUpperCase(),
         price: 184.10,
         change: 1.60,
         changePct: 0.88,
-        volume: 45000000,
         marketCap: 2800000000000,
+        peRatio: 28.5,
+        earningsDate: '2025-01-30',
+        week52High: 199.62,
+        week52Low: 164.08,
       });
     } catch (e) {
       console.error('Failed to fetch stock data', e);
@@ -71,373 +71,183 @@ export default function ResearchDashboard() {
     }
   };
 
-  const handleAISuggestStrategy = () => {
-    alert(`AI Suggest Strategy for ${symbol}\n\nThis will analyze:\n- Current price action\n- IV percentile\n- Upcoming earnings\n- News sentiment\n\nAnd recommend optimal strategy from Allessandra library.`);
+  const toggleIndicator = (id: string) => {
+    setIndicators(prev =>
+      prev.map(ind => (ind.id === id ? { ...ind, enabled: !ind.enabled } : ind))
+    );
   };
 
-  const handleAIMonitorPosition = () => {
-    alert(`AI Monitor Position for ${symbol}\n\nThis will:\n- Track position P&L in real-time\n- Alert on profit target / stop loss hits\n- Suggest adjustments based on Greeks\n- Auto-roll near expiration if enabled`);
-  };
-
-  const handleConvertToAutomated = () => {
-    alert(`Convert to Automated Strategy for ${symbol}\n\nThis will:\n- Create new strategy JSON from current position\n- Set approval/autopilot rules\n- Enable for future scans\n- Add to watchlist (current/invested/future)`);
-  };
+  const timeframes: Timeframe[] = ['1D', '5D', '1M', '3M', '6M', '1Y', '5Y'];
+  const chartTypes: ChartType[] = ['Line', 'Candlestick', 'Area'];
 
   return (
-    <div
-      style={{
-        background: 'rgba(30, 41, 59, 0.8)',
-        backdropFilter: 'blur(10px)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        borderRadius: '16px',
-        padding: '24px',
-        maxWidth: '1200px',
-        margin: '0 auto',
-      }}
-    >
+    <div className="bg-slate-800/80 backdrop-blur-md border border-white/10 rounded-2xl p-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div style={{ marginBottom: '24px' }}>
-        <h3
-          style={{
-            color: '#00ACC1',
-            fontSize: '1.5rem',
-            margin: 0,
-            marginBottom: '8px',
-          }}
-        >
-          📊 Research Dashboard
+      <div className="mb-6">
+        <h3 className="text-2xl font-bold text-cyan-400 mb-2">
+          🔬 Research Dashboard
         </h3>
-        <p style={{ color: '#94a3b8', fontSize: '0.9rem', margin: 0 }}>
-          Stock analysis, options chain, and AI strategy recommendations
+        <p className="text-slate-400 text-sm">
+          Stock analysis with charts, indicators, and AI recommendations
         </p>
       </div>
 
-      {/* Symbol Search */}
-      <div
-        style={{
-          display: 'flex',
-          gap: '12px',
-          marginBottom: '24px',
-          alignItems: 'center',
-        }}
-      >
-        <input
-          type="text"
-          value={symbol}
-          onChange={e => setSymbol(e.target.value.toUpperCase())}
-          onKeyPress={e => e.key === 'Enter' && handleSymbolSearch()}
-          placeholder="Enter symbol..."
-          style={{
-            flex: 1,
-            padding: '12px 16px',
-            background: 'rgba(15, 23, 42, 0.6)',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-            borderRadius: '8px',
-            color: '#e2e8f0',
-            fontSize: '1rem',
-            fontFamily: 'monospace',
-            outline: 'none',
-          }}
-        />
-        <button
-          onClick={handleSymbolSearch}
-          disabled={loading}
-          style={{
-            padding: '12px 24px',
-            background: '#00ACC1',
-            border: 'none',
-            borderRadius: '8px',
-            color: '#fff',
-            fontSize: '1rem',
-            fontWeight: 600,
-            cursor: loading ? 'not-allowed' : 'pointer',
-            opacity: loading ? 0.6 : 1,
-          }}
-        >
-          {loading ? 'Loading...' : 'Search'}
-        </button>
+      {/* Stock Lookup Section */}
+      <div className="mb-6">
+        <div className="flex gap-3">
+          <input
+            type="text"
+            value={symbol}
+            onChange={e => setSymbol(e.target.value.toUpperCase())}
+            onKeyPress={e => e.key === 'Enter' && handleSearch()}
+            placeholder="Enter ticker symbol (e.g., AAPL)"
+            className="flex-1 px-4 py-3 bg-slate-900/60 border border-white/20 rounded-lg text-slate-100 text-base font-mono outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all"
+          />
+          <button
+            onClick={handleSearch}
+            disabled={loading}
+            className="px-6 py-3 bg-cyan-500 hover:bg-cyan-600 disabled:bg-cyan-500/50 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all"
+          >
+            {loading ? 'Loading...' : 'Search'}
+          </button>
+        </div>
       </div>
 
-      {/* Stock Info Card */}
+      {/* Stock Fundamentals Card */}
       {stockData && (
-        <div
-          style={{
-            background: 'rgba(15, 23, 42, 0.6)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            borderRadius: '12px',
-            padding: '20px',
-            marginBottom: '24px',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="mb-6 bg-slate-900/60 border border-white/10 rounded-xl p-5">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {/* Current Price */}
             <div>
-              <h4 style={{ color: '#e2e8f0', fontSize: '1.8rem', margin: 0, marginBottom: '8px' }}>
-                {stockData.symbol}
-              </h4>
-              <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                <span style={{ color: '#e2e8f0', fontSize: '2rem', fontWeight: 700 }}>
-                  ${stockData.price.toFixed(2)}
-                </span>
-                <span
-                  style={{
-                    color: stockData.change >= 0 ? '#10b981' : '#ef4444',
-                    fontSize: '1.2rem',
-                    fontWeight: 600,
-                  }}
-                >
-                  {stockData.change >= 0 ? '+' : ''}
-                  {stockData.change.toFixed(2)} ({stockData.changePct.toFixed(2)}%)
-                </span>
+              <div className="text-slate-400 text-xs mb-1">Current Price</div>
+              <div className="text-slate-100 text-2xl font-bold">
+                ${stockData.price.toFixed(2)}
+              </div>
+              <div className={`text-sm font-semibold ${stockData.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {stockData.change >= 0 ? '+' : ''}
+                {stockData.change.toFixed(2)} ({stockData.changePct.toFixed(2)}%)
               </div>
             </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Volume</div>
-              <div style={{ color: '#e2e8f0', fontSize: '1.1rem', fontWeight: 600 }}>
-                {(stockData.volume / 1000000).toFixed(1)}M
-              </div>
-              <div style={{ color: '#94a3b8', fontSize: '0.9rem', marginTop: '8px' }}>Market Cap</div>
-              <div style={{ color: '#e2e8f0', fontSize: '1.1rem', fontWeight: 600 }}>
+
+            {/* Market Cap */}
+            <div>
+              <div className="text-slate-400 text-xs mb-1">Market Cap</div>
+              <div className="text-slate-100 text-lg font-semibold">
                 ${(stockData.marketCap / 1000000000000).toFixed(2)}T
+              </div>
+            </div>
+
+            {/* P/E Ratio */}
+            <div>
+              <div className="text-slate-400 text-xs mb-1">P/E Ratio</div>
+              <div className="text-slate-100 text-lg font-semibold">
+                {stockData.peRatio.toFixed(2)}
+              </div>
+            </div>
+
+            {/* Next Earnings */}
+            <div>
+              <div className="text-slate-400 text-xs mb-1">Next Earnings</div>
+              <div className="text-slate-100 text-lg font-semibold">
+                {stockData.earningsDate}
+              </div>
+            </div>
+
+            {/* 52-Week High */}
+            <div>
+              <div className="text-slate-400 text-xs mb-1">52-Week High</div>
+              <div className="text-slate-100 text-lg font-semibold">
+                ${stockData.week52High.toFixed(2)}
+              </div>
+            </div>
+
+            {/* 52-Week Low */}
+            <div>
+              <div className="text-slate-400 text-xs mb-1">52-Week Low</div>
+              <div className="text-slate-100 text-lg font-semibold">
+                ${stockData.week52Low.toFixed(2)}
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Main Content Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px', marginBottom: '24px' }}>
-        {/* Chart Section */}
-        <div>
-          {/* Chart Placeholder */}
-          <div
-            style={{
-              background: 'rgba(15, 23, 42, 0.6)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '12px',
-              padding: '20px',
-              minHeight: '400px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <div style={{ textAlign: 'center', color: '#94a3b8' }}>
-              <div style={{ fontSize: '3rem', marginBottom: '16px' }}>📈</div>
-              <div style={{ fontSize: '1.1rem', marginBottom: '8px' }}>Candlestick Chart</div>
-              <div style={{ fontSize: '0.9rem' }}>Chart integration coming soon</div>
-              <div style={{ fontSize: '0.8rem', marginTop: '12px', color: '#64748b' }}>
-                Will use: TradingView Widget, Chart.js, or D3.js
-              </div>
-            </div>
-          </div>
-
-          {/* Indicators Toggles */}
-          <div
-            style={{
-              marginTop: '16px',
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: '8px',
-            }}
-          >
-            {indicators.map(ind => (
-              <button
-                key={ind.name}
-                onClick={() => toggleIndicator(ind.name)}
-                style={{
-                  padding: '8px 16px',
-                  background: ind.enabled ? ind.color : 'rgba(15, 23, 42, 0.6)',
-                  border: `1px solid ${ind.enabled ? ind.color : 'rgba(255, 255, 255, 0.2)'}`,
-                  borderRadius: '8px',
-                  color: ind.enabled ? '#fff' : '#94a3b8',
-                  fontSize: '0.85rem',
-                  fontWeight: ind.enabled ? 600 : 400,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                }}
-              >
-                {ind.name}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Options Chain Section */}
-        <div
-          style={{
-            background: 'rgba(15, 23, 42, 0.6)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            borderRadius: '12px',
-            padding: '20px',
-            minHeight: '400px',
-          }}
-        >
-          <h4 style={{ color: '#7E57C2', fontSize: '1.2rem', margin: 0, marginBottom: '16px' }}>
-            Options Chain
-          </h4>
-          <div style={{ textAlign: 'center', color: '#94a3b8', marginTop: '100px' }}>
-            <div style={{ fontSize: '2rem', marginBottom: '12px' }}>🎯</div>
-            <div style={{ fontSize: '0.9rem' }}>Options chain viewer</div>
-            <div style={{ fontSize: '0.8rem', marginTop: '8px', color: '#64748b' }}>
-              Coming soon: Strike, Delta, IV, OI, Volume
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* AI Handoff Buttons */}
-      <div
-        style={{
-          background: 'rgba(126, 87, 194, 0.1)',
-          border: '1px solid rgba(126, 87, 194, 0.3)',
-          borderRadius: '12px',
-          padding: '20px',
-          marginBottom: '24px',
-        }}
-      >
-        <h4 style={{ color: '#7E57C2', fontSize: '1.2rem', margin: 0, marginBottom: '16px' }}>
-          🤖 AI Strategy Assistant
-        </h4>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-          <button
-            onClick={handleAISuggestStrategy}
-            style={{
-              padding: '16px',
-              background: 'linear-gradient(135deg, #00ACC1, #0097A7)',
-              border: 'none',
-              borderRadius: '8px',
-              color: '#fff',
-              fontSize: '1rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'transform 0.2s',
-            }}
-            onMouseEnter={e => {
-              (e.target as HTMLElement).style.transform = 'translateY(-2px)';
-            }}
-            onMouseLeave={e => {
-              (e.target as HTMLElement).style.transform = 'translateY(0)';
-            }}
-          >
-            <div style={{ fontSize: '1.5rem', marginBottom: '8px' }}>💡</div>
-            <div>Suggest Strategy</div>
-            <div style={{ fontSize: '0.75rem', opacity: 0.9, marginTop: '4px' }}>
-              Analyze & recommend
-            </div>
-          </button>
-
-          <button
-            onClick={handleAIMonitorPosition}
-            style={{
-              padding: '16px',
-              background: 'linear-gradient(135deg, #7E57C2, #5E35B1)',
-              border: 'none',
-              borderRadius: '8px',
-              color: '#fff',
-              fontSize: '1rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'transform 0.2s',
-            }}
-            onMouseEnter={e => {
-              (e.target as HTMLElement).style.transform = 'translateY(-2px)';
-            }}
-            onMouseLeave={e => {
-              (e.target as HTMLElement).style.transform = 'translateY(0)';
-            }}
-          >
-            <div style={{ fontSize: '1.5rem', marginBottom: '8px' }}>👁️</div>
-            <div>Monitor Position</div>
-            <div style={{ fontSize: '0.75rem', opacity: 0.9, marginTop: '4px' }}>
-              Track & alert
-            </div>
-          </button>
-
-          <button
-            onClick={handleConvertToAutomated}
-            style={{
-              padding: '16px',
-              background: 'linear-gradient(135deg, #00C851, #00A344)',
-              border: 'none',
-              borderRadius: '8px',
-              color: '#fff',
-              fontSize: '1rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'transform 0.2s',
-            }}
-            onMouseEnter={e => {
-              (e.target as HTMLElement).style.transform = 'translateY(-2px)';
-            }}
-            onMouseLeave={e => {
-              (e.target as HTMLElement).style.transform = 'translateY(0)';
-            }}
-          >
-            <div style={{ fontSize: '1.5rem', marginBottom: '8px' }}>⚡</div>
-            <div>Convert to Automated</div>
-            <div style={{ fontSize: '0.75rem', opacity: 0.9, marginTop: '4px' }}>
-              Autopilot strategy
-            </div>
-          </button>
-        </div>
-      </div>
-
-      {/* Theoretical vs Actual P&L Section */}
-      <div
-        style={{
-          background: 'rgba(15, 23, 42, 0.6)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          borderRadius: '12px',
-          padding: '20px',
-        }}
-      >
-        <h4 style={{ color: '#FF8800', fontSize: '1.2rem', margin: 0, marginBottom: '16px' }}>
-          📊 Theoretical vs Actual P&L
-        </h4>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: '16px',
-          }}
-        >
-          {['Pre-Trade Analysis', 'During Trade', 'Post-Trade Review'].map((phase, idx) => (
-            <div
-              key={phase}
-              style={{
-                background: 'rgba(30, 41, 59, 0.4)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '8px',
-                padding: '16px',
-                textAlign: 'center',
-              }}
+      {/* Timeframe Selector */}
+      <div className="mb-4">
+        <div className="flex gap-2">
+          {timeframes.map(tf => (
+            <button
+              key={tf}
+              onClick={() => setTimeframe(tf)}
+              className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
+                timeframe === tf
+                  ? 'bg-cyan-500 text-white'
+                  : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+              }`}
             >
-              <div style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '12px' }}>
-                {phase}
-              </div>
-              <div style={{ height: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ color: '#64748b', fontSize: '0.85rem' }}>
-                  {idx === 0 && '📉 Expected vs Max Loss'}
-                  {idx === 1 && '📊 Real-time Greek shifts'}
-                  {idx === 2 && '📈 Actual vs Projection'}
-                </div>
-              </div>
-            </div>
+              {tf}
+            </button>
           ))}
         </div>
-        <div
-          style={{
-            marginTop: '16px',
-            padding: '12px',
-            background: 'rgba(0, 200, 81, 0.1)',
-            border: '1px solid rgba(0, 200, 81, 0.3)',
-            borderRadius: '8px',
-            color: '#94a3b8',
-            fontSize: '0.85rem',
-          }}
-        >
-          <strong style={{ color: '#00C851' }}>Coming Soon:</strong> Interactive P&L comparison charts showing theoretical payoff diagrams
-          overlaid with actual fills, Greeks evolution, and variance analysis.
+      </div>
+
+      {/* Chart Type Toggle */}
+      <div className="mb-6">
+        <div className="flex gap-2">
+          {chartTypes.map(ct => (
+            <button
+              key={ct}
+              onClick={() => setChartType(ct)}
+              className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
+                chartType === ct
+                  ? 'bg-purple-500 text-white'
+                  : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+              }`}
+            >
+              {ct}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Chart Placeholder */}
+      <div className="mb-6 bg-slate-900/60 border border-white/10 rounded-xl p-8 flex items-center justify-center" style={{ height: '500px' }}>
+        <div className="text-center">
+          <div className="text-6xl mb-4">📈</div>
+          <div className="text-slate-300 text-xl font-semibold mb-2">
+            Chart will render here
+          </div>
+          <div className="text-slate-500 text-sm">
+            Selected: {chartType} · Timeframe: {timeframe}
+          </div>
+          <div className="text-slate-600 text-xs mt-3">
+            Chart library integration in INCREMENT 3
+          </div>
+        </div>
+      </div>
+
+      {/* Indicator Toggles Section */}
+      <div className="bg-slate-900/60 border border-white/10 rounded-xl p-5">
+        <h4 className="text-lg font-semibold text-slate-200 mb-4">
+          Technical Indicators
+        </h4>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {indicators.map(ind => (
+            <label
+              key={ind.id}
+              className="flex items-center gap-3 p-3 bg-slate-800/50 rounded-lg cursor-pointer hover:bg-slate-800 transition-all"
+            >
+              <input
+                type="checkbox"
+                checked={ind.enabled}
+                onChange={() => toggleIndicator(ind.id)}
+                className="w-4 h-4 text-cyan-500 bg-slate-700 border-slate-600 rounded focus:ring-cyan-500 focus:ring-2"
+              />
+              <span className={`text-sm font-medium ${ind.enabled ? 'text-cyan-400' : 'text-slate-400'}`}>
+                {ind.label}
+              </span>
+            </label>
+          ))}
         </div>
       </div>
     </div>
