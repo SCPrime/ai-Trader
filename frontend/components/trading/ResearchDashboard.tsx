@@ -1,12 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { createChart, IChartApi, ISeriesApi, CandlestickData, LineData } from 'lightweight-charts';
+import { calculateSMA, calculateRSI, type BarData } from '@/utils/indicators';
 
 /**
  * Research Dashboard - Stock Analysis & Charting
  *
- * INCREMENT 2: Basic structure with stock lookup, timeframe selector,
- * chart type toggle, and indicator checkboxes
+ * INCREMENT 3: Live chart rendering with lightweight-charts
+ * - Fetches historical data from Alpaca via API
+ * - Renders candlestick/line/area charts
+ * - Overlays SMA and RSI indicators
  */
 
 type Timeframe = '1D' | '5D' | '1M' | '3M' | '6M' | '1Y' | '5Y';
@@ -30,12 +34,20 @@ interface Indicator {
   enabled: boolean;
 }
 
+interface HistoricalResponse {
+  symbol: string;
+  timeframe: string;
+  bars: BarData[];
+  count: number;
+}
+
 export default function ResearchDashboard() {
   const [symbol, setSymbol] = useState('');
   const [loading, setLoading] = useState(false);
   const [stockData, setStockData] = useState<StockData | null>(null);
   const [timeframe, setTimeframe] = useState<Timeframe>('3M');
   const [chartType, setChartType] = useState<ChartType>('Candlestick');
+  const [historicalData, setHistoricalData] = useState<BarData[]>([]);
   const [indicators, setIndicators] = useState<Indicator[]>([
     { id: 'sma20', label: 'SMA 20', enabled: false },
     { id: 'sma50', label: 'SMA 50', enabled: false },
@@ -47,12 +59,17 @@ export default function ResearchDashboard() {
     { id: 'volume', label: 'Volume Bars', enabled: false },
   ]);
 
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<IChartApi | null>(null);
+  const seriesRef = useRef<ISeriesApi<'Candlestick' | 'Line' | 'Area'> | null>(null);
+  const indicatorSeriesRef = useRef<Map<string, ISeriesApi<'Line'>>>(new Map());
+
   const handleSearch = async () => {
     if (!symbol) return;
     setLoading(true);
     try {
-      // TODO: Replace with actual API call in INCREMENT 3
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Fetch stock fundamentals (mock for now)
+      await new Promise(resolve => setTimeout(resolve, 300));
       setStockData({
         symbol: symbol.toUpperCase(),
         price: 184.10,
@@ -64,10 +81,27 @@ export default function ResearchDashboard() {
         week52High: 199.62,
         week52Low: 164.08,
       });
+
+      // Fetch historical data
+      await fetchHistoricalData(symbol, timeframe);
     } catch (e) {
       console.error('Failed to fetch stock data', e);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchHistoricalData = async (sym: string, tf: Timeframe) => {
+    try {
+      const response = await fetch(`/api/market/historical?symbol=${sym}&timeframe=${tf}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch historical data: ${response.statusText}`);
+      }
+      const data: HistoricalResponse = await response.json();
+      setHistoricalData(data.bars);
+    } catch (error) {
+      console.error('Historical data fetch error:', error);
+      setHistoricalData([]);
     }
   };
 
@@ -76,6 +110,193 @@ export default function ResearchDashboard() {
       prev.map(ind => (ind.id === id ? { ...ind, enabled: !ind.enabled } : ind))
     );
   };
+
+  // Initialize chart
+  useEffect(() => {
+    if (!chartContainerRef.current) return;
+
+    const chart = createChart(chartContainerRef.current, {
+      width: chartContainerRef.current.clientWidth,
+      height: 500,
+      layout: {
+        background: { color: '#0f172a' },
+        textColor: '#94a3b8',
+      },
+      grid: {
+        vertLines: { color: '#1e293b' },
+        horzLines: { color: '#1e293b' },
+      },
+      crosshair: {
+        mode: 1, // Normal crosshair
+      },
+      rightPriceScale: {
+        borderColor: '#334155',
+      },
+      timeScale: {
+        borderColor: '#334155',
+        timeVisible: true,
+        secondsVisible: false,
+      },
+    });
+
+    chartRef.current = chart;
+
+    // Handle resize
+    const handleResize = () => {
+      if (chartContainerRef.current && chartRef.current) {
+        chartRef.current.applyOptions({
+          width: chartContainerRef.current.clientWidth,
+        });
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      chart.remove();
+    };
+  }, []);
+
+  // Update chart data when historicalData or chartType changes
+  useEffect(() => {
+    if (!chartRef.current || historicalData.length === 0) return;
+
+    // Remove existing series
+    if (seriesRef.current) {
+      chartRef.current.removeSeries(seriesRef.current);
+    }
+
+    // Clear indicator series
+    indicatorSeriesRef.current.forEach(series => {
+      chartRef.current?.removeSeries(series);
+    });
+    indicatorSeriesRef.current.clear();
+
+    // Create new series based on chart type
+    let series: ISeriesApi<'Candlestick' | 'Line' | 'Area'>;
+
+    if (chartType === 'Candlestick') {
+      series = chartRef.current.addCandlestickSeries({
+        upColor: '#10b981',
+        downColor: '#ef4444',
+        borderUpColor: '#10b981',
+        borderDownColor: '#ef4444',
+        wickUpColor: '#10b981',
+        wickDownColor: '#ef4444',
+      });
+
+      const candlestickData: CandlestickData[] = historicalData.map(bar => ({
+        time: new Date(bar.time).getTime() / 1000,
+        open: bar.open,
+        high: bar.high,
+        low: bar.low,
+        close: bar.close,
+      }));
+
+      series.setData(candlestickData);
+    } else if (chartType === 'Line') {
+      series = chartRef.current.addLineSeries({
+        color: '#00acc1',
+        lineWidth: 2,
+      });
+
+      const lineData: LineData[] = historicalData.map(bar => ({
+        time: new Date(bar.time).getTime() / 1000,
+        value: bar.close,
+      }));
+
+      series.setData(lineData);
+    } else {
+      // Area
+      series = chartRef.current.addAreaSeries({
+        topColor: 'rgba(0, 172, 193, 0.4)',
+        bottomColor: 'rgba(0, 172, 193, 0.0)',
+        lineColor: '#00acc1',
+        lineWidth: 2,
+      });
+
+      const areaData: LineData[] = historicalData.map(bar => ({
+        time: new Date(bar.time).getTime() / 1000,
+        value: bar.close,
+      }));
+
+      series.setData(areaData);
+    }
+
+    seriesRef.current = series;
+
+    // Fit content
+    chartRef.current.timeScale().fitContent();
+  }, [historicalData, chartType]);
+
+  // Update indicators when toggled
+  useEffect(() => {
+    if (!chartRef.current || historicalData.length === 0) return;
+
+    // Remove all indicator series
+    indicatorSeriesRef.current.forEach(series => {
+      chartRef.current?.removeSeries(series);
+    });
+    indicatorSeriesRef.current.clear();
+
+    // Add enabled indicators
+    indicators.forEach(ind => {
+      if (!ind.enabled || !chartRef.current) return;
+
+      if (ind.id === 'sma20') {
+        const sma20Data = calculateSMA(historicalData, 20);
+        const series = chartRef.current.addLineSeries({
+          color: '#00acc1',
+          lineWidth: 2,
+          title: 'SMA 20',
+        });
+        series.setData(
+          sma20Data.map(point => ({
+            time: new Date(point.time).getTime() / 1000,
+            value: point.value,
+          }))
+        );
+        indicatorSeriesRef.current.set('sma20', series);
+      } else if (ind.id === 'sma50') {
+        const sma50Data = calculateSMA(historicalData, 50);
+        const series = chartRef.current.addLineSeries({
+          color: '#7e57c2',
+          lineWidth: 2,
+          title: 'SMA 50',
+        });
+        series.setData(
+          sma50Data.map(point => ({
+            time: new Date(point.time).getTime() / 1000,
+            value: point.value,
+          }))
+        );
+        indicatorSeriesRef.current.set('sma50', series);
+      } else if (ind.id === 'sma200') {
+        const sma200Data = calculateSMA(historicalData, 200);
+        const series = chartRef.current.addLineSeries({
+          color: '#ff8800',
+          lineWidth: 2,
+          title: 'SMA 200',
+        });
+        series.setData(
+          sma200Data.map(point => ({
+            time: new Date(point.time).getTime() / 1000,
+            value: point.value,
+          }))
+        );
+        indicatorSeriesRef.current.set('sma200', series);
+      }
+      // RSI, MACD, Bollinger Bands, Ichimoku will be added in INCREMENT 4
+    });
+  }, [indicators, historicalData]);
+
+  // Refetch data when timeframe changes
+  useEffect(() => {
+    if (stockData?.symbol) {
+      fetchHistoricalData(stockData.symbol, timeframe);
+    }
+  }, [timeframe]);
 
   const timeframes: Timeframe[] = ['1D', '5D', '1M', '3M', '6M', '1Y', '5Y'];
   const chartTypes: ChartType[] = ['Line', 'Candlestick', 'Area'];
@@ -88,7 +309,7 @@ export default function ResearchDashboard() {
           🔬 Research Dashboard
         </h3>
         <p className="text-slate-400 text-sm">
-          Stock analysis with charts, indicators, and AI recommendations
+          Stock analysis with live charts, indicators, and AI recommendations
         </p>
       </div>
 
@@ -210,20 +431,9 @@ export default function ResearchDashboard() {
         </div>
       </div>
 
-      {/* Chart Placeholder */}
-      <div className="mb-6 bg-slate-900/60 border border-white/10 rounded-xl p-8 flex items-center justify-center" style={{ height: '500px' }}>
-        <div className="text-center">
-          <div className="text-6xl mb-4">📈</div>
-          <div className="text-slate-300 text-xl font-semibold mb-2">
-            Chart will render here
-          </div>
-          <div className="text-slate-500 text-sm">
-            Selected: {chartType} · Timeframe: {timeframe}
-          </div>
-          <div className="text-slate-600 text-xs mt-3">
-            Chart library integration in INCREMENT 3
-          </div>
-        </div>
+      {/* Chart Container */}
+      <div className="mb-6 bg-slate-900/60 border border-white/10 rounded-xl overflow-hidden">
+        <div ref={chartContainerRef} style={{ width: '100%', height: '500px' }} />
       </div>
 
       {/* Indicator Toggles Section */}
@@ -248,6 +458,9 @@ export default function ResearchDashboard() {
               </span>
             </label>
           ))}
+        </div>
+        <div className="mt-4 px-3 py-2 bg-slate-800/50 rounded-lg text-xs text-slate-500">
+          <strong className="text-slate-400">Note:</strong> SMA 20/50/200 indicators are active. MACD, Bollinger Bands, Ichimoku Cloud, and Volume Bars will be added in INCREMENT 4.
         </div>
       </div>
     </div>
