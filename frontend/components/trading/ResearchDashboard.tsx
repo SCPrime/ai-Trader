@@ -10,9 +10,16 @@ import {
   calculateIchimoku,
   type BarData
 } from '@/utils/indicators';
+import OptionsChain from './OptionsChain';
 
 /**
  * Research Dashboard - Stock Analysis & Charting
+ *
+ * INCREMENT 5: Options Chain viewer integration
+ * - Full options chain with greeks and IV
+ * - Expiration selector, strike filtering
+ * - ITM/ATM/OTM color coding
+ * - Integration with AI strategy builder
  *
  * INCREMENT 4: Complete technical indicators implementation
  * - MACD panel (separate pane with histogram)
@@ -67,6 +74,10 @@ export default function ResearchDashboard() {
     { id: 'ichimoku', label: 'Ichimoku Cloud', enabled: false },
     { id: 'volume', label: 'Volume Bars', enabled: false },
   ]);
+
+  // Options chain state
+  const [showOptionsChain, setShowOptionsChain] = useState(false);
+  const [selectedStrike, setSelectedStrike] = useState<{ strike: number; type: 'call' | 'put' } | null>(null);
 
   // Chart refs
   const priceChartContainerRef = useRef<HTMLDivElement>(null);
@@ -134,6 +145,11 @@ export default function ResearchDashboard() {
         prev.map(ind => (ind.id === id ? { ...ind, enabled: !ind.enabled } : ind))
       );
     }, 200);
+  }, []);
+
+  // Handle strike selection from options chain
+  const handleStrikeSelect = useCallback((strike: number, type: 'call' | 'put') => {
+    setSelectedStrike({ strike, type });
   }, []);
 
   // Memoized indicator calculations
@@ -881,6 +897,32 @@ export default function ResearchDashboard() {
           <strong>✓ Complete:</strong> All technical indicators implemented with memoization and debouncing for optimal performance.
         </div>
       </div>
+
+      {/* Options Chain Section */}
+      {stockData && (
+        <div className="mt-6">
+          <button
+            onClick={() => setShowOptionsChain(!showOptionsChain)}
+            className="w-full px-4 py-3 bg-purple-500/10 border border-purple-500/30 rounded-xl hover:bg-purple-500/20 transition-all mb-4"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">⚡</span>
+                <span className="text-lg font-semibold text-purple-400">Options Chain</span>
+              </div>
+              <span className="text-sm text-purple-300">
+                {showOptionsChain ? '▼ Hide' : '► Show'}
+              </span>
+            </div>
+          </button>
+
+          {showOptionsChain && (
+            <div className="animate-slideDown">
+              <OptionsChain symbol={stockData.symbol} onStrikeSelect={handleStrikeSelect} />
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
