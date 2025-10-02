@@ -1,8 +1,8 @@
 /**
- * Technical Indicators Calculations
+ * Technical Indicators Utility
  *
- * Pure functions for calculating common technical indicators
- * used in chart overlays.
+ * Provides calculation functions for technical analysis indicators
+ * Used by ResearchDashboard for chart overlays
  */
 
 export interface BarData {
@@ -14,87 +14,56 @@ export interface BarData {
   volume: number;
 }
 
-export interface IndicatorPoint {
+export interface LinePoint {
   time: string;
   value: number;
 }
 
 /**
- * Calculate Simple Moving Average (SMA)
- * @param data - Array of bar data
- * @param period - Number of periods (e.g., 20, 50, 200)
- * @returns Array of SMA points
+ * Simple Moving Average (SMA)
+ * Calculates the average price over a specified period
  */
-export function calculateSMA(data: BarData[], period: number): IndicatorPoint[] {
-  const result: IndicatorPoint[] = [];
+export function calculateSMA(data: BarData[], period: number): LinePoint[] {
+  if (data.length < period) return [];
 
+  const result: LinePoint[] = [];
   for (let i = period - 1; i < data.length; i++) {
-    let sum = 0;
-    for (let j = 0; j < period; j++) {
-      sum += data[i - j].close;
-    }
-    const avg = sum / period;
+    const sum = data.slice(i - period + 1, i + 1).reduce((acc, bar) => acc + bar.close, 0);
     result.push({
       time: data[i].time,
-      value: avg,
+      value: sum / period
     });
   }
-
   return result;
 }
 
 /**
- * Calculate Relative Strength Index (RSI)
- * @param data - Array of bar data
- * @param period - Number of periods (typically 14)
- * @returns Array of RSI points (0-100)
+ * Relative Strength Index (RSI)
+ * Momentum oscillator measuring speed and magnitude of price changes
  */
-export function calculateRSI(data: BarData[], period: number = 14): IndicatorPoint[] {
-  if (data.length < period + 1) {
-    return [];
-  }
+export function calculateRSI(data: BarData[], period: number = 14): LinePoint[] {
+  if (data.length < period + 1) return [];
 
-  const result: IndicatorPoint[] = [];
+  const result: LinePoint[] = [];
   const changes: number[] = [];
 
-  // Calculate price changes
   for (let i = 1; i < data.length; i++) {
     changes.push(data[i].close - data[i - 1].close);
   }
 
-  // Calculate initial average gain and loss
-  let avgGain = 0;
-  let avgLoss = 0;
-
-  for (let i = 0; i < period; i++) {
-    if (changes[i] > 0) {
-      avgGain += changes[i];
-    } else {
-      avgLoss += Math.abs(changes[i]);
-    }
-  }
-
-  avgGain /= period;
-  avgLoss /= period;
-
-  // Calculate RSI using Wilder's smoothing
   for (let i = period; i < changes.length; i++) {
-    const change = changes[i];
+    const gains = changes.slice(i - period, i).filter(c => c > 0);
+    const losses = changes.slice(i - period, i).filter(c => c < 0).map(Math.abs);
 
-    if (change > 0) {
-      avgGain = (avgGain * (period - 1) + change) / period;
-      avgLoss = (avgLoss * (period - 1)) / period;
-    } else {
-      avgGain = (avgGain * (period - 1)) / period;
-      avgLoss = (avgLoss * (period - 1) + Math.abs(change)) / period;
-    }
+    const avgGain = gains.length > 0 ? gains.reduce((a, b) => a + b, 0) / period : 0;
+    const avgLoss = losses.length > 0 ? losses.reduce((a, b) => a + b, 0) / period : 0;
 
     const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
-    const rsi = 100 - 100 / (1 + rs);
+    const rsi = 100 - (100 / (1 + rs));
 
     result.push({
       time: data[i + 1].time,
-      value: rsi,
+      value: rsi
     });
   }
 
@@ -102,248 +71,188 @@ export function calculateRSI(data: BarData[], period: number = 14): IndicatorPoi
 }
 
 /**
- * Calculate MACD (Moving Average Convergence Divergence)
- * @param data - Array of bar data
- * @param fastPeriod - Fast EMA period (default 12)
- * @param slowPeriod - Slow EMA period (default 26)
- * @param signalPeriod - Signal line period (default 9)
- * @returns Object with MACD line, signal line, and histogram
+ * Moving Average Convergence Divergence (MACD)
+ * Trend-following momentum indicator
  */
 export function calculateMACD(
   data: BarData[],
   fastPeriod: number = 12,
   slowPeriod: number = 26,
   signalPeriod: number = 9
-): {
-  macd: IndicatorPoint[];
-  signal: IndicatorPoint[];
-  histogram: IndicatorPoint[];
-} {
-  const emaFast = calculateEMA(data, fastPeriod);
-  const emaSlow = calculateEMA(data, slowPeriod);
+) {
+  const ema = (values: number[], period: number): number[] => {
+    const k = 2 / (period + 1);
+    const result: number[] = [values[0]];
+    for (let i = 1; i < values.length; i++) {
+      result.push(values[i] * k + result[i - 1] * (1 - k));
+    }
+    return result;
+  };
 
-  // Calculate MACD line
-  const macdLine: IndicatorPoint[] = [];
-  const minLength = Math.min(emaFast.length, emaSlow.length);
+  const closes = data.map(d => d.close);
+  const fastEMA = ema(closes, fastPeriod);
+  const slowEMA = ema(closes, slowPeriod);
 
-  for (let i = 0; i < minLength; i++) {
-    macdLine.push({
-      time: emaFast[i].time,
-      value: emaFast[i].value - emaSlow[i].value,
-    });
-  }
-
-  // Calculate signal line (EMA of MACD)
-  const signalLine = calculateEMAFromPoints(macdLine, signalPeriod);
-
-  // Calculate histogram
-  const histogram: IndicatorPoint[] = [];
-  const histMinLength = Math.min(macdLine.length, signalLine.length);
-
-  for (let i = 0; i < histMinLength; i++) {
-    histogram.push({
-      time: macdLine[i].time,
-      value: macdLine[i].value - signalLine[i].value,
-    });
-  }
+  const macdLine = fastEMA.map((fast, i) => fast - slowEMA[i]);
+  const signalLine = ema(macdLine, signalPeriod);
+  const histogram = macdLine.map((macd, i) => macd - signalLine[i]);
 
   return {
-    macd: macdLine,
-    signal: signalLine,
-    histogram,
+    macd: macdLine.map((val, i) => ({ time: data[i].time, value: val })),
+    signal: signalLine.map((val, i) => ({ time: data[i].time, value: val })),
+    histogram: histogram.map((val, i) => ({ time: data[i].time, value: val }))
   };
 }
 
 /**
- * Calculate Exponential Moving Average (EMA)
- * @param data - Array of bar data
- * @param period - Number of periods
- * @returns Array of EMA points
- */
-export function calculateEMA(data: BarData[], period: number): IndicatorPoint[] {
-  const result: IndicatorPoint[] = [];
-  const multiplier = 2 / (period + 1);
-
-  // Start with SMA for the first EMA value
-  let ema = 0;
-  for (let i = 0; i < period; i++) {
-    ema += data[i].close;
-  }
-  ema /= period;
-
-  result.push({
-    time: data[period - 1].time,
-    value: ema,
-  });
-
-  // Calculate EMA for remaining values
-  for (let i = period; i < data.length; i++) {
-    ema = (data[i].close - ema) * multiplier + ema;
-    result.push({
-      time: data[i].time,
-      value: ema,
-    });
-  }
-
-  return result;
-}
-
-/**
- * Calculate EMA from indicator points (used for MACD signal line)
- */
-function calculateEMAFromPoints(points: IndicatorPoint[], period: number): IndicatorPoint[] {
-  const result: IndicatorPoint[] = [];
-  const multiplier = 2 / (period + 1);
-
-  if (points.length < period) {
-    return [];
-  }
-
-  // Start with SMA
-  let ema = 0;
-  for (let i = 0; i < period; i++) {
-    ema += points[i].value;
-  }
-  ema /= period;
-
-  result.push({
-    time: points[period - 1].time,
-    value: ema,
-  });
-
-  // Calculate EMA
-  for (let i = period; i < points.length; i++) {
-    ema = (points[i].value - ema) * multiplier + ema;
-    result.push({
-      time: points[i].time,
-      value: ema,
-    });
-  }
-
-  return result;
-}
-
-/**
- * Calculate Bollinger Bands
- * @param data - Array of bar data
- * @param period - Number of periods (typically 20)
- * @param stdDev - Number of standard deviations (typically 2)
- * @returns Object with upper, middle, and lower bands
+ * Bollinger Bands
+ * Volatility bands placed above and below a moving average
  */
 export function calculateBollingerBands(
   data: BarData[],
   period: number = 20,
   stdDev: number = 2
-): {
-  upper: IndicatorPoint[];
-  middle: IndicatorPoint[];
-  lower: IndicatorPoint[];
-} {
-  const middle = calculateSMA(data, period);
-  const upper: IndicatorPoint[] = [];
-  const lower: IndicatorPoint[] = [];
+) {
+  const sma = calculateSMA(data, period);
+  const result: { upper: LinePoint[], middle: LinePoint[], lower: LinePoint[] } = {
+    upper: [],
+    middle: sma,
+    lower: []
+  };
 
   for (let i = period - 1; i < data.length; i++) {
-    // Calculate standard deviation
     const slice = data.slice(i - period + 1, i + 1);
-    const mean = slice.reduce((sum, bar) => sum + bar.close, 0) / period;
-    const variance = slice.reduce((sum, bar) => sum + Math.pow(bar.close - mean, 2), 0) / period;
+    const mean = slice.reduce((acc, bar) => acc + bar.close, 0) / period;
+    const variance = slice.reduce((acc, bar) => acc + Math.pow(bar.close - mean, 2), 0) / period;
     const std = Math.sqrt(variance);
 
-    const idx = i - period + 1;
-    upper.push({
-      time: data[i].time,
-      value: middle[idx].value + stdDev * std,
-    });
-    lower.push({
-      time: data[i].time,
-      value: middle[idx].value - stdDev * std,
-    });
+    result.upper.push({ time: data[i].time, value: mean + stdDev * std });
+    result.lower.push({ time: data[i].time, value: mean - stdDev * std });
   }
 
-  return { upper, middle, lower };
+  return result;
 }
 
 /**
- * Calculate Ichimoku Cloud
- * @param data - Array of bar data
- * @returns Object with all Ichimoku lines
+ * Ichimoku Cloud
+ * Comprehensive indicator showing support/resistance, trend direction, and momentum
  */
-export function calculateIchimoku(data: BarData[]): {
-  tenkan: IndicatorPoint[];
-  kijun: IndicatorPoint[];
-  senkouA: IndicatorPoint[];
-  senkouB: IndicatorPoint[];
-  chikou: IndicatorPoint[];
-} {
-  const tenkanPeriod = 9;
-  const kijunPeriod = 26;
-  const senkouBPeriod = 52;
-  const displacement = 26;
-
-  const tenkan: IndicatorPoint[] = [];
-  const kijun: IndicatorPoint[] = [];
-  const senkouA: IndicatorPoint[] = [];
-  const senkouB: IndicatorPoint[] = [];
-  const chikou: IndicatorPoint[] = [];
-
-  // Helper function to calculate midpoint of high/low over period
-  const calcMidpoint = (startIdx: number, period: number): number => {
-    const slice = data.slice(startIdx, startIdx + period);
-    const high = Math.max(...slice.map(b => b.high));
-    const low = Math.min(...slice.map(b => b.low));
+export function calculateIchimoku(data: BarData[]) {
+  const highLow = (period: number, index: number): number => {
+    const slice = data.slice(Math.max(0, index - period + 1), index + 1);
+    const high = Math.max(...slice.map(d => d.high));
+    const low = Math.min(...slice.map(d => d.low));
     return (high + low) / 2;
   };
 
-  // Calculate Tenkan-sen (Conversion Line)
-  for (let i = tenkanPeriod - 1; i < data.length; i++) {
-    tenkan.push({
-      time: data[i].time,
-      value: calcMidpoint(i - tenkanPeriod + 1, tenkanPeriod),
-    });
-  }
+  const tenkan: LinePoint[] = [];
+  const kijun: LinePoint[] = [];
+  const senkouA: LinePoint[] = [];
+  const senkouB: LinePoint[] = [];
+  const chikou: LinePoint[] = [];
 
-  // Calculate Kijun-sen (Base Line)
-  for (let i = kijunPeriod - 1; i < data.length; i++) {
-    kijun.push({
-      time: data[i].time,
-      value: calcMidpoint(i - kijunPeriod + 1, kijunPeriod),
-    });
-  }
-
-  // Calculate Senkou Span A (Leading Span A) - displaced forward
-  for (let i = kijunPeriod - 1; i < data.length; i++) {
-    const tenkanValue = tenkan[i - (kijunPeriod - tenkanPeriod)]?.value || 0;
-    const kijunValue = kijun[i - kijunPeriod + 1]?.value || 0;
-
-    // Displace forward by 26 periods
-    const displacedIdx = i + displacement;
-    if (displacedIdx < data.length) {
-      senkouA.push({
-        time: data[displacedIdx].time,
-        value: (tenkanValue + kijunValue) / 2,
-      });
+  for (let i = 0; i < data.length; i++) {
+    if (i >= 8) tenkan.push({ time: data[i].time, value: highLow(9, i) });
+    if (i >= 25) kijun.push({ time: data[i].time, value: highLow(26, i) });
+    if (i >= 25 && tenkan.length > 0 && kijun.length > 0) {
+      const senkou = (tenkan[tenkan.length - 1].value + kijun[kijun.length - 1].value) / 2;
+      senkouA.push({ time: data[i].time, value: senkou });
     }
-  }
-
-  // Calculate Senkou Span B (Leading Span B) - displaced forward
-  for (let i = senkouBPeriod - 1; i < data.length; i++) {
-    const displacedIdx = i + displacement;
-    if (displacedIdx < data.length) {
-      senkouB.push({
-        time: data[displacedIdx].time,
-        value: calcMidpoint(i - senkouBPeriod + 1, senkouBPeriod),
-      });
-    }
-  }
-
-  // Calculate Chikou Span (Lagging Span) - displaced backward
-  for (let i = displacement; i < data.length; i++) {
-    chikou.push({
-      time: data[i - displacement].time,
-      value: data[i].close,
-    });
+    if (i >= 51) senkouB.push({ time: data[i].time, value: highLow(52, i) });
+    if (i >= 26) chikou.push({ time: data[i - 26].time, value: data[i].close });
   }
 
   return { tenkan, kijun, senkouA, senkouB, chikou };
+}
+
+/**
+ * Exponential Moving Average (EMA)
+ * Weighted moving average that gives more importance to recent data
+ */
+export function calculateEMA(data: BarData[], period: number): LinePoint[] {
+  if (data.length < period) return [];
+
+  const k = 2 / (period + 1);
+  const result: LinePoint[] = [];
+
+  // Start with SMA for first value
+  const firstSMA = data.slice(0, period).reduce((acc, bar) => acc + bar.close, 0) / period;
+  result.push({ time: data[period - 1].time, value: firstSMA });
+
+  for (let i = period; i < data.length; i++) {
+    const ema = data[i].close * k + result[result.length - 1].value * (1 - k);
+    result.push({ time: data[i].time, value: ema });
+  }
+
+  return result;
+}
+
+/**
+ * Average True Range (ATR)
+ * Volatility indicator measuring market volatility
+ */
+export function calculateATR(data: BarData[], period: number = 14): LinePoint[] {
+  if (data.length < period + 1) return [];
+
+  const trueRanges: number[] = [];
+
+  for (let i = 1; i < data.length; i++) {
+    const high = data[i].high;
+    const low = data[i].low;
+    const prevClose = data[i - 1].close;
+
+    const tr = Math.max(
+      high - low,
+      Math.abs(high - prevClose),
+      Math.abs(low - prevClose)
+    );
+    trueRanges.push(tr);
+  }
+
+  const result: LinePoint[] = [];
+
+  // First ATR is simple average
+  const firstATR = trueRanges.slice(0, period).reduce((a, b) => a + b, 0) / period;
+  result.push({ time: data[period].time, value: firstATR });
+
+  // Subsequent ATRs use smoothing
+  for (let i = period; i < trueRanges.length; i++) {
+    const atr = (result[result.length - 1].value * (period - 1) + trueRanges[i]) / period;
+    result.push({ time: data[i + 1].time, value: atr });
+  }
+
+  return result;
+}
+
+/**
+ * Stochastic Oscillator
+ * Momentum indicator comparing closing price to price range
+ */
+export function calculateStochastic(
+  data: BarData[],
+  kPeriod: number = 14,
+  dPeriod: number = 3
+): { k: LinePoint[], d: LinePoint[] } {
+  if (data.length < kPeriod) return { k: [], d: [] };
+
+  const kValues: LinePoint[] = [];
+
+  for (let i = kPeriod - 1; i < data.length; i++) {
+    const slice = data.slice(i - kPeriod + 1, i + 1);
+    const high = Math.max(...slice.map(d => d.high));
+    const low = Math.min(...slice.map(d => d.low));
+    const close = data[i].close;
+
+    const k = ((close - low) / (high - low)) * 100;
+    kValues.push({ time: data[i].time, value: k });
+  }
+
+  const dValues: LinePoint[] = [];
+
+  for (let i = dPeriod - 1; i < kValues.length; i++) {
+    const sum = kValues.slice(i - dPeriod + 1, i + 1).reduce((acc, val) => acc + val.value, 0);
+    dValues.push({ time: kValues[i].time, value: sum / dPeriod });
+  }
+
+  return { k: kValues, d: dValues };
 }
