@@ -11,6 +11,7 @@ import {
   type BarData
 } from '@/utils/indicators';
 import OptionsChain from './OptionsChain';
+import StrategySuggestionsModal from './StrategySuggestionsModal';
 
 /**
  * Research Dashboard - Stock Analysis & Charting
@@ -78,6 +79,11 @@ export default function ResearchDashboard() {
   // Options chain state
   const [showOptionsChain, setShowOptionsChain] = useState(false);
   const [selectedStrike, setSelectedStrike] = useState<{ strike: number; type: 'call' | 'put' } | null>(null);
+
+  // AI Strategy state
+  const [showStrategyModal, setShowStrategyModal] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [strategySuggestions, setStrategySuggestions] = useState<any>(null);
 
   // Chart refs
   const priceChartContainerRef = useRef<HTMLDivElement>(null);
@@ -151,6 +157,104 @@ export default function ResearchDashboard() {
   const handleStrikeSelect = useCallback((strike: number, type: 'call' | 'put') => {
     setSelectedStrike({ strike, type });
   }, []);
+
+  // AI Strategy Handlers
+  const handleSuggestStrategy = async () => {
+    if (!stockData) return;
+
+    setAiLoading(true);
+    try {
+      // Gather technicals from calculated indicators
+      const technicals = {
+        rsi: calculatedIndicators.rsi?.[calculatedIndicators.rsi.length - 1]?.value,
+        sma20: calculatedIndicators.sma20?.[calculatedIndicators.sma20.length - 1]?.value,
+        sma50: calculatedIndicators.sma50?.[calculatedIndicators.sma50.length - 1]?.value,
+        sma200: calculatedIndicators.sma200?.[calculatedIndicators.sma200.length - 1]?.value,
+        macd: calculatedIndicators.macd ? {
+          macd: calculatedIndicators.macd.macd[calculatedIndicators.macd.macd.length - 1]?.value,
+          signal: calculatedIndicators.macd.signal[calculatedIndicators.macd.signal.length - 1]?.value,
+          histogram: calculatedIndicators.macd.histogram[calculatedIndicators.macd.histogram.length - 1]?.value,
+        } : undefined,
+        iv_percentile: 55, // TODO: Calculate from historical IV data
+      };
+
+      const optionsChain = {
+        avgCallIV: 0.35,
+        avgPutIV: 0.33,
+        atmCallOI: 5000,
+        atmPutOI: 4500,
+        avgSpread: 0.04,
+      };
+
+      const response = await fetch('/api/ai/suggest-strategy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          symbol: stockData.symbol,
+          currentPrice: stockData.price,
+          technicals,
+          optionsChain,
+          earningsDate: stockData.earningsDate,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get strategy suggestions');
+      }
+
+      const data = await response.json();
+      setStrategySuggestions(data);
+      setShowStrategyModal(true);
+    } catch (error) {
+      console.error('Strategy suggestion error:', error);
+      alert('Failed to generate strategy suggestions. Please try again.');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleMonitorPosition = () => {
+    if (!stockData) return;
+    alert(`📊 Monitor Position: ${stockData.symbol}
+
+This will:
+• Create real-time P&L tracking
+• Set profit target alert (+10%)
+• Set stop loss alert (-8%)
+• Enable SMS notifications on hits
+• Track Greeks evolution
+
+Feature coming in INCREMENT 7`);
+  };
+
+  const handleConvertToAutomated = () => {
+    if (!stockData) return;
+    alert(`⚡ Convert to Automated Strategy: ${stockData.symbol}
+
+This will:
+• Open strategy builder with pre-filled template
+• Current analysis becomes entry rules
+• Set exit rules and position sizing
+• Save as new Allessandra strategy
+• Enable for future automated scans
+
+Feature coming in INCREMENT 8`);
+  };
+
+  const handleApproveStrategy = (strategyId: string) => {
+    alert(`✓ Strategy Approved: ${strategyId}
+
+Creating proposal for review...
+
+This will:
+• Generate detailed proposal with legs and pricing
+• Set approval deadline based on strategy settings
+• Add to Proposal Review workflow
+• Await user final approval before execution
+
+Proposal system coming in INCREMENT 9`);
+    setShowStrategyModal(false);
+  };
 
   // Memoized indicator calculations
   const calculatedIndicators = useMemo(() => {
@@ -807,6 +911,36 @@ export default function ResearchDashboard() {
         </div>
       )}
 
+      {/* AI Strategy Assistant */}
+      {stockData && (
+        <div className="mb-6 bg-purple-500/10 border border-purple-500/30 rounded-xl p-5">
+          <h4 className="text-lg font-semibold text-purple-400 mb-4">
+            🤖 AI Strategy Assistant
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <button
+              onClick={handleSuggestStrategy}
+              disabled={aiLoading}
+              className="px-4 py-3 bg-gradient-to-r from-purple-500 to-cyan-500 hover:from-purple-600 hover:to-cyan-600 disabled:from-purple-500/50 disabled:to-cyan-500/50 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl"
+            >
+              {aiLoading ? '⏳ Analyzing...' : '💡 Suggest Strategy'}
+            </button>
+            <button
+              onClick={handleMonitorPosition}
+              className="px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white font-semibold rounded-lg transition-all"
+            >
+              👁️ Monitor Position
+            </button>
+            <button
+              onClick={handleConvertToAutomated}
+              className="px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white font-semibold rounded-lg transition-all"
+            >
+              ⚡ Convert to Automated
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Timeframe Selector */}
       <div className="mb-4">
         <div className="flex gap-2">
@@ -922,6 +1056,19 @@ export default function ResearchDashboard() {
             </div>
           )}
         </div>
+      )}
+
+      {/* Strategy Suggestions Modal */}
+      {strategySuggestions && (
+        <StrategySuggestionsModal
+          isOpen={showStrategyModal}
+          onClose={() => setShowStrategyModal(false)}
+          symbol={strategySuggestions.symbol}
+          currentPrice={strategySuggestions.currentPrice}
+          suggestions={strategySuggestions.suggestions}
+          analysis={strategySuggestions.analysis}
+          onApprove={handleApproveStrategy}
+        />
       )}
     </div>
   );
