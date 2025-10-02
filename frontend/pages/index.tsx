@@ -13,7 +13,7 @@ export default function Dashboard() {
   const [selectedWorkflow, setSelectedWorkflow] = useState<string>('');
   const [hoveredWorkflow, setHoveredWorkflow] = useState<Workflow | null>(null);
   const [showSettings, setShowSettings] = useState(false);
-  const [isUserSetup, setIsUserSetup] = useState(false);
+  const [isUserSetup, setIsUserSetup] = useState(true); // TEMP: Skip UserSetup for testing
   const [isLoading, setIsLoading] = useState(true);
 
   // Check if user is set up on mount

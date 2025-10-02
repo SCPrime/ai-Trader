@@ -66,18 +66,18 @@ export default function UserSetup({ onComplete }: UserSetupProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900"
       style={{
         background: 'radial-gradient(ellipse at top, #0f172a 0%, #1e293b 50%, #0f172a 100%)',
       }}
     >
-      <div className="bg-slate-800/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-fadeIn">
+      <div className="bg-slate-800 border border-white/20 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-fadeIn">
         {/* Header */}
-        <div className="px-6 py-8 border-b border-white/10">
+        <div className="px-6 py-8 border-b border-white/10 bg-gradient-to-r from-cyan-500/20 to-purple-500/20">
           <div className="text-center">
             <div className="text-5xl mb-4">🚀</div>
-            <h2 className="text-3xl font-bold text-cyan-400 mb-2">Welcome to Allessandra</h2>
-            <p className="text-slate-400">
+            <h2 className="text-3xl font-bold text-white mb-2">Welcome to Allessandra</h2>
+            <p className="text-sm text-slate-300">
               AI-Powered Options Trading Platform
             </p>
           </div>
@@ -170,11 +170,11 @@ export default function UserSetup({ onComplete }: UserSetupProps) {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 bg-slate-900/60 border-t border-white/10">
+        <div className="px-6 py-4 bg-slate-900/50 border-t border-white/10">
           <button
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="w-full px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold rounded-lg shadow-lg hover:shadow-cyan-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+            className="w-full px-6 py-3 bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600 text-white font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-cyan-500/50 disabled:shadow-none"
           >
             {isSubmitting ? '⏳ Setting up...' : '🚀 Start Trading'}
           </button>
