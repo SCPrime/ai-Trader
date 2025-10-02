@@ -14,6 +14,7 @@ import OptionsChain from './OptionsChain';
 import StrategySuggestionsModal from './StrategySuggestionsModal';
 import PLComparisonChart from './PLComparisonChart';
 import PLSummaryDashboard from './PLSummaryDashboard';
+import StrategyBuilder from './StrategyBuilder';
 import type { PLViewMode, TheoreticalPayoff, PositionTracking, PLComparison, PositionLeg } from '@/types/pnl';
 
 /**
@@ -94,6 +95,9 @@ export default function ResearchDashboard() {
   const [theoreticalPayoff, setTheoreticalPayoff] = useState<TheoreticalPayoff | null>(null);
   const [positionTracking, setPositionTracking] = useState<PositionTracking | null>(null);
   const [plComparison, setPlComparison] = useState<PLComparison | null>(null);
+
+  // Strategy Builder state
+  const [showStrategyBuilder, setShowStrategyBuilder] = useState(false);
 
   // Chart refs
   const priceChartContainerRef = useRef<HTMLDivElement>(null);
@@ -239,16 +243,7 @@ Feature coming in INCREMENT 7`);
 
   const handleConvertToAutomated = () => {
     if (!stockData) return;
-    alert(`⚡ Convert to Automated Strategy: ${stockData.symbol}
-
-This will:
-• Open strategy builder with pre-filled template
-• Current analysis becomes entry rules
-• Set exit rules and position sizing
-• Save as new Allessandra strategy
-• Enable for future automated scans
-
-Feature coming in INCREMENT 8`);
+    setShowStrategyBuilder(true);
   };
 
   const handleApproveStrategy = (strategyId: string) => {
@@ -1263,6 +1258,21 @@ Proposal system coming in INCREMENT 9`);
           onApprove={handleApproveStrategy}
         />
       )}
+
+      {/* Strategy Builder Modal */}
+      <StrategyBuilder
+        isOpen={showStrategyBuilder}
+        onClose={() => setShowStrategyBuilder(false)}
+        initialData={
+          stockData
+            ? {
+                name: `${stockData.symbol} Strategy`,
+                priceMin: stockData.price * 0.8,
+                priceMax: stockData.price * 1.2,
+              }
+            : undefined
+        }
+      />
     </div>
   );
 }
