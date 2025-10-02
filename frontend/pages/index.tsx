@@ -1,15 +1,48 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import RadialMenu, { workflows, Workflow } from '../components/RadialMenu';
 import PositionsTable from '../components/PositionsTable';
 import MorningRoutine from '../components/MorningRoutine';
 import ExecuteTradeForm from '../components/ExecuteTradeForm';
 import ResearchDashboard from '../components/trading/ResearchDashboard';
 import Settings from '../components/Settings';
+import UserSetup from '../components/UserSetup';
+import { isUserLoggedIn, initializeSession } from '../lib/userManagement';
 
 export default function Dashboard() {
   const [selectedWorkflow, setSelectedWorkflow] = useState<string>('');
   const [hoveredWorkflow, setHoveredWorkflow] = useState<Workflow | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [isUserSetup, setIsUserSetup] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Check if user is set up on mount
+  useEffect(() => {
+    const userExists = isUserLoggedIn();
+    setIsUserSetup(userExists);
+
+    if (userExists) {
+      // Initialize or restore session
+      initializeSession();
+    }
+
+    setIsLoading(false);
+  }, []);
+
+  // Handle user setup completion
+  const handleUserSetupComplete = () => {
+    setIsUserSetup(true);
+    initializeSession();
+  };
+
+  // Show loading state briefly
+  if (isLoading) {
+    return null;
+  }
+
+  // Show user setup modal if not set up
+  if (!isUserSetup) {
+    return <UserSetup onComplete={handleUserSetupComplete} />;
+  }
 
   const getWorkflowById = (id: string) => {
     return workflows.find(w => w.id === id);

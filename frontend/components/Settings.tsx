@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { getCurrentUser, getUserAnalytics, clearUserData } from '../lib/userManagement';
+import type { User } from '../lib/userManagement';
 
 /**
  * Settings Component
@@ -50,8 +52,10 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [showClearDataConfirm, setShowClearDataConfirm] = useState(false);
 
-  // Load settings from localStorage on mount
+  // Load settings and user info from localStorage on mount
   useEffect(() => {
     const savedSettings = localStorage.getItem('allessandra_settings');
     if (savedSettings) {
@@ -61,7 +65,11 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
         console.error('Failed to load settings:', error);
       }
     }
-  }, []);
+
+    // Load user data
+    const currentUser = getCurrentUser();
+    setUser(currentUser);
+  }, [isOpen]); // Reload when modal opens
 
   const updateSetting = <K extends keyof SettingsData>(key: K, value: SettingsData[K]) => {
     setSettings(prev => ({ ...prev, [key]: value }));
@@ -97,7 +105,17 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
     setSaveSuccess(false);
   };
 
+  const handleClearUserData = () => {
+    if (window.confirm('Are you sure you want to clear all user data? This will log you out and you will need to set up again.')) {
+      clearUserData();
+      window.location.reload(); // Force reload to trigger user setup
+    }
+    setShowClearDataConfirm(false);
+  };
+
   if (!isOpen) return null;
+
+  const analytics = user ? getUserAnalytics() : null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn overflow-y-auto">
@@ -128,6 +146,70 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* User Info Section */}
+          {user && (
+            <div className="bg-slate-900/60 border border-white/10 rounded-xl p-5">
+              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                <span className="text-xl">👤</span>
+                User Information
+              </h3>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 bg-slate-800/50 border border-white/10 rounded-lg">
+                  <div>
+                    <div className="text-xs text-slate-400 mb-1">Display Name</div>
+                    <div className="text-sm font-medium text-white">{user.displayName}</div>
+                  </div>
+                </div>
+
+                {user.email && (
+                  <div className="flex items-center justify-between p-3 bg-slate-800/50 border border-white/10 rounded-lg">
+                    <div>
+                      <div className="text-xs text-slate-400 mb-1">Email</div>
+                      <div className="text-sm font-medium text-white">{user.email}</div>
+                    </div>
+                  </div>
+                )}
+
+                {user.testGroup && (
+                  <div className="flex items-center justify-between p-3 bg-slate-800/50 border border-white/10 rounded-lg">
+                    <div>
+                      <div className="text-xs text-slate-400 mb-1">Test Group</div>
+                      <div className="text-sm font-medium text-white capitalize">{user.testGroup}</div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between p-3 bg-slate-800/50 border border-white/10 rounded-lg">
+                  <div>
+                    <div className="text-xs text-slate-400 mb-1">User ID</div>
+                    <div className="text-xs font-mono text-slate-300">{user.userId}</div>
+                  </div>
+                </div>
+
+                {analytics && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 bg-slate-800/50 border border-white/10 rounded-lg">
+                      <div className="text-xs text-slate-400 mb-1">Account Age</div>
+                      <div className="text-sm font-semibold text-cyan-400">{analytics.accountAge}</div>
+                    </div>
+                    <div className="p-3 bg-slate-800/50 border border-white/10 rounded-lg">
+                      <div className="text-xs text-slate-400 mb-1">Total Sessions</div>
+                      <div className="text-sm font-semibold text-purple-400">{analytics.totalSessions}</div>
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  onClick={handleClearUserData}
+                  className="w-full mt-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 rounded-lg transition-all text-sm font-medium"
+                >
+                  🗑️ Clear User Data & Logout
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Trading Mode Section */}
           <div className="bg-slate-900/60 border border-white/10 rounded-xl p-5">
             <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">

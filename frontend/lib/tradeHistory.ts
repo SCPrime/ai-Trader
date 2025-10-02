@@ -8,6 +8,7 @@
 
 export interface TradeRecord {
   id: string;
+  userId: string; // Track which user made this trade
   strategy_id: string;
   strategy_version: number;
   ticker: string;
@@ -62,8 +63,22 @@ export function recordTrade(trade: Omit<TradeRecord, 'id'>): TradeRecord {
 /**
  * Get all trades for a strategy
  */
-export function getTradesForStrategy(strategyId: string): TradeRecord[] {
-  return mockTradeHistory.filter(trade => trade.strategy_id === strategyId);
+export function getTradesForStrategy(strategyId: string, userId?: string): TradeRecord[] {
+  let trades = mockTradeHistory.filter(trade => trade.strategy_id === strategyId);
+
+  // Optionally filter by userId
+  if (userId) {
+    trades = trades.filter(trade => trade.userId === userId);
+  }
+
+  return trades;
+}
+
+/**
+ * Get all trades for a user
+ */
+export function getTradesForUser(userId: string): TradeRecord[] {
+  return mockTradeHistory.filter(trade => trade.userId === userId);
 }
 
 /**
@@ -211,7 +226,7 @@ export function checkPerformanceInfo(
 /**
  * Seed mock data for testing (optional)
  */
-export function seedMockTradeData(strategyId: string) {
+export function seedMockTradeData(strategyId: string, userId: string) {
   // Generate 20 mock trades
   for (let i = 0; i < 20; i++) {
     const enteredAt = new Date(Date.now() - (20 - i) * 7 * 24 * 60 * 60 * 1000); // Weekly trades
@@ -220,6 +235,7 @@ export function seedMockTradeData(strategyId: string) {
     const pnl = isWinner ? Math.random() * 500 + 100 : -(Math.random() * 300 + 50);
 
     recordTrade({
+      userId,
       strategy_id: strategyId,
       strategy_version: 1,
       ticker: ['AAPL', 'MSFT', 'GOOGL', 'SPY', 'QQQ'][Math.floor(Math.random() * 5)],
@@ -235,7 +251,7 @@ export function seedMockTradeData(strategyId: string) {
     });
   }
 
-  console.log(`Seeded ${strategyId} with 20 mock trades`);
+  console.log(`Seeded ${strategyId} with 20 mock trades for user ${userId}`);
 }
 
 /**
