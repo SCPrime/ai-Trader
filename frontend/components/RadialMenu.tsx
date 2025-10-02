@@ -32,11 +32,11 @@ const workflows: Workflow[] = [
     description: 'Real-time market news aggregation with AI-powered sentiment analysis and breaking news alerts.'
   },
   {
-    id: 'recommendations',
-    name: 'AI Recs',
-    icon: '🤖',
+    id: 'proposals',
+    name: 'Proposals',
+    icon: '📋',
     color: '#0097A7',
-    description: 'AI-generated trade recommendations based on technical indicators, patterns, and market conditions.'
+    description: 'Review and approve AI-generated trade proposals with risk metrics and deadline tracking.'
   },
   {
     id: 'active-positions',

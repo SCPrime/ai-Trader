@@ -4,6 +4,7 @@ import PositionsTable from '../components/PositionsTable';
 import MorningRoutine from '../components/MorningRoutine';
 import ExecuteTradeForm from '../components/ExecuteTradeForm';
 import ResearchDashboard from '../components/trading/ResearchDashboard';
+import ProposalReview from '../components/trading/ProposalReview';
 import Settings from '../components/Settings';
 import UserSetup from '../components/UserSetup';
 import { isUserLoggedIn, initializeSession } from '../lib/userManagement';
@@ -67,6 +68,9 @@ export default function Dashboard() {
         case 'research':
           return <ResearchDashboard />;
 
+        case 'proposals':
+          return <ProposalReview />;
+
         case 'settings':
           setShowSettings(true);
           setSelectedWorkflow(''); // Clear selection after opening modal
@@ -116,27 +120,6 @@ export default function Dashboard() {
             </div>
           );
 
-        case 'recommendations':
-          return (
-            <div style={{
-              background: 'rgba(30, 41, 59, 0.8)',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid #0097A740',
-              borderRadius: '16px',
-              padding: '24px',
-              minHeight: '200px'
-            }}>
-              <h4 style={{ color: '#0097A7', fontSize: '1.5rem', margin: 0, marginBottom: '16px' }}>
-                🤖 AI Recommendations
-              </h4>
-              <p style={{ color: '#cbd5e1', lineHeight: 1.6, margin: 0, marginBottom: '12px' }}>
-                AI-generated trade recommendations based on technical indicators, patterns, and market conditions.
-              </p>
-              <p style={{ color: '#94a3b8', fontStyle: 'italic', margin: 0 }}>
-                Coming soon: ML-powered trade signals, confidence scores, and backtested strategies.
-              </p>
-            </div>
-          );
 
         case 'strategy-builder':
           return (
