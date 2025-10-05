@@ -1,50 +1,207 @@
 import { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 
-const workflows = [
-  { id: 'morning-routine', name: 'MORNING\nROUTINE', color: '#00ACC1' },
-  { id: 'news-review', name: 'NEWS\nREVIEW', color: '#7E57C2' },
-  { id: 'proposals', name: 'AI\nRECS', color: '#0097A7' },
-  { id: 'active-positions', name: 'ACTIVE\nPOSITIONS', color: '#00C851' },
-  { id: 'pnl-dashboard', name: 'P&L\nDASHBOARD', color: '#FF8800' },
-  { id: 'strategy-builder', name: 'STRATEGY\nBUILDER', color: '#5E35B1' },
-  { id: 'backtesting', name: 'BACK\nTESTING', color: '#00BCD4' },
-  { id: 'execute', name: 'EXECUTE', color: '#FF4444' },
-  { id: 'research', name: 'RESEARCH', color: '#F97316' },
-  { id: 'settings', name: 'SETTINGS', color: '#64748b' }
+export interface Workflow {
+  id: string;
+  name: string;
+  color: string;
+  icon: string;
+  description: string;
+}
+
+interface RadialMenuProps {
+  onWorkflowSelect: (workflowId: string) => void;
+  onWorkflowHover?: (workflow: Workflow | null) => void;
+  selectedWorkflow?: string;
+}
+
+export const workflows: Workflow[] = [
+  { id: 'morning-routine', name: 'MORNING\nROUTINE', color: '#00ACC1', icon: '🌅', description: 'Start your day with market analysis, portfolio review, and trading alerts.' },
+  { id: 'news-review', name: 'NEWS\nREVIEW', color: '#7E57C2', icon: '📰', description: 'Real-time market news aggregation with AI-powered sentiment analysis.' },
+  { id: 'proposals', name: 'AI\nRECS', color: '#0097A7', icon: '🤖', description: 'Review AI-generated trading recommendations and strategy proposals.' },
+  { id: 'active-positions', name: 'ACTIVE\nPOSITIONS', color: '#00C851', icon: '📊', description: 'Monitor and manage your current open positions and orders.' },
+  { id: 'pnl-dashboard', name: 'P&L\nDASHBOARD', color: '#FF8800', icon: '💰', description: 'Comprehensive profit and loss analysis with performance metrics.' },
+  { id: 'strategy-builder', name: 'STRATEGY\nBUILDER', color: '#5E35B1', icon: '🎯', description: 'Design and test custom trading strategies with drag-and-drop rules.' },
+  { id: 'backtesting', name: 'BACK\nTESTING', color: '#00BCD4', icon: '📈', description: 'Test strategies against historical data to validate performance.' },
+  { id: 'execute', name: 'EXECUTE', color: '#FF4444', icon: '⚡', description: 'Execute trades with pre-filled orders and real-time confirmation.' },
+  { id: 'research', name: 'RESEARCH', color: '#F97316', icon: '🔍', description: 'Deep dive into technical analysis, charts, and market indicators.' },
+  { id: 'settings', name: 'SETTINGS', color: '#64748b', icon: '⚙️', description: 'Configure your trading preferences and system settings.' }
 ];
 
-export default function RadialMenu() {
-  const svgRef = useRef(null);
-  const [selectedWorkflow, setSelectedWorkflow] = useState(null);
-  const [hoveredWorkflow, setHoveredWorkflow] = useState(null);
+export default function RadialMenu({ onWorkflowSelect, onWorkflowHover, selectedWorkflow }: RadialMenuProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [hoveredWorkflow, setHoveredWorkflow] = useState<Workflow | null>(null);
   const [marketData] = useState({
     nasdaq: { value: 18234.56, change: 1.2 },
     nyse: { value: 16890.34, change: -0.3 }
   });
 
-  const handleWorkflowClick = (workflowId) => {
-    setSelectedWorkflow(workflowId);
-  };
-
-  const handleCenterClick = () => {
-    setSelectedWorkflow(null);
-  };
+  // Debug logging for Fast Refresh loop detection
+  useEffect(() => {
+    console.log('RadialMenu rendered with selectedWorkflow:', selectedWorkflow);
+  }, [selectedWorkflow]);
 
   useEffect(() => {
     if (!svgRef.current) return;
 
-    const width = 800;
-    const height = 800;
+    const width = 900;
+    const height = 900;
     const radius = Math.min(width, height) / 2;
-    const innerRadius = radius * 0.28;
-    const outerRadius = radius * 0.92;
+    const innerRadius = radius * 0.30;
+    const outerRadius = radius * 0.90;
 
     const svg = d3.select(svgRef.current);
     svg.selectAll('*').remove();
 
     const defs = svg.append('defs');
 
+    // ====== SVG FILTERS ======
+
+    // Normal shadow filter
+    const normalShadow = defs.append('filter')
+      .attr('id', 'normalShadow')
+      .attr('height', '150%')
+      .attr('width', '150%');
+    normalShadow.append('feGaussianBlur')
+      .attr('in', 'SourceAlpha')
+      .attr('stdDeviation', '3');
+    normalShadow.append('feOffset')
+      .attr('dx', '0')
+      .attr('dy', '2')
+      .attr('result', 'offsetblur');
+    normalShadow.append('feComponentTransfer')
+      .append('feFuncA')
+      .attr('type', 'linear')
+      .attr('slope', '0.4');
+    const normalMerge = normalShadow.append('feMerge');
+    normalMerge.append('feMergeNode');
+    normalMerge.append('feMergeNode').attr('in', 'SourceGraphic');
+
+    // Hover glow filter
+    const hoverGlow = defs.append('filter')
+      .attr('id', 'hoverGlow')
+      .attr('height', '200%')
+      .attr('width', '200%')
+      .attr('x', '-50%')
+      .attr('y', '-50%');
+    hoverGlow.append('feGaussianBlur')
+      .attr('in', 'SourceAlpha')
+      .attr('stdDeviation', '8')
+      .attr('result', 'blur');
+    hoverGlow.append('feFlood')
+      .attr('flood-color', '#00ffff')
+      .attr('flood-opacity', '0.6');
+    hoverGlow.append('feComposite')
+      .attr('in2', 'blur')
+      .attr('operator', 'in')
+      .attr('result', 'glow');
+    const hoverMerge = hoverGlow.append('feMerge');
+    hoverMerge.append('feMergeNode').attr('in', 'glow');
+    hoverMerge.append('feMergeNode').attr('in', 'glow');
+    hoverMerge.append('feMergeNode').attr('in', 'SourceGraphic');
+
+    // Click glow filter
+    const clickGlow = defs.append('filter')
+      .attr('id', 'clickGlow')
+      .attr('height', '300%')
+      .attr('width', '300%')
+      .attr('x', '-100%')
+      .attr('y', '-100%');
+    clickGlow.append('feGaussianBlur')
+      .attr('in', 'SourceAlpha')
+      .attr('stdDeviation', '12')
+      .attr('result', 'blur');
+    clickGlow.append('feFlood')
+      .attr('flood-color', '#ffffff')
+      .attr('flood-opacity', '0.8');
+    clickGlow.append('feComposite')
+      .attr('in2', 'blur')
+      .attr('operator', 'in')
+      .attr('result', 'glow');
+    const clickMerge = clickGlow.append('feMerge');
+    clickMerge.append('feMergeNode').attr('in', 'glow');
+    clickMerge.append('feMergeNode').attr('in', 'glow');
+    clickMerge.append('feMergeNode').attr('in', 'glow');
+    clickMerge.append('feMergeNode').attr('in', 'SourceGraphic');
+
+    // Inner shadow filter
+    const innerShadow = defs.append('filter')
+      .attr('id', 'innerShadow');
+    innerShadow.append('feGaussianBlur')
+      .attr('in', 'SourceAlpha')
+      .attr('stdDeviation', '3')
+      .attr('result', 'blur');
+    innerShadow.append('feOffset')
+      .attr('in', 'blur')
+      .attr('dx', '0')
+      .attr('dy', '2')
+      .attr('result', 'offsetBlur');
+    innerShadow.append('feFlood')
+      .attr('flood-color', '#000000')
+      .attr('flood-opacity', '0.5')
+      .attr('result', 'color');
+    innerShadow.append('feComposite')
+      .attr('in', 'color')
+      .attr('in2', 'offsetBlur')
+      .attr('operator', 'in')
+      .attr('result', 'shadow');
+    innerShadow.append('feComposite')
+      .attr('in', 'shadow')
+      .attr('in2', 'SourceAlpha')
+      .attr('operator', 'in');
+    const innerMerge = innerShadow.append('feMerge');
+    innerMerge.append('feMergeNode');
+    innerMerge.append('feMergeNode').attr('in', 'SourceGraphic');
+
+    // Sparkles filter
+    const sparkles = defs.append('filter')
+      .attr('id', 'sparkles')
+      .attr('x', '-50%')
+      .attr('y', '-50%')
+      .attr('width', '200%')
+      .attr('height', '200%');
+    sparkles.append('feGaussianBlur')
+      .attr('in', 'SourceAlpha')
+      .attr('stdDeviation', '2')
+      .attr('result', 'blur');
+    sparkles.append('feSpecularLighting')
+      .attr('in', 'blur')
+      .attr('surfaceScale', '5')
+      .attr('specularConstant', '0.75')
+      .attr('specularExponent', '20')
+      .attr('lighting-color', '#ffffff')
+      .attr('result', 'spec')
+      .append('fePointLight')
+      .attr('x', '0')
+      .attr('y', '0')
+      .attr('z', '100');
+    sparkles.append('feComposite')
+      .attr('in', 'spec')
+      .attr('in2', 'SourceAlpha')
+      .attr('operator', 'in')
+      .attr('result', 'specOut');
+    const sparkleMerge = sparkles.append('feMerge');
+    sparkleMerge.append('feMergeNode').attr('in', 'SourceGraphic');
+    sparkleMerge.append('feMergeNode').attr('in', 'specOut');
+
+    // AI Glow filter for center logo
+    const aiGlow = defs.append('filter')
+      .attr('id', 'aiGlow')
+      .attr('x', '-50%')
+      .attr('y', '-50%')
+      .attr('width', '200%')
+      .attr('height', '200%');
+    aiGlow.append('feGaussianBlur')
+      .attr('stdDeviation', '4')
+      .attr('result', 'coloredBlur');
+    const aiMerge = aiGlow.append('feMerge');
+    aiMerge.append('feMergeNode').attr('in', 'coloredBlur');
+    aiMerge.append('feMergeNode').attr('in', 'SourceGraphic');
+
+    // ====== GRADIENTS ======
+
+    // Center gradient
     const centerGradient = defs.append('radialGradient')
       .attr('id', 'centerGradient');
     centerGradient.append('stop')
@@ -54,27 +211,32 @@ export default function RadialMenu() {
       .attr('offset', '100%')
       .attr('stop-color', '#1e293b');
 
-    const aiGradient = defs.append('linearGradient')
-      .attr('id', 'aiGradient')
-      .attr('x1', '0%')
-      .attr('y1', '0%')
-      .attr('x2', '200%')
-      .attr('y2', '0%');
-    aiGradient.append('stop')
-      .attr('offset', '0%')
-      .attr('stop-color', '#10b981');
-    aiGradient.append('stop')
-      .attr('offset', '25%')
-      .attr('stop-color', '#34d399');
-    aiGradient.append('stop')
-      .attr('offset', '50%')
-      .attr('stop-color', '#6ee7b7');
-    aiGradient.append('stop')
-      .attr('offset', '75%')
-      .attr('stop-color', '#34d399');
-    aiGradient.append('stop')
-      .attr('offset', '100%')
-      .attr('stop-color', '#10b981');
+    // Animated radial gradients for each wedge with wave effects
+    workflows.forEach((workflow, i) => {
+      const wedgeGradient = defs.append('radialGradient')
+        .attr('id', `wedgeGradient${i}`)
+        .attr('cx', '50%')
+        .attr('cy', '50%')
+        .attr('r', '50%');
+
+      wedgeGradient.append('stop')
+        .attr('offset', '0%')
+        .attr('stop-color', workflow.color)
+        .attr('stop-opacity', '1');
+
+      wedgeGradient.append('stop')
+        .attr('offset', '100%')
+        .attr('stop-color', workflow.color)
+        .attr('stop-opacity', '0.7');
+
+      // Animate the gradient
+      wedgeGradient.select('stop:first-child')
+        .append('animate')
+        .attr('attributeName', 'stop-opacity')
+        .attr('values', '1;0.8;1')
+        .attr('dur', '3s')
+        .attr('repeatCount', 'indefinite');
+    });
 
     const g = svg
       .attr('width', width)
@@ -82,21 +244,21 @@ export default function RadialMenu() {
       .append('g')
       .attr('transform', `translate(${width / 2}, ${height / 2})`);
 
-    const pie = d3.pie()
+    const pie = d3.pie<Workflow>()
       .value(1)
       .sort(null)
       .startAngle(-Math.PI / 2)
-      .padAngle(0.004);
+      .padAngle(0.008);
 
-    const arc = d3.arc()
+    const arc = d3.arc<d3.PieArcDatum<Workflow>>()
       .innerRadius(innerRadius)
       .outerRadius(outerRadius)
-      .cornerRadius(1);
+      .cornerRadius(3);
 
-    const hoverArc = d3.arc()
+    const hoverArc = d3.arc<d3.PieArcDatum<Workflow>>()
       .innerRadius(innerRadius)
-      .outerRadius(outerRadius + 5)
-      .cornerRadius(1);
+      .outerRadius(outerRadius + 12)
+      .cornerRadius(3);
 
     const segments = g.selectAll('.segment')
       .data(pie(workflows))
@@ -107,25 +269,40 @@ export default function RadialMenu() {
 
     segments.append('path')
       .attr('d', arc)
-      .attr('fill', d => d.data.color)
+      .attr('fill', (d, i) => `url(#wedgeGradient${i})`)
       .attr('stroke', '#000000')
-      .attr('stroke-width', 1.5)
-      .style('filter', 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4))')
+      .attr('stroke-width', 2)
+      .style('filter', 'url(#normalShadow)')
       .on('mouseenter', function(event, d) {
         d3.select(this)
           .transition()
-          .duration(100)
-          .attr('d', hoverArc);
+          .duration(150)
+          .attr('d', hoverArc)
+          .style('filter', 'url(#hoverGlow)');
         setHoveredWorkflow(d.data);
+        if (onWorkflowHover) onWorkflowHover(d.data);
       })
       .on('mouseleave', function() {
         d3.select(this)
           .transition()
-          .duration(100)
-          .attr('d', arc);
+          .duration(150)
+          .attr('d', arc)
+          .style('filter', 'url(#normalShadow)');
         setHoveredWorkflow(null);
+        if (onWorkflowHover) onWorkflowHover(null);
       })
-      .on('click', (event, d) => handleWorkflowClick(d.data.id));
+      .on('mousedown', function() {
+        d3.select(this)
+          .style('filter', 'url(#clickGlow)');
+      })
+      .on('mouseup', function() {
+        d3.select(this)
+          .style('filter', 'url(#hoverGlow)');
+      })
+      .on('click', (event, d) => {
+        console.log('RadialMenu: Workflow clicked:', d.data.id);
+        onWorkflowSelect(d.data.id);
+      });
 
     segments.append('text')
       .attr('transform', d => {
@@ -133,12 +310,14 @@ export default function RadialMenu() {
         return `translate(${x}, ${y})`;
       })
       .attr('text-anchor', 'middle')
-      .attr('font-size', '22px')
+      .attr('font-size', '24px')
       .attr('font-weight', '900')
       .attr('font-style', 'italic')
       .attr('fill', 'white')
-      .attr('letter-spacing', '1.5px')
-      .style('text-shadow', '0 3px 8px rgba(0, 0, 0, 0.9)')
+      .attr('letter-spacing', '2px')
+      .style('text-shadow', '0 4px 12px rgba(0, 0, 0, 0.9), 0 2px 4px rgba(0, 0, 0, 0.8)')
+      .style('pointer-events', 'none')
+      .style('filter', 'url(#sparkles)')
       .each(function(d) {
         const lines = d.data.name.split('\n');
         const text = d3.select(this);
@@ -146,144 +325,258 @@ export default function RadialMenu() {
         lines.forEach((line, i) => {
           text.append('tspan')
             .attr('x', 0)
-            .attr('dy', i === 0 ? '-0.4em' : '1.3em')
+            .attr('dy', i === 0 ? '-0.5em' : '1.4em')
             .text(line);
         });
       });
 
+    // ====== CENTER CIRCLE ======
     const centerGroup = g.append('g')
       .style('cursor', 'pointer')
-      .on('click', handleCenterClick);
+      .on('click', () => onWorkflowSelect(''));
 
     centerGroup.append('circle')
-      .attr('r', innerRadius - 10)
+      .attr('r', innerRadius - 15)
       .attr('fill', 'url(#centerGradient)')
       .attr('stroke', '#059669')
+      .attr('stroke-width', 3)
+      .style('filter', 'url(#innerShadow)');
+
+    // Animated ring around center
+    centerGroup.append('circle')
+      .attr('r', innerRadius - 15)
+      .attr('fill', 'none')
+      .attr('stroke', '#10b981')
       .attr('stroke-width', 2)
-      .style('filter', 'drop-shadow(0 0 15px rgba(5, 150, 105, 0.3))');
+      .attr('opacity', 0.3)
+      .append('animate')
+      .attr('attributeName', 'opacity')
+      .attr('values', '0.3;0.8;0.3')
+      .attr('dur', '2s')
+      .attr('repeatCount', 'indefinite');
 
-    const logoGroup = centerGroup.append('g')
-      .attr('transform', 'translate(0, -60)');
+    // ====== CENTER LOGO (PaiD) ======
+    // Note: Logo rendered as HTML overlay for CSS animation compatibility
 
-    logoGroup.append('text')
-      .attr('x', -50)
-      .attr('y', 0)
-      .attr('font-size', '36px')
-      .attr('font-weight', '900')
-      .attr('font-style', 'italic')
-      .attr('fill', '#047857')
-      .attr('letter-spacing', '10px')
-      .style('text-shadow', '0 0 10px rgba(5, 150, 105, 0.3)')
-      .text('P');
-
-    logoGroup.append('text')
-      .attr('x', -10)
-      .attr('y', 0)
-      .attr('font-size', '36px')
-      .attr('font-weight', '900')
-      .attr('font-style', 'italic')
-      .attr('fill', 'url(#aiGradient)')
-      .attr('letter-spacing', '10px')
-      .style('text-shadow', '0 0 20px rgba(16, 185, 129, 0.5)')
-      .style('filter', 'drop-shadow(0 0 15px rgba(52, 211, 153, 0.9))')
-      .text('ai');
-
-    logoGroup.append('text')
-      .attr('x', 30)
-      .attr('y', 0)
-      .attr('font-size', '36px')
-      .attr('font-weight', '900')
-      .attr('font-style', 'italic')
-      .attr('fill', '#34d399')
-      .attr('letter-spacing', '10px')
-      .style('text-shadow', '0 0 10px rgba(52, 211, 153, 0.3)')
-      .text('D');
-
+    // ====== MARKET DATA ======
     const nasdaq = centerGroup.append('g')
-      .attr('transform', 'translate(0, -10)');
+      .attr('transform', 'translate(0, -15)');
 
     nasdaq.append('text')
       .attr('text-anchor', 'middle')
-      .attr('font-size', '11px')
+      .attr('font-size', '12px')
       .attr('font-weight', '800')
       .attr('fill', '#cbd5e1')
-      .attr('letter-spacing', '2.5px')
+      .attr('letter-spacing', '3px')
+      .style('pointer-events', 'none')
       .text('NASDAQ');
 
     nasdaq.append('text')
       .attr('text-anchor', 'middle')
-      .attr('dy', '20')
-      .attr('font-size', '22px')
+      .attr('dy', '22')
+      .attr('font-size', '24px')
       .attr('font-weight', '900')
       .attr('fill', '#f1f5f9')
-      .style('text-shadow', '0 2px 4px rgba(0, 0, 0, 0.5)')
+      .style('text-shadow', '0 2px 6px rgba(0, 0, 0, 0.6)')
+      .style('pointer-events', 'none')
       .text(marketData.nasdaq.value.toLocaleString('en-US', { minimumFractionDigits: 2 }));
 
-    nasdaq.append('text')
+    const nasdaqChange = nasdaq.append('text')
       .attr('text-anchor', 'middle')
-      .attr('dy', '36')
-      .attr('font-size', '13px')
+      .attr('dy', '40')
+      .attr('font-size', '14px')
       .attr('font-weight', '800')
       .attr('fill', marketData.nasdaq.change >= 0 ? '#10b981' : '#ef4444')
-      .style('text-shadow', '0 0 8px ' + (marketData.nasdaq.change >= 0 ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)'))
+      .style('text-shadow', '0 0 10px ' + (marketData.nasdaq.change >= 0 ? 'rgba(16, 185, 129, 0.5)' : 'rgba(239, 68, 68, 0.5)'))
+      .style('pointer-events', 'none')
       .text(`${marketData.nasdaq.change >= 0 ? '▲' : '▼'} ${Math.abs(marketData.nasdaq.change)}%`);
 
+    // Animate market data
+    nasdaqChange
+      .transition()
+      .duration(1000)
+      .style('opacity', 0.7)
+      .transition()
+      .duration(1000)
+      .style('opacity', 1)
+      .on('end', function repeat() {
+        d3.select(this)
+          .transition()
+          .duration(1000)
+          .style('opacity', 0.7)
+          .transition()
+          .duration(1000)
+          .style('opacity', 1)
+          .on('end', repeat);
+      });
+
     const nyse = centerGroup.append('g')
-      .attr('transform', 'translate(0, 40)');
+      .attr('transform', 'translate(0, 45)');
 
     nyse.append('text')
       .attr('text-anchor', 'middle')
-      .attr('font-size', '11px')
+      .attr('font-size', '12px')
       .attr('font-weight', '800')
       .attr('fill', '#cbd5e1')
-      .attr('letter-spacing', '2.5px')
+      .attr('letter-spacing', '3px')
+      .style('pointer-events', 'none')
       .text('NYSE');
 
     nyse.append('text')
       .attr('text-anchor', 'middle')
-      .attr('dy', '20')
-      .attr('font-size', '22px')
+      .attr('dy', '22')
+      .attr('font-size', '24px')
       .attr('font-weight', '900')
       .attr('fill', '#f1f5f9')
-      .style('text-shadow', '0 2px 4px rgba(0, 0, 0, 0.5)')
+      .style('text-shadow', '0 2px 6px rgba(0, 0, 0, 0.6)')
+      .style('pointer-events', 'none')
       .text(marketData.nyse.value.toLocaleString('en-US', { minimumFractionDigits: 2 }));
 
-    nyse.append('text')
+    const nyseChange = nyse.append('text')
       .attr('text-anchor', 'middle')
-      .attr('dy', '36')
-      .attr('font-size', '13px')
+      .attr('dy', '40')
+      .attr('font-size', '14px')
       .attr('font-weight', '800')
       .attr('fill', marketData.nyse.change >= 0 ? '#10b981' : '#ef4444')
-      .style('text-shadow', '0 0 8px ' + (marketData.nyse.change >= 0 ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)'))
+      .style('text-shadow', '0 0 10px ' + (marketData.nyse.change >= 0 ? 'rgba(16, 185, 129, 0.5)' : 'rgba(239, 68, 68, 0.5)'))
+      .style('pointer-events', 'none')
       .text(`${marketData.nyse.change >= 0 ? '▲' : '▼'} ${Math.abs(marketData.nyse.change)}%`);
 
-  }, [marketData]);
+    // Animate market data
+    nyseChange
+      .transition()
+      .duration(1000)
+      .delay(500)
+      .style('opacity', 0.7)
+      .transition()
+      .duration(1000)
+      .style('opacity', 1)
+      .on('end', function repeat() {
+        d3.select(this)
+          .transition()
+          .duration(1000)
+          .style('opacity', 0.7)
+          .transition()
+          .duration(1000)
+          .style('opacity', 1)
+          .on('end', repeat);
+      });
+
+  }, []); // Empty array - only run once on mount to prevent infinite re-renders
+
+  // Separate effect for selectedWorkflow updates - only update selected wedge styling
+  useEffect(() => {
+    if (!svgRef.current || !selectedWorkflow) return;
+
+    // Update only the selected wedge styling without full re-render
+    d3.select(svgRef.current)
+      .selectAll('.segment path')
+      .style('filter', function(this: any, d: any) {
+        return d.data.id === selectedWorkflow ? 'url(#clickGlow)' : 'url(#normalShadow)';
+      });
+  }, [selectedWorkflow]);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-8">
-      <div className="mb-8 text-center">
-        <h1 className="text-9xl font-black mb-3 drop-shadow-2xl" style={{ fontStyle: 'italic' }}>
-          <span className="text-emerald-800" style={{ letterSpacing: '0.15em' }}>P</span>
-          <span className="inline-block text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-green-300 to-emerald-400 animate-pulse" style={{
-            letterSpacing: '0.12em',
-            filter: 'drop-shadow(0 0 30px rgba(16,185,129,0.5))'
-          }}>ai</span>
-          <span className="text-emerald-400" style={{ letterSpacing: '0.15em' }}>D</span>
-        </h1>
-        <p className="text-emerald-400 text-xl font-black tracking-[0.5em] uppercase drop-shadow-lg" style={{ fontStyle: 'italic' }}>
-          10-STAGE WORKFLOW
-        </p>
+    <div
+      ref={containerRef}
+      style={{
+        width: '100%',
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #0f1828 0%, #1a2a3f 100%)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '40px 20px',
+      }}
+    >
+      {/* Title Header */}
+      <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+        <div style={{ fontSize: '145px', fontWeight: '900', fontStyle: 'italic', lineHeight: '1', marginBottom: '10px' }}>
+          <span style={{ color: '#1a7560' }}>P</span>
+          <span style={{
+            fontFamily: 'Georgia, serif',
+            color: '#45f0c0',
+            textShadow: '0 0 20px #45f0c0, 0 0 40px #45f0c0',
+            animation: 'glow-a 3s ease-in-out infinite'
+          }}>a</span>
+          <span style={{
+            fontFamily: 'Georgia, serif',
+            color: '#58ffda',
+            textShadow: '0 0 25px #58ffda, 0 0 50px #58ffda',
+            animation: 'glow-i 3s ease-in-out infinite 0.75s'
+          }}>i</span>
+          <span style={{ color: '#0d5a4a' }}>D</span>
+        </div>
+        <div style={{
+          fontSize: '28px',
+          fontWeight: '600',
+          color: '#94a3b8',
+          letterSpacing: '4px',
+          textTransform: 'uppercase',
+          textShadow: '0 2px 10px rgba(0, 0, 0, 0.5)'
+        }}>
+          10 Stage Workflow
+        </div>
       </div>
 
-      <svg ref={svgRef} className="drop-shadow-2xl" />
+      {/* SVG Radial Menu */}
+      <div style={{ position: 'relative' }}>
+        <svg ref={svgRef} className="drop-shadow-2xl" />
 
-      {hoveredWorkflow && (
-        <div className="mt-10 backdrop-blur-xl bg-gradient-to-br from-slate-800/60 to-slate-900/60 rounded-2xl border-2 border-emerald-500/50 px-10 py-6 max-w-lg shadow-2xl">
-          <h3 className="text-3xl font-black text-white mb-2 tracking-wide" style={{ fontStyle: 'italic' }}>
-            {hoveredWorkflow.name.replace('\n', ' ')}
-          </h3>
+        {/* Center Logo Overlay - exact copy of top logo styling */}
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          pointerEvents: 'none',
+          marginTop: '-70px' // Adjust to position above market data
+        }}>
+          <div style={{
+            fontSize: '42px',
+            fontWeight: '900',
+            fontStyle: 'italic',
+            lineHeight: '1',
+            whiteSpace: 'nowrap'
+          }}>
+            <span style={{ color: '#1a7560' }}>P</span>
+            <span style={{
+              fontFamily: 'Georgia, serif',
+              color: '#45f0c0',
+              textShadow: '0 0 20px #45f0c0, 0 0 40px #45f0c0',
+              animation: 'glow-a 3s ease-in-out infinite'
+            }}>a</span>
+            <span style={{
+              fontFamily: 'Georgia, serif',
+              color: '#58ffda',
+              textShadow: '0 0 25px #58ffda, 0 0 50px #58ffda',
+              animation: 'glow-i 3s ease-in-out infinite 0.75s'
+            }}>i</span>
+            <span style={{ color: '#0d5a4a', marginLeft: '4px' }}>D</span>
+          </div>
         </div>
-      )}
+      </div>
+
+      {/* CSS Animations */}
+      <style jsx>{`
+        @keyframes glow-a {
+          0%, 100% {
+            text-shadow: 0 0 10px #45f0c0, 0 0 20px #45f0c0;
+          }
+          50% {
+            text-shadow: 0 0 25px #45f0c0, 0 0 50px #45f0c0, 0 0 75px #45f0c0;
+          }
+        }
+        @keyframes glow-i {
+          0%, 100% {
+            text-shadow: 0 0 12px #58ffda, 0 0 24px #58ffda;
+          }
+          50% {
+            text-shadow: 0 0 28px #58ffda, 0 0 56px #58ffda, 0 0 84px #58ffda;
+          }
+        }
+      `}</style>
     </div>
   );
 }

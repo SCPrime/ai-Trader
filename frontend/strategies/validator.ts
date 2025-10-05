@@ -626,8 +626,49 @@ function validateBusinessRules(
     }
   }
 
-  // Autopilot informational warnings (non-blocking)
+  // Environment-aware autopilot validation
   if (strategy.automation?.execution_mode === 'autopilot') {
+    const tradingMode = typeof window !== 'undefined'
+      ? localStorage.getItem('tradingMode') || 'paper'
+      : 'paper';
+
+    if (tradingMode === 'live') {
+      // Get trade history from localStorage
+      const history = JSON.parse(localStorage.getItem('tradeHistory') || '[]');
+      const strategyTrades = history.filter((t: any) => t.strategyId === strategy.strategy_id);
+
+      const daysSinceLaunch = strategyTrades.length > 0
+        ? (Date.now() - new Date(strategyTrades[0].timestamp).getTime()) / (1000 * 60 * 60 * 24)
+        : 0;
+
+      const winRate = strategyTrades.length > 0
+        ? strategyTrades.filter((t: any) => t.pnl > 0).length / strategyTrades.length
+        : 0;
+
+      if (daysSinceLaunch < 90) {
+        errors.push({
+          field: 'automation.execution_mode',
+          message: 'Autopilot requires 90+ days of trade history in live mode',
+          code: 'AUTOPILOT_INSUFFICIENT_HISTORY',
+        });
+      }
+
+      if (winRate < (strategy.automation.autopilot_if_win_rate_gt || 0.58)) {
+        errors.push({
+          field: 'automation.execution_mode',
+          message: `Win rate ${(winRate*100).toFixed(1)}% below required ${((strategy.automation.autopilot_if_win_rate_gt || 0.58)*100).toFixed(1)}%`,
+          code: 'AUTOPILOT_WIN_RATE_TOO_LOW',
+        });
+      }
+    } else {
+      // Paper mode: Allow but warn
+      warnings.push({
+        field: 'automation.execution_mode',
+        message: '⚠️ PAPER TRADING: Autopilot enabled for testing. This strategy will execute trades without approval.',
+        code: 'AUTOPILOT_PAPER_MODE',
+      });
+    }
+
     const hasGates =
       strategy.automation.autopilot_if_win_rate_gt !== undefined ||
       strategy.automation.autopilot_if_sharpe_gt !== undefined ||
@@ -638,13 +679,6 @@ function validateBusinessRules(
         field: 'automation',
         message: 'Consider setting performance thresholds (win rate, Sharpe, max DD) for autopilot mode',
         code: 'AUTOPILOT_NO_GATES',
-      });
-    } else {
-      // Informational: performance thresholds are set
-      warnings.push({
-        field: 'automation',
-        message: `Autopilot performance thresholds configured. Strategy will show performance tracking info based on trade history.`,
-        code: 'AUTOPILOT_INFO',
       });
     }
   }

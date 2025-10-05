@@ -710,31 +710,4 @@ export interface EquityPoint {
   drawdown_pct: number;
 }
 
-// ============================================================================
-// Export all types
-// ============================================================================
-
-export type {
-  Strategy,
-  Universe,
-  Entry,
-  Position,
-  Sizing,
-  Exits,
-  Risk,
-  Automation,
-  UserOverrides,
-  BrokerRouting,
-  PortfolioPolicy,
-  Proposal,
-  Order,
-  Execution,
-  PositionRecord,
-  RiskEvent,
-  Report,
-  NewsArticle,
-  Target,
-  Notification,
-  ValidationResult,
-  BacktestResult,
-};
+// All types are already exported above with export interface/export type

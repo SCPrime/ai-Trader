@@ -543,7 +543,7 @@ Proposal system coming in INCREMENT 9`);
       });
 
       const candlestickData: CandlestickData[] = historicalData.map(bar => ({
-        time: new Date(bar.time).getTime() / 1000,
+        time: new Date(bar.time).getTime() / 1000 as any,
         open: bar.open,
         high: bar.high,
         low: bar.low,
@@ -558,7 +558,7 @@ Proposal system coming in INCREMENT 9`);
       });
 
       const lineData: LineData[] = historicalData.map(bar => ({
-        time: new Date(bar.time).getTime() / 1000,
+        time: new Date(bar.time).getTime() / 1000 as any,
         value: bar.close,
       }));
 
@@ -573,7 +573,7 @@ Proposal system coming in INCREMENT 9`);
       });
 
       const areaData: LineData[] = historicalData.map(bar => ({
-        time: new Date(bar.time).getTime() / 1000,
+        time: new Date(bar.time).getTime() / 1000 as any,
         value: bar.close,
       }));
 
@@ -607,7 +607,7 @@ Proposal system coming in INCREMENT 9`);
       });
       series.setData(
         calculatedIndicators.sma20.map((point: any) => ({
-          time: new Date(point.time).getTime() / 1000,
+          time: new Date(point.time).getTime() / 1000 as any,
           value: point.value,
         }))
       );
@@ -622,7 +622,7 @@ Proposal system coming in INCREMENT 9`);
       });
       series.setData(
         calculatedIndicators.sma50.map((point: any) => ({
-          time: new Date(point.time).getTime() / 1000,
+          time: new Date(point.time).getTime() / 1000 as any,
           value: point.value,
         }))
       );
@@ -637,7 +637,7 @@ Proposal system coming in INCREMENT 9`);
       });
       series.setData(
         calculatedIndicators.sma200.map((point: any) => ({
-          time: new Date(point.time).getTime() / 1000,
+          time: new Date(point.time).getTime() / 1000 as any,
           value: point.value,
         }))
       );
@@ -655,7 +655,7 @@ Proposal system coming in INCREMENT 9`);
       });
       upperSeries.setData(
         upper.map((point: any) => ({
-          time: new Date(point.time).getTime() / 1000,
+          time: new Date(point.time).getTime() / 1000 as any,
           value: point.value,
         }))
       );
@@ -667,7 +667,7 @@ Proposal system coming in INCREMENT 9`);
       });
       middleSeries.setData(
         middle.map((point: any) => ({
-          time: new Date(point.time).getTime() / 1000,
+          time: new Date(point.time).getTime() / 1000 as any,
           value: point.value,
         }))
       );
@@ -679,7 +679,7 @@ Proposal system coming in INCREMENT 9`);
       });
       lowerSeries.setData(
         lower.map((point: any) => ({
-          time: new Date(point.time).getTime() / 1000,
+          time: new Date(point.time).getTime() / 1000 as any,
           value: point.value,
         }))
       );
@@ -700,7 +700,7 @@ Proposal system coming in INCREMENT 9`);
       });
       tenkanSeries.setData(
         tenkan.map((point: any) => ({
-          time: new Date(point.time).getTime() / 1000,
+          time: new Date(point.time).getTime() / 1000 as any,
           value: point.value,
         }))
       );
@@ -712,7 +712,7 @@ Proposal system coming in INCREMENT 9`);
       });
       kijunSeries.setData(
         kijun.map((point: any) => ({
-          time: new Date(point.time).getTime() / 1000,
+          time: new Date(point.time).getTime() / 1000 as any,
           value: point.value,
         }))
       );
@@ -724,7 +724,7 @@ Proposal system coming in INCREMENT 9`);
       });
       senkouASeries.setData(
         senkouA.map((point: any) => ({
-          time: new Date(point.time).getTime() / 1000,
+          time: new Date(point.time).getTime() / 1000 as any,
           value: point.value,
         }))
       );
@@ -736,7 +736,7 @@ Proposal system coming in INCREMENT 9`);
       });
       senkouBSeries.setData(
         senkouB.map((point: any) => ({
-          time: new Date(point.time).getTime() / 1000,
+          time: new Date(point.time).getTime() / 1000 as any,
           value: point.value,
         }))
       );
@@ -748,7 +748,7 @@ Proposal system coming in INCREMENT 9`);
       });
       chikouSeries.setData(
         chikou.map((point: any) => ({
-          time: new Date(point.time).getTime() / 1000,
+          time: new Date(point.time).getTime() / 1000 as any,
           value: point.value,
         }))
       );
@@ -803,7 +803,7 @@ Proposal system coming in INCREMENT 9`);
       });
       macdSeries.setData(
         macd.map((point: any) => ({
-          time: new Date(point.time).getTime() / 1000,
+          time: new Date(point.time).getTime() / 1000 as any,
           value: point.value,
         }))
       );
@@ -816,7 +816,7 @@ Proposal system coming in INCREMENT 9`);
       });
       signalSeries.setData(
         signal.map((point: any) => ({
-          time: new Date(point.time).getTime() / 1000,
+          time: new Date(point.time).getTime() / 1000 as any,
           value: point.value,
         }))
       );
@@ -832,7 +832,7 @@ Proposal system coming in INCREMENT 9`);
       });
       histogramSeries.setData(
         histogram.map((point: any) => ({
-          time: new Date(point.time).getTime() / 1000,
+          time: new Date(point.time).getTime() / 1000 as any,
           value: point.value,
           color: point.value >= 0 ? '#10b981' : '#ef4444',
         }))
@@ -890,7 +890,7 @@ Proposal system coming in INCREMENT 9`);
       });
 
       const volumeData: HistogramData[] = historicalData.map(bar => ({
-        time: new Date(bar.time).getTime() / 1000,
+        time: new Date(bar.time).getTime() / 1000 as any,
         value: bar.volume,
         color: bar.close >= bar.open ? '#10b981' : '#ef4444',
       }));
