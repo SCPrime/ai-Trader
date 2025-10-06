@@ -4,7 +4,8 @@ import RadialMenu, { workflows, Workflow } from '../components/RadialMenu';
 import PositionsTable from '../components/PositionsTable';
 import MorningRoutine from '../components/MorningRoutine';
 import ExecuteTradeForm from '../components/ExecuteTradeForm';
-import ResearchDashboard from '../components/trading/ResearchDashboard';
+import ResearchDashboardSimple from '../components/ResearchDashboardSimple';
+import AIRecommendations from '../components/AIRecommendations';
 import ProposalReview from '../components/trading/ProposalReview';
 import Settings from '../components/Settings';
 import UserSetup from '../components/UserSetup';
@@ -67,10 +68,10 @@ export default function Dashboard() {
           return <ExecuteTradeForm />;
 
         case 'research':
-          return <ResearchDashboard />;
+          return <ResearchDashboardSimple />;
 
         case 'proposals':
-          return <ProposalReview />;
+          return <AIRecommendations />;
 
         case 'settings':
           setShowSettings(true);
@@ -232,153 +233,33 @@ export default function Dashboard() {
   };
 
   return (
-    <div style={{
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-      color: '#e2e8f0',
-      minHeight: '100vh',
-      height: '100vh',
-      margin: 0,
-      padding: 0,
-      overflow: 'hidden',
-      background: 'linear-gradient(135deg, #0f1828 0%, #1a2a3f 100%)'
-    }}>
+    <>
       {!selectedWorkflow ? (
-        // Full View - No workflow selected
+        // Full screen view when no workflow selected
         <div style={{
+          width: '100vw',
+          height: '100vh',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          minHeight: '100vh'
+          justifyContent: 'flex-start',
+          background: 'linear-gradient(135deg, #0f1828 0%, #1a2a3f 100%)',
+          overflow: 'hidden',
+          padding: 0,
+          margin: 0,
+          position: 'relative'
         }}>
-          <RadialMenu
-            onWorkflowSelect={setSelectedWorkflow}
-            onWorkflowHover={setHoveredWorkflow}
-          />
-
-          {/* Info Panel */}
+          {/* Radial Menu Container - centered and scaled to fit */}
           <div style={{
-            background: 'rgba(30, 41, 59, 0.8)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            borderRadius: '16px',
-            padding: '24px',
-            marginTop: '30px',
-            width: '100%',
-            maxWidth: '600px',
-            animation: 'fadeIn 1s ease-out'
-          }}>
-            <h3 style={{
-              color: '#00ACC1',
-              fontSize: '1.25rem',
-              margin: 0,
-              marginBottom: '12px'
-            }}>
-              <span style={{
-                display: 'inline-block',
-                width: '12px',
-                height: '12px',
-                borderRadius: '50%',
-                background: '#00C851',
-                marginRight: '8px',
-                animation: 'pulse 2s infinite'
-              }} />
-              System Status
-            </h3>
-            <p style={{
-              color: '#94a3b8',
-              lineHeight: 1.6,
-              margin: 0,
-              marginBottom: '8px'
-            }}>
-              Click any segment to explore workflow stages
-            </p>
-            <p style={{
-              color: '#94a3b8',
-              lineHeight: 1.6,
-              margin: 0
-            }}>
-              Hover for descriptions • Click for details
-            </p>
-          </div>
-
-          {/* Keyboard Hints */}
-          <div style={{
-            marginTop: '20px',
-            padding: '16px',
-            background: 'rgba(30, 41, 59, 0.6)',
-            borderRadius: '12px',
-            fontSize: '0.875rem',
-            color: '#94a3b8',
-            width: '100%',
-            maxWidth: '600px'
-          }}>
-            <strong>Keyboard Navigation:</strong>
-            {' '}
-            <kbd style={{
-              background: 'rgba(255, 255, 255, 0.1)',
-              padding: '2px 8px',
-              borderRadius: '4px',
-              fontFamily: 'monospace',
-              color: '#e2e8f0'
-            }}>Tab</kbd>
-            {' '}to focus • {' '}
-            <kbd style={{
-              background: 'rgba(255, 255, 255, 0.1)',
-              padding: '2px 8px',
-              borderRadius: '4px',
-              fontFamily: 'monospace',
-              color: '#e2e8f0'
-            }}>Enter</kbd>
-            {' '}to select • {' '}
-            <kbd style={{
-              background: 'rgba(255, 255, 255, 0.1)',
-              padding: '2px 8px',
-              borderRadius: '4px',
-              fontFamily: 'monospace',
-              color: '#e2e8f0'
-            }}>→</kbd>
-            {' '}
-            <kbd style={{
-              background: 'rgba(255, 255, 255, 0.1)',
-              padding: '2px 8px',
-              borderRadius: '4px',
-              fontFamily: 'monospace',
-              color: '#e2e8f0'
-            }}>←</kbd>
-            {' '}to rotate
-          </div>
-        </div>
-      ) : (
-        // Split View - Workflow selected with resizable divider
-        <Split
-          sizes={[50, 50]}
-          minSize={[300, 400]}
-          gutterSize={1}
-          gutterStyle={() => ({
-            backgroundColor: '#10b981',
-            cursor: 'col-resize',
-            border: 'none'
-          })}
-          className="split-container"
-          style={{
-            display: 'flex',
-            height: '100vh',
-            width: '100vw',
-            margin: 0,
-            padding: 0
-          }}
-        >
-          {/* Left Panel - Radial Menu */}
-          <div className="left-panel" style={{
-            width: '100%',
-            height: '100vh',
+            flex: 1,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            overflow: 'auto',
-            background: 'linear-gradient(135deg, #0f1828 0%, #1a2a3f 100%)',
-            margin: 0,
-            padding: 0
+            width: '100%',
+            maxHeight: 'calc(100vh - 100px)',
+            overflow: 'hidden',
+            paddingTop: '20px',
+            paddingBottom: '20px'
           }}>
             <div style={{
               transform: 'scale(0.65)',
@@ -387,24 +268,146 @@ export default function Dashboard() {
               <RadialMenu
                 onWorkflowSelect={setSelectedWorkflow}
                 onWorkflowHover={setHoveredWorkflow}
-                selectedWorkflow={selectedWorkflow}
               />
             </div>
           </div>
 
-          {/* Right Panel - Workflow Content */}
-          <div className="right-panel" style={{
-            flex: 1,
-            height: '100vh',
-            overflow: 'auto',
-            background: 'linear-gradient(135deg, #0f1828 0%, #1a2a3f 100%)',
-            margin: 0,
-            padding: '20px',
-            animation: 'slideInRight 0.3s ease-out'
+          {/* Bottom Info Bar - absolute positioned */}
+          <div style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            background: 'rgba(15, 24, 40, 0.95)',
+            backdropFilter: 'blur(10px)',
+            borderTop: '1px solid rgba(16, 185, 129, 0.2)',
+            padding: '16px 24px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            zIndex: 10
           }}>
-            {renderWorkflowContent()}
+            {/* System Status */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              color: '#10b981',
+              fontSize: '14px'
+            }}>
+              <span style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                background: '#10b981',
+                display: 'inline-block',
+                animation: 'pulse 2s infinite'
+              }} />
+              System Ready
+            </div>
+
+            {/* Keyboard Hints */}
+            <div style={{
+              fontSize: '0.875rem',
+              color: '#94a3b8',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}>
+              <span>
+                <kbd style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  padding: '2px 8px',
+                  borderRadius: '4px',
+                  fontFamily: 'monospace',
+                  color: '#e2e8f0',
+                  marginRight: '4px'
+                }}>Tab</kbd>
+                focus
+              </span>
+              <span>
+                <kbd style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  padding: '2px 8px',
+                  borderRadius: '4px',
+                  fontFamily: 'monospace',
+                  color: '#e2e8f0',
+                  marginRight: '4px'
+                }}>Enter</kbd>
+                select
+              </span>
+              <span>
+                <kbd style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  padding: '2px 8px',
+                  borderRadius: '4px',
+                  fontFamily: 'monospace',
+                  color: '#e2e8f0',
+                  marginRight: '4px'
+                }}>← →</kbd>
+                rotate
+              </span>
+            </div>
+
+            {/* Hover Description */}
+            <div style={{
+              color: '#cbd5e1',
+              fontSize: '14px',
+              fontStyle: 'italic',
+              maxWidth: '300px',
+              textAlign: 'right'
+            }}>
+              {hoveredWorkflow ? hoveredWorkflow.description : 'Hover over segments for details'}
+            </div>
           </div>
-        </Split>
+        </div>
+      ) : (
+        // Split view when workflow selected
+        <Split
+        sizes={[40, 60]}
+        minSize={[350, 400]}
+        expandToMin={false}
+        gutterSize={1}
+        gutterAlign="center"
+        snapOffset={30}
+        dragInterval={1}
+        direction="horizontal"
+        cursor="col-resize"
+        className="split"
+      >
+        {/* Left panel - radial menu */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+          height: '100vh',
+          background: 'linear-gradient(135deg, #0f1828 0%, #1a2a3f 100%)',
+        }}>
+          <div style={{
+            transform: 'scale(0.5)',
+            transformOrigin: 'center center'
+          }}>
+            <RadialMenu
+              onWorkflowSelect={setSelectedWorkflow}
+              onWorkflowHover={setHoveredWorkflow}
+              selectedWorkflow={selectedWorkflow}
+              compact={true}
+            />
+          </div>
+        </div>
+
+        {/* Right panel - workflow content */}
+        <div style={{
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          height: '100vh',
+          background: 'linear-gradient(135deg, #0f1828 0%, #1a2a3f 100%)',
+          padding: '20px',
+        }}>
+          {renderWorkflowContent()}
+        </div>
+      </Split>
       )}
 
       {/* Animations */}
@@ -489,6 +492,6 @@ export default function Dashboard() {
 
       {/* Settings Modal */}
       <Settings isOpen={showSettings} onClose={() => setShowSettings(false)} />
-    </div>
+    </>
   );
 }

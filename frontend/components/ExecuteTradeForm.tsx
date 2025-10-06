@@ -1,5 +1,7 @@
 "use client";
 import { useState } from "react";
+import { Card, Input, Select, Button } from "./ui";
+import { theme } from "../styles/theme";
 
 interface Order {
   symbol: string;
@@ -72,7 +74,7 @@ export default function ExecuteTradeForm() {
     };
 
     try {
-      const res = await fetch("/api/proxy/api/trading/execute", {
+      const res = await fetch("/api/proxy/trading/execute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -119,7 +121,7 @@ export default function ExecuteTradeForm() {
     };
 
     try {
-      const res = await fetch("/api/proxy/api/trading/execute", {
+      const res = await fetch("/api/proxy/trading/execute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -138,130 +140,73 @@ export default function ExecuteTradeForm() {
     }
   };
 
-  const inputStyle: React.CSSProperties = {
-    padding: "10px 12px",
-    fontSize: "14px",
-    border: "1px solid #d1d5db",
-    borderRadius: "6px",
-    width: "100%",
-    fontFamily: "system-ui, sans-serif",
-  };
-
-  const labelStyle: React.CSSProperties = {
-    display: "block",
-    marginBottom: "6px",
-    fontSize: "13px",
-    fontWeight: "600",
-    color: "#374151",
-  };
-
-  const buttonStyle: React.CSSProperties = {
-    padding: "12px 24px",
-    fontSize: "14px",
-    fontWeight: "600",
-    border: "none",
-    borderRadius: "6px",
-    cursor: loading ? "not-allowed" : "pointer",
-    transition: "all 0.2s",
-  };
-
-  const primaryButtonStyle: React.CSSProperties = {
-    ...buttonStyle,
-    backgroundColor: loading ? "#9ca3af" : "#3b82f6",
-    color: "white",
-  };
-
-  const secondaryButtonStyle: React.CSSProperties = {
-    ...buttonStyle,
-    backgroundColor: loading ? "#f3f4f6" : "#e5e7eb",
-    color: loading ? "#9ca3af" : "#374151",
-  };
-
   return (
-    <div
-      style={{
-        backgroundColor: "white",
-        padding: "24px",
-        borderRadius: "12px",
-        border: "1px solid #e5e7eb",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-      }}
-    >
-      <h2 style={{ marginTop: 0, marginBottom: "20px", fontSize: "20px", color: "#111827" }}>
-        Execute Trade (Dry-Run)
+    <Card glow="green">
+      <h2 style={{
+        marginTop: 0,
+        marginBottom: theme.spacing.lg,
+        fontSize: '24px',
+        color: theme.colors.primary,
+        textShadow: theme.glow.green
+      }}>
+        ⚡ Execute Trade
       </h2>
 
       <form onSubmit={handleSubmit}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-          {/* Symbol */}
-          <div>
-            <label style={labelStyle}>Symbol</label>
-            <input
-              type="text"
-              value={symbol}
-              onChange={(e) => setSymbol(e.target.value)}
-              placeholder="SPY, AAPL, QQQ..."
-              style={inputStyle}
-              disabled={loading}
-              required
-            />
-          </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: theme.spacing.md }}>
+          <Input
+            label="Symbol"
+            type="text"
+            value={symbol}
+            onChange={(e) => setSymbol(e.target.value)}
+            placeholder="SPY, AAPL, QQQ..."
+            disabled={loading}
+            required
+          />
 
-          {/* Side */}
-          <div>
-            <label style={labelStyle}>Side</label>
-            <select
-              value={side}
-              onChange={(e) => setSide(e.target.value as "buy" | "sell")}
-              style={inputStyle}
-              disabled={loading}
-            >
-              <option value="buy">Buy</option>
-              <option value="sell">Sell</option>
-            </select>
-          </div>
+          <Select
+            label="Side"
+            value={side}
+            onChange={(e) => setSide(e.target.value as "buy" | "sell")}
+            options={[
+              { value: "buy", label: "Buy" },
+              { value: "sell", label: "Sell" },
+            ]}
+            disabled={loading}
+          />
 
-          {/* Quantity */}
-          <div>
-            <label style={labelStyle}>Quantity</label>
-            <input
-              type="number"
-              value={qty}
-              onChange={(e) => setQty(parseInt(e.target.value) || 0)}
-              min="1"
-              step="1"
-              style={inputStyle}
-              disabled={loading}
-              required
-            />
-          </div>
+          <Input
+            label="Quantity"
+            type="number"
+            value={qty}
+            onChange={(e) => setQty(parseInt(e.target.value) || 0)}
+            min="1"
+            step="1"
+            disabled={loading}
+            required
+          />
 
-          {/* Order Type */}
-          <div>
-            <label style={labelStyle}>Order Type</label>
-            <select
-              value={orderType}
-              onChange={(e) => setOrderType(e.target.value as "market" | "limit")}
-              style={inputStyle}
-              disabled={loading}
-            >
-              <option value="market">Market</option>
-              <option value="limit">Limit</option>
-            </select>
-          </div>
+          <Select
+            label="Order Type"
+            value={orderType}
+            onChange={(e) => setOrderType(e.target.value as "market" | "limit")}
+            options={[
+              { value: "market", label: "Market" },
+              { value: "limit", label: "Limit" },
+            ]}
+            disabled={loading}
+          />
 
-          {/* Limit Price (conditional) */}
           {orderType === "limit" && (
             <div style={{ gridColumn: "1 / -1" }}>
-              <label style={labelStyle}>Limit Price</label>
-              <input
+              <Input
+                label="Limit Price"
                 type="number"
                 value={limitPrice}
                 onChange={(e) => setLimitPrice(e.target.value)}
                 min="0.01"
                 step="0.01"
                 placeholder="0.00"
-                style={inputStyle}
                 disabled={loading}
                 required
               />
@@ -269,36 +214,33 @@ export default function ExecuteTradeForm() {
           )}
         </div>
 
-        {/* Action Buttons */}
-        <div style={{ display: "flex", gap: "12px", marginTop: "20px" }}>
-          <button type="submit" style={primaryButtonStyle} disabled={loading}>
-            {loading ? "Submitting..." : "Submit Order (Dry-Run)"}
-          </button>
+        <div style={{ display: "flex", gap: theme.spacing.md, marginTop: theme.spacing.lg }}>
+          <Button type="submit" loading={loading} variant="primary">
+            Submit Order (Dry-Run)
+          </Button>
 
           {lastRequestId && (
-            <button
+            <Button
               type="button"
               onClick={testDuplicate}
-              style={secondaryButtonStyle}
-              disabled={loading}
-              title="Re-send with same requestId to test duplicate detection"
+              loading={loading}
+              variant="secondary"
             >
               Test Duplicate
-            </button>
+            </Button>
           )}
         </div>
       </form>
 
-      {/* Last Request ID */}
       {lastRequestId && (
         <div
           style={{
-            marginTop: "16px",
-            padding: "10px 12px",
-            backgroundColor: "#f3f4f6",
-            borderRadius: "6px",
-            fontSize: "12px",
-            color: "#6b7280",
+            marginTop: theme.spacing.md,
+            padding: theme.spacing.md,
+            background: theme.background.input,
+            borderRadius: theme.borderRadius.sm,
+            fontSize: '12px',
+            color: theme.colors.textMuted,
             fontFamily: "monospace",
           }}
         >
@@ -306,27 +248,28 @@ export default function ExecuteTradeForm() {
         </div>
       )}
 
-      {/* Response Display */}
       {response && (
         <div
           style={{
-            marginTop: "20px",
-            padding: "16px",
-            backgroundColor: response.duplicate ? "#fef3c7" : "#d1fae5",
-            border: `1px solid ${response.duplicate ? "#fbbf24" : "#10b981"}`,
-            borderRadius: "8px",
+            marginTop: theme.spacing.lg,
+            padding: theme.spacing.md,
+            background: response.duplicate ? 'rgba(255, 136, 0, 0.2)' : 'rgba(16, 185, 129, 0.2)',
+            border: `1px solid ${response.duplicate ? theme.colors.warning : theme.colors.primary}`,
+            borderRadius: theme.borderRadius.md,
+            boxShadow: response.duplicate ? theme.glow.orange : theme.glow.green,
           }}
         >
-          <div style={{ fontSize: "14px", fontWeight: "600", marginBottom: "8px" }}>
+          <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: theme.spacing.sm, color: theme.colors.text }}>
             {response.duplicate ? "⚠️ Duplicate Detected" : "✅ Order Accepted"}
           </div>
           <pre
             style={{
-              fontSize: "12px",
-              fontFamily: "monospace",
+              fontSize: '12px',
+              fontFamily: 'monospace',
               margin: 0,
-              whiteSpace: "pre-wrap",
-              wordBreak: "break-word",
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              color: theme.colors.textMuted,
             }}
           >
             {JSON.stringify(response, null, 2)}
@@ -334,23 +277,23 @@ export default function ExecuteTradeForm() {
         </div>
       )}
 
-      {/* Error Display */}
       {error && (
         <div
           style={{
-            marginTop: "20px",
-            padding: "16px",
-            backgroundColor: "#fee2e2",
-            border: "1px solid #ef4444",
-            borderRadius: "8px",
-            color: "#991b1b",
-            fontSize: "14px",
-            fontWeight: "500",
+            marginTop: theme.spacing.lg,
+            padding: theme.spacing.md,
+            background: 'rgba(255, 68, 68, 0.2)',
+            border: `1px solid ${theme.colors.danger}`,
+            borderRadius: theme.borderRadius.md,
+            color: theme.colors.text,
+            fontSize: '14px',
+            fontWeight: '500',
+            boxShadow: theme.glow.red,
           }}
         >
           ❌ {error}
         </div>
       )}
-    </div>
+    </Card>
   );
 }

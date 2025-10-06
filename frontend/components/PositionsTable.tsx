@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Card, Button } from "./ui";
+import { theme } from "../styles/theme";
 
 interface Position {
   symbol: string;
@@ -80,127 +82,324 @@ export default function PositionsTable() {
   const totalPnLPercent = totalCostBasis > 0 ? (totalUnrealizedPnL / totalCostBasis) * 100 : 0;
 
   return (
-    <div style={styles.card}>
+    <div style={{ padding: theme.spacing.lg }}>
       {/* Header */}
-      <div style={styles.header}>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: theme.spacing.lg
+      }}>
         <div>
-          <h3 style={styles.title}>📊 Active Positions</h3>
-          <p style={styles.subtitle}>
-            {positions.length} position{positions.length !== 1 ? 's' : ''} •
-            Total Value: ${totalMarketValue.toFixed(2)}
+          <h2 style={{
+            margin: 0,
+            fontSize: '28px',
+            fontWeight: '700',
+            color: theme.colors.text,
+            textShadow: theme.glow.green,
+            marginBottom: theme.spacing.xs
+          }}>
+            📊 Active Positions
+          </h2>
+          <p style={{
+            margin: 0,
+            fontSize: '14px',
+            color: theme.colors.textMuted
+          }}>
+            {positions.length} position{positions.length !== 1 ? 's' : ''} • Total Value: ${totalMarketValue.toFixed(2)}
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          {lastRefreshed && <span style={styles.muted}>Refreshed {lastRefreshed}</span>}
-          <button onClick={load} disabled={loading} style={styles.btnPrimary}>
-            {loading ? '⏳ Loading...' : '🔄 Refresh'}
-          </button>
+        <div style={{ display: 'flex', gap: theme.spacing.md, alignItems: 'center' }}>
+          {lastRefreshed && (
+            <span style={{ color: theme.colors.textMuted, fontSize: '13px' }}>
+              Refreshed {lastRefreshed}
+            </span>
+          )}
+          <Button onClick={load} loading={loading} variant="primary">
+            🔄 Refresh
+          </Button>
         </div>
       </div>
 
       {/* Summary Cards */}
-      <div style={styles.summaryGrid}>
-        <div style={styles.summaryCard}>
-          <div style={styles.summaryLabel}>Total P&L</div>
-          <div style={{...styles.summaryValue, color: totalUnrealizedPnL >= 0 ? '#10b981' : '#ef4444'}}>
-            {totalUnrealizedPnL >= 0 ? '+' : ''}${totalUnrealizedPnL.toFixed(2)}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: theme.spacing.md,
+        marginBottom: theme.spacing.lg
+      }}>
+        <Card>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{
+              fontSize: '12px',
+              color: theme.colors.textMuted,
+              marginBottom: theme.spacing.sm,
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              fontWeight: '600'
+            }}>
+              Total P&L
+            </div>
+            <div style={{
+              fontSize: '24px',
+              fontWeight: '700',
+              color: totalUnrealizedPnL >= 0 ? theme.colors.primary : theme.colors.danger,
+              marginBottom: theme.spacing.xs
+            }}>
+              {totalUnrealizedPnL >= 0 ? '+' : ''}${totalUnrealizedPnL.toFixed(2)}
+            </div>
+            <div style={{
+              fontSize: '14px',
+              fontWeight: '600',
+              color: totalUnrealizedPnL >= 0 ? theme.colors.primary : theme.colors.danger
+            }}>
+              {totalPnLPercent >= 0 ? '+' : ''}{totalPnLPercent.toFixed(2)}%
+            </div>
           </div>
-          <div style={{...styles.summaryPercent, color: totalUnrealizedPnL >= 0 ? '#10b981' : '#ef4444'}}>
-            {totalPnLPercent >= 0 ? '+' : ''}{totalPnLPercent.toFixed(2)}%
+        </Card>
+
+        <Card>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{
+              fontSize: '12px',
+              color: theme.colors.textMuted,
+              marginBottom: theme.spacing.sm,
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              fontWeight: '600'
+            }}>
+              Cost Basis
+            </div>
+            <div style={{
+              fontSize: '24px',
+              fontWeight: '700',
+              color: theme.colors.text
+            }}>
+              ${totalCostBasis.toFixed(2)}
+            </div>
           </div>
-        </div>
-        <div style={styles.summaryCard}>
-          <div style={styles.summaryLabel}>Cost Basis</div>
-          <div style={styles.summaryValue}>${totalCostBasis.toFixed(2)}</div>
-        </div>
-        <div style={styles.summaryCard}>
-          <div style={styles.summaryLabel}>Market Value</div>
-          <div style={styles.summaryValue}>${totalMarketValue.toFixed(2)}</div>
-        </div>
+        </Card>
+
+        <Card>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{
+              fontSize: '12px',
+              color: theme.colors.textMuted,
+              marginBottom: theme.spacing.sm,
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              fontWeight: '600'
+            }}>
+              Market Value
+            </div>
+            <div style={{
+              fontSize: '24px',
+              fontWeight: '700',
+              color: theme.colors.text
+            }}>
+              ${totalMarketValue.toFixed(2)}
+            </div>
+          </div>
+        </Card>
       </div>
 
       {/* Error */}
-      {error && <div style={styles.errorBox}>❌ {error}</div>}
+      {error && (
+        <div style={{
+          padding: theme.spacing.md,
+          background: 'rgba(255, 68, 68, 0.2)',
+          border: `1px solid ${theme.colors.danger}`,
+          borderRadius: theme.borderRadius.md,
+          color: theme.colors.text,
+          marginBottom: theme.spacing.lg,
+          boxShadow: theme.glow.red
+        }}>
+          ❌ {error}
+        </div>
+      )}
 
       {/* Empty State */}
       {!error && positions.length === 0 && !loading && (
-        <div style={styles.emptyState}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>📭</div>
-          <div style={styles.emptyTitle}>No Positions</div>
-          <div style={styles.emptyText}>You don't have any open positions yet.</div>
-        </div>
+        <Card>
+          <div style={{ padding: theme.spacing.xl, textAlign: 'center' }}>
+            <div style={{ fontSize: '48px', marginBottom: theme.spacing.md }}>📭</div>
+            <div style={{
+              fontSize: '20px',
+              fontWeight: '600',
+              color: theme.colors.text,
+              marginBottom: theme.spacing.sm
+            }}>
+              No Positions
+            </div>
+            <div style={{ fontSize: '14px', color: theme.colors.textMuted }}>
+              You don't have any open positions yet.
+            </div>
+          </div>
+        </Card>
       )}
 
       {/* Table */}
       {!error && positions.length > 0 && (
-        <div style={{ overflowX: "auto" }}>
-          <table style={styles.table}>
-            <thead>
-              <tr>
-                <th style={styles.th}>Symbol</th>
-                <th style={{...styles.th, textAlign: 'right'}}>Quantity</th>
-                <th style={{...styles.th, textAlign: 'right'}}>Avg Price</th>
-                <th style={{...styles.th, textAlign: 'right'}}>Current Price</th>
-                <th style={{...styles.th, textAlign: 'right'}}>Market Value</th>
-                <th style={{...styles.th, textAlign: 'right'}}>Unrealized P&L</th>
-                <th style={{...styles.th, textAlign: 'right'}}>P&L %</th>
-              </tr>
-            </thead>
-            <tbody>
-              {positions.map((pos, i) => {
-                const isProfit = pos.unrealizedPnL >= 0;
-                const pnlColor = isProfit ? '#10b981' : '#ef4444';
+        <Card glow="green">
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{
+              width: '100%',
+              borderCollapse: 'collapse',
+              fontSize: '14px'
+            }}>
+              <thead>
+                <tr style={{ borderBottom: `2px solid ${theme.colors.border}` }}>
+                  <th style={{
+                    padding: theme.spacing.md,
+                    color: theme.colors.textMuted,
+                    fontWeight: '600',
+                    fontSize: '12px',
+                    textTransform: 'uppercase',
+                    textAlign: 'left',
+                    letterSpacing: '0.5px'
+                  }}>
+                    Symbol
+                  </th>
+                  <th style={{
+                    padding: theme.spacing.md,
+                    color: theme.colors.textMuted,
+                    fontWeight: '600',
+                    fontSize: '12px',
+                    textTransform: 'uppercase',
+                    textAlign: 'right',
+                    letterSpacing: '0.5px'
+                  }}>
+                    Quantity
+                  </th>
+                  <th style={{
+                    padding: theme.spacing.md,
+                    color: theme.colors.textMuted,
+                    fontWeight: '600',
+                    fontSize: '12px',
+                    textTransform: 'uppercase',
+                    textAlign: 'right',
+                    letterSpacing: '0.5px'
+                  }}>
+                    Avg Price
+                  </th>
+                  <th style={{
+                    padding: theme.spacing.md,
+                    color: theme.colors.textMuted,
+                    fontWeight: '600',
+                    fontSize: '12px',
+                    textTransform: 'uppercase',
+                    textAlign: 'right',
+                    letterSpacing: '0.5px'
+                  }}>
+                    Current Price
+                  </th>
+                  <th style={{
+                    padding: theme.spacing.md,
+                    color: theme.colors.textMuted,
+                    fontWeight: '600',
+                    fontSize: '12px',
+                    textTransform: 'uppercase',
+                    textAlign: 'right',
+                    letterSpacing: '0.5px'
+                  }}>
+                    Market Value
+                  </th>
+                  <th style={{
+                    padding: theme.spacing.md,
+                    color: theme.colors.textMuted,
+                    fontWeight: '600',
+                    fontSize: '12px',
+                    textTransform: 'uppercase',
+                    textAlign: 'right',
+                    letterSpacing: '0.5px'
+                  }}>
+                    Unrealized P&L
+                  </th>
+                  <th style={{
+                    padding: theme.spacing.md,
+                    color: theme.colors.textMuted,
+                    fontWeight: '600',
+                    fontSize: '12px',
+                    textTransform: 'uppercase',
+                    textAlign: 'right',
+                    letterSpacing: '0.5px'
+                  }}>
+                    P&L %
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {positions.map((pos, i) => {
+                  const isProfit = pos.unrealizedPnL >= 0;
+                  const pnlColor = isProfit ? theme.colors.primary : theme.colors.danger;
 
-                return (
-                  <tr key={i} style={styles.tr}>
-                    <td style={styles.td}>
-                      <span style={styles.symbol}>{pos.symbol}</span>
-                    </td>
-                    <td style={{...styles.td, textAlign: 'right'}}>{pos.qty}</td>
-                    <td style={{...styles.td, textAlign: 'right'}}>${pos.avgPrice.toFixed(2)}</td>
-                    <td style={{...styles.td, textAlign: 'right'}}>${pos.currentPrice.toFixed(2)}</td>
-                    <td style={{...styles.td, textAlign: 'right', fontWeight: 600}}>${pos.marketValue.toFixed(2)}</td>
-                    <td style={{...styles.td, textAlign: 'right', color: pnlColor, fontWeight: 600}}>
-                      {isProfit ? '+' : ''}${pos.unrealizedPnL.toFixed(2)}
-                    </td>
-                    <td style={{...styles.td, textAlign: 'right', color: pnlColor, fontWeight: 600}}>
-                      {isProfit ? '+' : ''}{pos.unrealizedPnLPercent.toFixed(2)}%
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                  return (
+                    <tr key={i} style={{
+                      borderBottom: `1px solid ${theme.colors.border}`,
+                      transition: 'background 0.2s'
+                    }}>
+                      <td style={{ padding: theme.spacing.md }}>
+                        <span style={{
+                          fontWeight: '700',
+                          fontSize: '16px',
+                          color: theme.colors.secondary
+                        }}>
+                          {pos.symbol}
+                        </span>
+                      </td>
+                      <td style={{
+                        padding: theme.spacing.md,
+                        color: theme.colors.text,
+                        textAlign: 'right'
+                      }}>
+                        {pos.qty}
+                      </td>
+                      <td style={{
+                        padding: theme.spacing.md,
+                        color: theme.colors.text,
+                        textAlign: 'right'
+                      }}>
+                        ${pos.avgPrice.toFixed(2)}
+                      </td>
+                      <td style={{
+                        padding: theme.spacing.md,
+                        color: theme.colors.text,
+                        textAlign: 'right'
+                      }}>
+                        ${pos.currentPrice.toFixed(2)}
+                      </td>
+                      <td style={{
+                        padding: theme.spacing.md,
+                        color: theme.colors.text,
+                        fontWeight: '600',
+                        textAlign: 'right'
+                      }}>
+                        ${pos.marketValue.toFixed(2)}
+                      </td>
+                      <td style={{
+                        padding: theme.spacing.md,
+                        color: pnlColor,
+                        fontWeight: '600',
+                        textAlign: 'right'
+                      }}>
+                        {isProfit ? '+' : ''}${pos.unrealizedPnL.toFixed(2)}
+                      </td>
+                      <td style={{
+                        padding: theme.spacing.md,
+                        color: pnlColor,
+                        fontWeight: '600',
+                        textAlign: 'right'
+                      }}>
+                        {isProfit ? '+' : ''}{pos.unrealizedPnLPercent.toFixed(2)}%
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Card>
       )}
     </div>
   );
 }
-
-// Dark theme styles
-const styles = {
-  card: { padding: 24, background: "#1f2937", border: "1px solid #374151", borderRadius: 12 } as React.CSSProperties,
-  header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 } as React.CSSProperties,
-  title: { margin: 0, fontSize: 24, color: "#f9fafb", fontWeight: 700 } as React.CSSProperties,
-  subtitle: { margin: "4px 0 0 0", fontSize: 14, color: "#9ca3af" } as React.CSSProperties,
-  muted: { color: "#9ca3af", fontSize: 13 } as React.CSSProperties,
-  btnPrimary: { padding: "8px 16px", borderRadius: 8, border: "none", background: "#3b82f6", color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 600 } as React.CSSProperties,
-
-  summaryGrid: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 24 } as React.CSSProperties,
-  summaryCard: { padding: 16, background: "#374151", borderRadius: 8, border: "1px solid #4b5563" } as React.CSSProperties,
-  summaryLabel: { fontSize: 12, color: "#9ca3af", marginBottom: 8, textTransform: "uppercase", fontWeight: 600 } as React.CSSProperties,
-  summaryValue: { fontSize: 24, color: "#f9fafb", fontWeight: 700, marginBottom: 4 } as React.CSSProperties,
-  summaryPercent: { fontSize: 14, fontWeight: 600 } as React.CSSProperties,
-
-  errorBox: { padding: 16, border: "1px solid #ef4444", background: "#7f1d1d", color: "#fecaca", borderRadius: 8, marginBottom: 20 } as React.CSSProperties,
-
-  emptyState: { padding: 60, textAlign: "center" } as React.CSSProperties,
-  emptyTitle: { fontSize: 20, fontWeight: 600, color: "#f9fafb", marginBottom: 8 } as React.CSSProperties,
-  emptyText: { fontSize: 14, color: "#9ca3af" } as React.CSSProperties,
-
-  table: { width: "100%", borderCollapse: "collapse", fontSize: 14 } as React.CSSProperties,
-  th: { padding: "12px 16px", borderBottom: "2px solid #374151", color: "#9ca3af", fontWeight: 600, fontSize: 12, textTransform: "uppercase", background: "#374151" } as React.CSSProperties,
-  tr: { borderBottom: "1px solid #374151", transition: "background 0.2s" } as React.CSSProperties,
-  td: { padding: "16px", color: "#f9fafb" } as React.CSSProperties,
-  symbol: { fontWeight: 700, fontSize: 16, color: "#60a5fa" } as React.CSSProperties,
-};

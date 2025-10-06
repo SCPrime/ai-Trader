@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { Card, Button } from "./ui";
+import { theme } from "../styles/theme";
 
 type Result = {
   name: string;
@@ -57,42 +59,118 @@ export default function MorningRoutine() {
   }
 
   return (
-    <div style={card}>
-      <div style={cardHeader}>
-        <h3 style={title}>🌅 Morning Checks</h3>
-        <button onClick={run} disabled={running} style={btnPrimary}>
-          {running ? "Running…" : "Run Checks"}
-        </button>
-      </div>
+    <div style={{ padding: theme.spacing.lg }}>
+      <Card glow="teal">
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: theme.spacing.lg
+        }}>
+          <h2 style={{
+            margin: 0,
+            fontSize: '28px',
+            fontWeight: '700',
+            color: theme.colors.text,
+            textShadow: theme.glow.teal
+          }}>
+            🌅 Morning Checks
+          </h2>
+          <Button onClick={run} loading={running} variant="primary">
+            Run Checks
+          </Button>
+        </div>
 
-      {summary && <div style={muted}>{summary}</div>}
-
-      <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
-        {results.map((r, i) => (
-          <div key={i} style={rowBox(r.ok)}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-              <strong>{r.name}</strong>
-              <span>{r.ok ? "✅" : "❌"} {r.status}/{r.ms}ms</span>
-            </div>
-            {r.error && <div style={{ color: "#991b1b" }}>Error: {r.error}</div>}
-            {r.body && <pre style={pre}>{JSON.stringify(r.body, null, 2)}</pre>}
+        {summary && (
+          <div style={{
+            color: theme.colors.textMuted,
+            fontSize: '14px',
+            marginBottom: theme.spacing.md,
+            fontWeight: '600'
+          }}>
+            {summary}
           </div>
-        ))}
-      </div>
+        )}
+
+        <div style={{ display: 'grid', gap: theme.spacing.sm, marginTop: theme.spacing.md }}>
+          {results.map((r, i) => (
+            <div
+              key={i}
+              style={{
+                border: `1px solid ${r.ok ? theme.colors.primary : theme.colors.danger}`,
+                background: r.ok ? 'rgba(16, 185, 129, 0.1)' : 'rgba(255, 68, 68, 0.1)',
+                borderRadius: theme.borderRadius.md,
+                padding: theme.spacing.md,
+                boxShadow: r.ok ? theme.glow.green : theme.glow.red
+              }}
+            >
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                marginBottom: theme.spacing.xs,
+                alignItems: 'center'
+              }}>
+                <strong style={{
+                  color: theme.colors.text,
+                  fontSize: '16px'
+                }}>
+                  {r.name}
+                </strong>
+                <span style={{
+                  color: r.ok ? theme.colors.primary : theme.colors.danger,
+                  fontWeight: '600',
+                  fontSize: '14px'
+                }}>
+                  {r.ok ? "✅" : "❌"} {r.status} / {r.ms}ms
+                </span>
+              </div>
+
+              {r.error && (
+                <div style={{
+                  color: theme.colors.danger,
+                  fontSize: '14px',
+                  marginTop: theme.spacing.xs
+                }}>
+                  Error: {r.error}
+                </div>
+              )}
+
+              {r.body && (
+                <pre style={{
+                  margin: 0,
+                  marginTop: theme.spacing.sm,
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                  background: theme.background.input,
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: theme.borderRadius.sm,
+                  padding: theme.spacing.sm,
+                  color: theme.colors.textMuted,
+                  fontSize: '12px',
+                  fontFamily: 'monospace',
+                  maxHeight: '200px',
+                  overflowY: 'auto'
+                }}>
+                  {JSON.stringify(r.body, null, 2)}
+                </pre>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {results.length === 0 && !running && (
+          <div style={{
+            textAlign: 'center',
+            padding: theme.spacing.xl,
+            color: theme.colors.textMuted
+          }}>
+            <div style={{ fontSize: '48px', marginBottom: theme.spacing.md }}>☀️</div>
+            <div style={{ fontSize: '16px' }}>
+              Click "Run Checks" to start your morning routine
+            </div>
+          </div>
+        )}
+      </Card>
     </div>
   );
 }
-
-const card: React.CSSProperties = { padding: 24, background: "#1f2937", border: "1px solid #374151", borderRadius: 12 };
-const cardHeader: React.CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 };
-const title: React.CSSProperties = { margin: 0, fontSize: 24, color: "#f9fafb", fontWeight: 700 };
-const btnPrimary: React.CSSProperties = { padding: "8px 16px", borderRadius: 8, border: "none", background: "#3b82f6", color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 600 };
-const muted: React.CSSProperties = { color: "#9ca3af", fontSize: 14, marginBottom: 12 };
-const rowBox = (ok: boolean): React.CSSProperties => ({
-  border: `1px solid ${ok ? "#10b981" : "#ef4444"}`,
-  background: ok ? "#064e3b" : "#7f1d1d",
-  color: ok ? "#d1fae5" : "#fecaca",
-  borderRadius: 8,
-  padding: 12,
-});
-const pre: React.CSSProperties = { margin: 0, whiteSpace: "pre-wrap", wordBreak: "break-word", background: "#111827", border: "1px solid #374151", borderRadius: 6, padding: 8, color: "#9ca3af", fontSize: 12 };

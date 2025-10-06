@@ -8,6 +8,8 @@ const ALLOW_GET = new Set<string>([
   "api/health",
   "api/settings",
   "api/portfolio/positions",
+  "api/ai/recommendations",
+  "api/market/historical",
 ]);
 
 const ALLOW_POST = new Set<string>([

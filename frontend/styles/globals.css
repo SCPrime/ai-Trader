@@ -1,0 +1,53 @@
+/* Prevent body overflow */
+html, body {
+  overflow: hidden !important;
+  height: 100vh;
+  width: 100vw;
+  margin: 0;
+  padding: 0;
+}
+
+#__next {
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+/* Force green gutter - CRITICAL */
+.gutter {
+  background-color: #10b981 !important;
+  background-repeat: no-repeat !important;
+  background-position: 50% !important;
+  cursor: col-resize !important;
+  border: none !important;
+  flex-shrink: 0 !important;
+  pointer-events: auto !important;
+  z-index: 100 !important;
+}
+
+.gutter.gutter-horizontal {
+  background-color: #10b981 !important;
+  cursor: col-resize !important;
+  width: 1px !important;
+  pointer-events: auto !important;
+}
+
+.gutter.gutter-horizontal:hover {
+  background-color: #059669 !important;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.5) !important;
+  width: 3px !important;
+  transition: all 0.2s ease !important;
+}
+
+/* Split container */
+.split {
+  display: flex !important;
+  flex-direction: row !important;
+  height: 100vh !important;
+  width: 100vw !important;
+}
+
+/* Ensure split panels don't interfere with gutter */
+.split > div {
+  pointer-events: auto;
+}

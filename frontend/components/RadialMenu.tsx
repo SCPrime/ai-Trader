@@ -13,6 +13,7 @@ interface RadialMenuProps {
   onWorkflowSelect: (workflowId: string) => void;
   onWorkflowHover?: (workflow: Workflow | null) => void;
   selectedWorkflow?: string;
+  compact?: boolean;
 }
 
 export const workflows: Workflow[] = [
@@ -28,7 +29,7 @@ export const workflows: Workflow[] = [
   { id: 'settings', name: 'SETTINGS', color: '#64748b', icon: '⚙️', description: 'Configure your trading preferences and system settings.' }
 ];
 
-export default function RadialMenu({ onWorkflowSelect, onWorkflowHover, selectedWorkflow }: RadialMenuProps) {
+export default function RadialMenu({ onWorkflowSelect, onWorkflowHover, selectedWorkflow, compact }: RadialMenuProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [hoveredWorkflow, setHoveredWorkflow] = useState<Workflow | null>(null);
@@ -490,35 +491,37 @@ export default function RadialMenu({ onWorkflowSelect, onWorkflowHover, selected
         padding: '40px 20px',
       }}
     >
-      {/* Title Header */}
-      <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-        <div style={{ fontSize: '145px', fontWeight: '900', fontStyle: 'italic', lineHeight: '1', marginBottom: '10px' }}>
-          <span style={{ color: '#1a7560' }}>P</span>
-          <span style={{
-            fontFamily: 'Georgia, serif',
-            color: '#45f0c0',
-            textShadow: '0 0 20px #45f0c0, 0 0 40px #45f0c0',
-            animation: 'glow-a 3s ease-in-out infinite'
-          }}>a</span>
-          <span style={{
-            fontFamily: 'Georgia, serif',
-            color: '#58ffda',
-            textShadow: '0 0 25px #58ffda, 0 0 50px #58ffda',
-            animation: 'glow-i 3s ease-in-out infinite 0.75s'
-          }}>i</span>
-          <span style={{ color: '#0d5a4a' }}>D</span>
+      {/* Title Header - only show in full screen mode */}
+      {!compact && (
+        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+          <div style={{ fontSize: '145px', fontWeight: '900', fontStyle: 'italic', lineHeight: '1', marginBottom: '10px' }}>
+            <span style={{ color: '#1a7560' }}>P</span>
+            <span style={{
+              fontFamily: 'Georgia, serif',
+              color: '#45f0c0',
+              textShadow: '0 0 20px #45f0c0, 0 0 40px #45f0c0',
+              animation: 'glow-a 3s ease-in-out infinite'
+            }}>a</span>
+            <span style={{
+              fontFamily: 'Georgia, serif',
+              color: '#58ffda',
+              textShadow: '0 0 25px #58ffda, 0 0 50px #58ffda',
+              animation: 'glow-i 3s ease-in-out infinite 0.75s'
+            }}>i</span>
+            <span style={{ color: '#0d5a4a' }}>D</span>
+          </div>
+          <div style={{
+            fontSize: '28px',
+            fontWeight: '600',
+            color: '#94a3b8',
+            letterSpacing: '4px',
+            textTransform: 'uppercase',
+            textShadow: '0 2px 10px rgba(0, 0, 0, 0.5)'
+          }}>
+            10 Stage Workflow
+          </div>
         </div>
-        <div style={{
-          fontSize: '28px',
-          fontWeight: '600',
-          color: '#94a3b8',
-          letterSpacing: '4px',
-          textTransform: 'uppercase',
-          textShadow: '0 2px 10px rgba(0, 0, 0, 0.5)'
-        }}>
-          10 Stage Workflow
-        </div>
-      </div>
+      )}
 
       {/* SVG Radial Menu */}
       <div style={{ position: 'relative' }}>

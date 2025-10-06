@@ -1,6 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  async rewrites() {
+    return [
+      {
+        source: '/api/proxy/:path*',
+        destination: 'http://localhost:8000/:path*', // FastAPI backend
+      },
+    ];
+  },
   async headers() {
     return [
       {
@@ -11,7 +19,7 @@ const nextConfig = {
           // ✅ CSP that permits Next.js hydration, inline styles, and same-origin iframes
           {
             key: "Content-Security-Policy",
-            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src 'self' https://ai-trader-86a1.onrender.com wss://ai-trader-86a1.onrender.com; img-src 'self' data: blob: https:; font-src 'self' data:; frame-src 'self'; base-uri 'self'; form-action 'self';"
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:8000 https://ai-trader-86a1.onrender.com wss://ai-trader-86a1.onrender.com; img-src 'self' data: blob: https:; font-src 'self' data:; frame-src 'self'; base-uri 'self'; form-action 'self';"
           }
         ]
       }
