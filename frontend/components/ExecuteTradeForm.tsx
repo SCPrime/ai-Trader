@@ -177,7 +177,7 @@ export default function ExecuteTradeForm() {
   };
 
   return (
-    <>
+    <div>
       <ConfirmDialog
         isOpen={showConfirmDialog}
         title="Confirm Order"
@@ -458,6 +458,6 @@ export default function ExecuteTradeForm() {
           </div>
         </Card>
       </div>
-    </>
+    </div>
   );
 }
