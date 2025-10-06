@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
 import { TrendingUp, Check, AlertCircle, Loader2, ChevronDown } from "lucide-react";
+import { Card } from "./ui";
+import { theme } from "../styles/theme";
 import ConfirmDialog from "./ConfirmDialog";
 import { addOrderToHistory } from "./OrderHistory";
 
@@ -190,21 +192,45 @@ export default function ExecuteTradeForm() {
         }}
       />
 
-      <div className="w-full">
-        <div className="max-w-4xl mx-auto px-4">
+      <div style={{ padding: theme.spacing.lg }}>
+        <Card glow="green">
           {/* Header */}
-          <div className="flex items-center gap-3 mb-8">
-            <div className="p-3 bg-teal-500/10 rounded-xl border border-teal-500/20">
-              <TrendingUp className="w-8 h-8 text-teal-400" />
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: theme.spacing.md,
+            marginBottom: theme.spacing.xl
+          }}>
+            <div style={{
+              padding: theme.spacing.md,
+              background: 'rgba(16, 185, 129, 0.1)',
+              borderRadius: theme.borderRadius.lg,
+              border: '1px solid rgba(16, 185, 129, 0.2)'
+            }}>
+              <TrendingUp style={{ width: 32, height: 32, color: theme.colors.primary }} />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white">Execute Trade</h1>
-              <p className="text-slate-400 mt-1">Place orders with dry-run mode enabled</p>
+              <h1 style={{
+                margin: 0,
+                fontSize: '28px',
+                fontWeight: '700',
+                color: theme.colors.text
+              }}>
+                Execute Trade
+              </h1>
+              <p style={{
+                margin: 0,
+                marginTop: '4px',
+                color: theme.colors.textMuted,
+                fontSize: '14px'
+              }}>
+                Place orders with dry-run mode enabled
+              </p>
             </div>
           </div>
 
-          {/* Main Card */}
-          <div className="bg-slate-800/40 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-8 shadow-2xl">
+          {/* Form */}
+          <div>
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Form Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -422,19 +448,8 @@ export default function ExecuteTradeForm() {
               </div>
             )}
           </div>
-        </div>
+        </Card>
       </div>
-
-      <style jsx global>{`
-        @keyframes spin {
-          from {
-            transform: rotate(0deg);
-          }
-          to {
-            transform: rotate(360deg);
-          }
-        }
-      `}</style>
     </>
   );
 }
