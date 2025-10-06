@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 
-const BACKEND = 'http://localhost:8000';
+const BACKEND = process.env.BACKEND_API_BASE_URL || 'http://localhost:8000';
 const API_TOKEN = process.env.API_TOKEN!;
 
 // Exact endpoints our UI uses (paths without /api prefix - added in URL construction)
