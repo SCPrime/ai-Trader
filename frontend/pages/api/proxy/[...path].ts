@@ -1,21 +1,21 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 
-const BACKEND = process.env.BACKEND_API_BASE_URL!;
+const BACKEND = 'http://localhost:8001';
 const API_TOKEN = process.env.API_TOKEN!;
 
-// Exact endpoints our UI uses
+// Exact endpoints our UI uses (paths without /api prefix - added in URL construction)
 const ALLOW_GET = new Set<string>([
-  "api/health",
-  "api/settings",
-  "api/portfolio/positions",
-  "api/ai/recommendations",
-  "api/market/historical",
+  "health",
+  "settings",
+  "portfolio/positions",
+  "ai/recommendations",
+  "market/historical",
 ]);
 
 const ALLOW_POST = new Set<string>([
-  "api/trading/execute",
-  "api/settings",
-  "api/admin/kill",
+  "trading/execute",
+  "settings",
+  "admin/kill",
 ]);
 
 function isAllowedOrigin(req: NextApiRequest) {
@@ -51,7 +51,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: "Not allowed" });
   }
 
-  const url = `${BACKEND}/${path}`;
+  const url = `${BACKEND}/api/${path}`;
   const headers: Record<string, string> = {
     authorization: `Bearer ${API_TOKEN}`,
     "content-type": "application/json",
@@ -60,6 +60,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // propagate request id if client set one
   const rid = (req.headers["x-request-id"] as string) || "";
   if (rid) headers["x-request-id"] = rid;
+
+  // Debug logging
+  console.log(`[PROXY] ${req.method} ${path} -> ${url}`);
+  console.log(`[PROXY] Auth header: Bearer ${API_TOKEN?.substring(0, 8)}...`);
+  console.log(`[PROXY] Backend: ${BACKEND}`);
 
   try {
     const upstream = await fetch(url, {

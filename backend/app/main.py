@@ -1,7 +1,25 @@
+from dotenv import load_dotenv
+from pathlib import Path
+import os
+
+# Load .env file before importing settings
+env_path = Path(__file__).parent.parent / ".env"
+load_dotenv(env_path)
+
+print(f"\n===== BACKEND STARTUP =====")
+print(f".env path: {env_path}")
+print(f".env exists: {env_path.exists()}")
+print(f"API_TOKEN from env: {os.getenv('API_TOKEN', 'NOT_SET')}")
+print(f"===========================\n", flush=True)
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .core.config import settings
 from .routers import health, settings as settings_router, portfolio, orders, stream
+
+print(f"\n===== SETTINGS LOADED =====")
+print(f"settings.API_TOKEN: {settings.API_TOKEN}")
+print(f"===========================\n", flush=True)
 
 app = FastAPI(title="AI Trader Backend", version="0.1.0")
 
