@@ -1,7 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Card, Input, Select, Button } from "./ui";
-import { theme } from "../styles/theme";
+import { TrendingUp, Check, AlertCircle, Loader2, ChevronDown } from "lucide-react";
 import ConfirmDialog from "./ConfirmDialog";
 import { addOrderToHistory } from "./OrderHistory";
 
@@ -32,6 +31,7 @@ export default function ExecuteTradeForm() {
   const [lastRequestId, setLastRequestId] = useState<string | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingOrder, setPendingOrder] = useState<Order | null>(null);
+  const [showRawJson, setShowRawJson] = useState(false);
 
   const generateRequestId = () =>
     `req-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
@@ -190,160 +190,251 @@ export default function ExecuteTradeForm() {
         }}
       />
 
-      <Card glow="green">
-      <h2 style={{
-        marginTop: 0,
-        marginBottom: theme.spacing.lg,
-        fontSize: '24px',
-        color: theme.colors.primary,
-        textShadow: theme.glow.green
-      }}>
-        ⚡ Execute Trade
-      </h2>
-
-      <form onSubmit={handleSubmit}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: theme.spacing.md }}>
-          <Input
-            label="Symbol"
-            type="text"
-            value={symbol}
-            onChange={(e) => setSymbol(e.target.value)}
-            placeholder="SPY, AAPL, QQQ..."
-            disabled={loading}
-            required
-          />
-
-          <Select
-            label="Side"
-            value={side}
-            onChange={(e) => setSide(e.target.value as "buy" | "sell")}
-            options={[
-              { value: "buy", label: "Buy" },
-              { value: "sell", label: "Sell" },
-            ]}
-            disabled={loading}
-          />
-
-          <Input
-            label="Quantity"
-            type="number"
-            value={qty}
-            onChange={(e) => setQty(parseInt(e.target.value) || 0)}
-            min="1"
-            step="1"
-            disabled={loading}
-            required
-          />
-
-          <Select
-            label="Order Type"
-            value={orderType}
-            onChange={(e) => setOrderType(e.target.value as "market" | "limit")}
-            options={[
-              { value: "market", label: "Market" },
-              { value: "limit", label: "Limit" },
-            ]}
-            disabled={loading}
-          />
-
-          {orderType === "limit" && (
-            <div style={{ gridColumn: "1 / -1" }}>
-              <Input
-                label="Limit Price"
-                type="number"
-                value={limitPrice}
-                onChange={(e) => setLimitPrice(e.target.value)}
-                min="0.01"
-                step="0.01"
-                placeholder="0.00"
-                disabled={loading}
-                required
-              />
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-8">
+        <div className="max-w-4xl mx-auto">
+          {/* Header */}
+          <div className="flex items-center gap-3 mb-8">
+            <div className="p-3 bg-teal-500/10 rounded-xl border border-teal-500/20">
+              <TrendingUp className="w-8 h-8 text-teal-400" />
             </div>
-          )}
-        </div>
-
-        <div style={{ display: "flex", gap: theme.spacing.md, marginTop: theme.spacing.lg }}>
-          <Button type="submit" loading={loading} variant="primary">
-            Submit Order (Dry-Run)
-          </Button>
-
-          {lastRequestId && (
-            <Button
-              type="button"
-              onClick={testDuplicate}
-              loading={loading}
-              variant="secondary"
-            >
-              Test Duplicate
-            </Button>
-          )}
-        </div>
-      </form>
-
-      {lastRequestId && (
-        <div
-          style={{
-            marginTop: theme.spacing.md,
-            padding: theme.spacing.md,
-            background: theme.background.input,
-            borderRadius: theme.borderRadius.sm,
-            fontSize: '12px',
-            color: theme.colors.textMuted,
-            fontFamily: "monospace",
-          }}
-        >
-          <strong>Last Request ID:</strong> {lastRequestId}
-        </div>
-      )}
-
-      {response && (
-        <div
-          style={{
-            marginTop: theme.spacing.lg,
-            padding: theme.spacing.md,
-            background: response.duplicate ? 'rgba(255, 136, 0, 0.2)' : 'rgba(16, 185, 129, 0.2)',
-            border: `1px solid ${response.duplicate ? theme.colors.warning : theme.colors.primary}`,
-            borderRadius: theme.borderRadius.md,
-            boxShadow: response.duplicate ? theme.glow.orange : theme.glow.green,
-          }}
-        >
-          <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: theme.spacing.sm, color: theme.colors.text }}>
-            {response.duplicate ? "⚠️ Duplicate Detected" : "✅ Order Accepted"}
+            <div>
+              <h1 className="text-3xl font-bold text-white">Execute Trade</h1>
+              <p className="text-slate-400 mt-1">Place orders with dry-run mode enabled</p>
+            </div>
           </div>
-          <pre
-            style={{
-              fontSize: '12px',
-              fontFamily: 'monospace',
-              margin: 0,
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-              color: theme.colors.textMuted,
-            }}
-          >
-            {JSON.stringify(response, null, 2)}
-          </pre>
-        </div>
-      )}
 
-      {error && (
-        <div
-          style={{
-            marginTop: theme.spacing.lg,
-            padding: theme.spacing.md,
-            background: 'rgba(255, 68, 68, 0.2)',
-            border: `1px solid ${theme.colors.danger}`,
-            borderRadius: theme.borderRadius.md,
-            color: theme.colors.text,
-            fontSize: '14px',
-            fontWeight: '500',
-            boxShadow: theme.glow.red,
-          }}
-        >
-          ❌ {error}
+          {/* Main Card */}
+          <div className="bg-slate-800/40 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-8 shadow-2xl">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Form Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Symbol */}
+                <div>
+                  <label className="block text-sm font-semibold text-slate-300 mb-2">
+                    Symbol
+                  </label>
+                  <input
+                    type="text"
+                    value={symbol}
+                    onChange={(e) => setSymbol(e.target.value)}
+                    placeholder="SPY, AAPL, QQQ..."
+                    disabled={loading}
+                    required
+                    className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500/50 transition-all disabled:opacity-50"
+                  />
+                </div>
+
+                {/* Side */}
+                <div>
+                  <label className="block text-sm font-semibold text-slate-300 mb-2">
+                    Side
+                  </label>
+                  <select
+                    value={side}
+                    onChange={(e) => setSide(e.target.value as "buy" | "sell")}
+                    disabled={loading}
+                    className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500/50 transition-all disabled:opacity-50"
+                  >
+                    <option value="buy">Buy</option>
+                    <option value="sell">Sell</option>
+                  </select>
+                </div>
+
+                {/* Quantity */}
+                <div>
+                  <label className="block text-sm font-semibold text-slate-300 mb-2">
+                    Quantity
+                  </label>
+                  <input
+                    type="number"
+                    value={qty}
+                    onChange={(e) => setQty(parseInt(e.target.value) || 0)}
+                    min="1"
+                    step="1"
+                    disabled={loading}
+                    required
+                    className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500/50 transition-all disabled:opacity-50"
+                  />
+                </div>
+
+                {/* Order Type */}
+                <div>
+                  <label className="block text-sm font-semibold text-slate-300 mb-2">
+                    Order Type
+                  </label>
+                  <select
+                    value={orderType}
+                    onChange={(e) => setOrderType(e.target.value as "market" | "limit")}
+                    disabled={loading}
+                    className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500/50 transition-all disabled:opacity-50"
+                  >
+                    <option value="market">Market</option>
+                    <option value="limit">Limit</option>
+                  </select>
+                </div>
+
+                {/* Limit Price (conditional) */}
+                {orderType === "limit" && (
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-semibold text-slate-300 mb-2">
+                      Limit Price
+                    </label>
+                    <input
+                      type="number"
+                      value={limitPrice}
+                      onChange={(e) => setLimitPrice(e.target.value)}
+                      min="0.01"
+                      step="0.01"
+                      placeholder="0.00"
+                      disabled={loading}
+                      required
+                      className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500/50 transition-all disabled:opacity-50"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-4 pt-4">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-teal-500 to-cyan-500 text-white font-semibold rounded-xl shadow-lg shadow-teal-500/30 hover:shadow-teal-500/50 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <TrendingUp className="w-5 h-5" />
+                      Submit Order (Dry-Run)
+                    </>
+                  )}
+                </button>
+
+                {lastRequestId && (
+                  <button
+                    type="button"
+                    onClick={testDuplicate}
+                    disabled={loading}
+                    className="px-6 py-3 bg-slate-700/50 border border-slate-600/50 text-slate-300 font-semibold rounded-xl hover:bg-slate-700 hover:border-slate-500 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Test Duplicate
+                  </button>
+                )}
+              </div>
+            </form>
+
+            {/* Last Request ID */}
+            {lastRequestId && (
+              <div className="mt-6 p-4 bg-slate-900/50 border border-slate-700/50 rounded-xl">
+                <p className="text-xs text-slate-400 font-mono">
+                  <span className="font-semibold">Last Request ID:</span> {lastRequestId}
+                </p>
+              </div>
+            )}
+
+            {/* Success Response */}
+            {response && !error && (
+              <div className="mt-6 space-y-4">
+                <div
+                  className={`p-6 rounded-xl border-2 ${
+                    response.duplicate
+                      ? "bg-amber-500/10 border-amber-500/30"
+                      : "bg-teal-500/10 border-teal-500/30"
+                  }`}
+                >
+                  <div className="flex items-start gap-4">
+                    <div
+                      className={`p-2 rounded-lg ${
+                        response.duplicate ? "bg-amber-500/20" : "bg-teal-500/20"
+                      }`}
+                    >
+                      {response.duplicate ? (
+                        <AlertCircle className="w-6 h-6 text-amber-400" />
+                      ) : (
+                        <Check className="w-6 h-6 text-teal-400" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <h3
+                        className={`text-lg font-bold mb-2 ${
+                          response.duplicate ? "text-amber-400" : "text-teal-400"
+                        }`}
+                      >
+                        {response.duplicate ? "Duplicate Detected" : "Order Accepted"}
+                      </h3>
+                      <div className="space-y-2 text-sm text-slate-300">
+                        <p>
+                          <span className="text-slate-400">Status:</span>{" "}
+                          <span className="font-semibold">
+                            {response.accepted ? "Accepted" : "Rejected"}
+                          </span>
+                        </p>
+                        {response.dryRun && (
+                          <p>
+                            <span className="text-slate-400">Mode:</span>{" "}
+                            <span className="font-semibold text-cyan-400">Dry Run</span>
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Collapsible Raw JSON */}
+                <button
+                  onClick={() => setShowRawJson(!showRawJson)}
+                  className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700/50 rounded-xl text-slate-300 font-medium hover:bg-slate-900 transition-all flex items-center justify-between"
+                >
+                  <span>View Raw Response</span>
+                  <ChevronDown
+                    className={`w-5 h-5 transition-transform ${
+                      showRawJson ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+
+                {showRawJson && (
+                  <div className="p-4 bg-slate-950/50 border border-slate-700/50 rounded-xl overflow-auto">
+                    <pre className="text-xs text-slate-400 font-mono whitespace-pre-wrap">
+                      {JSON.stringify(response, null, 2)}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Error Display */}
+            {error && (
+              <div className="mt-6 p-6 bg-red-500/10 border-2 border-red-500/30 rounded-xl">
+                <div className="flex items-start gap-4">
+                  <div className="p-2 bg-red-500/20 rounded-lg">
+                    <AlertCircle className="w-6 h-6 text-red-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-red-400 mb-2">Error</h3>
+                    <p className="text-sm text-slate-300">{error}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-      )}
-    </Card>
+      </div>
+
+      <style jsx global>{`
+        @keyframes spin {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+      `}</style>
     </>
   );
 }
