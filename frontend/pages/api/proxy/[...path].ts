@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 
-const BACKEND = 'http://localhost:8001';
+const BACKEND = 'http://localhost:8000';
 const API_TOKEN = process.env.API_TOKEN!;
 
 // Exact endpoints our UI uses (paths without /api prefix - added in URL construction)
@@ -22,8 +22,12 @@ function isAllowedOrigin(req: NextApiRequest) {
   const origin = (req.headers.origin || "").toLowerCase();
   const prod = (process.env.PUBLIC_SITE_ORIGIN || "").toLowerCase();
   const preview = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}`.toLowerCase() : "";
-  // Permit prod + current preview; if Origin missing (same-origin fetch), allow.
-  return !origin || origin === prod || (!!preview && origin === preview);
+
+  // Allow localhost for development
+  const isLocalhost = origin.includes("localhost") || origin.includes("127.0.0.1");
+
+  // Permit prod + current preview + localhost; if Origin missing (same-origin fetch), allow.
+  return !origin || origin === prod || (!!preview && origin === preview) || isLocalhost;
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -61,10 +65,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const rid = (req.headers["x-request-id"] as string) || "";
   if (rid) headers["x-request-id"] = rid;
 
-  // Debug logging
-  console.log(`[PROXY] ${req.method} ${path} -> ${url}`);
+  // Enhanced debug logging
+  console.log(`\n[PROXY] ====== New Request ======`);
+  console.log(`[PROXY] Method: ${req.method}`);
+  console.log(`[PROXY] Original URL: ${req.url}`);
+  console.log(`[PROXY] Extracted path: "${path}"`);
+  console.log(`[PROXY] Constructed URL: ${url}`);
   console.log(`[PROXY] Auth header: Bearer ${API_TOKEN?.substring(0, 8)}...`);
   console.log(`[PROXY] Backend: ${BACKEND}`);
+  if (req.method === "POST") {
+    console.log(`[PROXY] Body:`, JSON.stringify(req.body, null, 2));
+  }
 
   try {
     const upstream = await fetch(url, {
@@ -76,12 +87,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     const text = await upstream.text();
+    console.log(`[PROXY] Response status: ${upstream.status}`);
+    console.log(`[PROXY] Response body: ${text.substring(0, 200)}${text.length > 200 ? '...' : ''}`);
+    console.log(`[PROXY] ====== End Request ======\n`);
+
     res
       .status(upstream.status)
       .setHeader("content-type", upstream.headers.get("content-type") || "application/json")
       .setHeader("cache-control", "no-store")
       .send(text);
   } catch (err) {
+    console.error(`[PROXY] ERROR: ${err}`);
+    console.error(`[PROXY] Error details:`, err);
+    console.log(`[PROXY] ====== End Request (ERROR) ======\n`);
     res.status(502).json({ error: "Upstream error", detail: String(err) });
   }
 }
