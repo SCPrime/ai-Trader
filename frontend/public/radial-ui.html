@@ -32,18 +32,20 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 120px;
-            height: 120px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            width: 140px;
+            height: 140px;
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(16, 185, 129, 0.3);
             border-radius: 50%;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            color: white;
+            color: #e5e7eb;
             font-weight: 700;
             font-size: 16px;
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.3), 0 0 40px rgba(16, 185, 129, 0.15), 0 10px 30px rgba(0, 0, 0, 0.5);
             z-index: 10;
             cursor: default;
         }
@@ -55,25 +57,26 @@
 
         .radial-segment {
             position: absolute;
-            width: 140px;
-            height: 140px;
+            width: 150px;
+            height: 150px;
             border-radius: 50%;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            color: white;
+            color: #e5e7eb;
             font-weight: 600;
-            font-size: 13px;
+            font-size: 14px;
             text-align: center;
             cursor: pointer;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .radial-segment:hover {
-            transform: scale(1.1);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            transform: scale(1.15);
+            border-color: rgba(255, 255, 255, 0.3);
         }
 
         .radial-segment .icon {
@@ -86,12 +89,32 @@
             padding: 0 8px;
         }
 
-        /* Positioning for 5 workflows in circle */
-        .segment-1 { top: 30px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
-        .segment-2 { top: 180px; left: 420px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
-        .segment-3 { bottom: 30px; left: 380px; background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
-        .segment-4 { bottom: 30px; left: 80px; background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
-        .segment-5 { top: 180px; left: 40px; background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); }
+        /* Positioning for 5 workflows in circle - Using theme colors */
+        .segment-1 {
+            top: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(126, 87, 194, 0.4);
+            box-shadow: 0 0 20px rgba(126, 87, 194, 0.3), 0 0 40px rgba(126, 87, 194, 0.15);
+        }
+        .segment-2 {
+            top: 160px; left: 420px;
+            background: rgba(0, 172, 193, 0.4);
+            box-shadow: 0 0 20px rgba(0, 172, 193, 0.3), 0 0 40px rgba(0, 172, 193, 0.15);
+        }
+        .segment-3 {
+            bottom: 20px; left: 390px;
+            background: rgba(16, 185, 129, 0.4);
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.3), 0 0 40px rgba(16, 185, 129, 0.15);
+        }
+        .segment-4 {
+            bottom: 20px; left: 60px;
+            background: rgba(255, 136, 0, 0.4);
+            box-shadow: 0 0 20px rgba(255, 136, 0, 0.3), 0 0 40px rgba(255, 136, 0, 0.15);
+        }
+        .segment-5 {
+            top: 160px; left: 30px;
+            background: rgba(255, 68, 68, 0.4);
+            box-shadow: 0 0 20px rgba(255, 68, 68, 0.3), 0 0 40px rgba(255, 68, 68, 0.15);
+        }
 
         #workflow-info {
             margin-top: 40px;

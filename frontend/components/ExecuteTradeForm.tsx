@@ -2,6 +2,8 @@
 import { useState } from "react";
 import { Card, Input, Select, Button } from "./ui";
 import { theme } from "../styles/theme";
+import ConfirmDialog from "./ConfirmDialog";
+import { addOrderToHistory } from "./OrderHistory";
 
 interface Order {
   symbol: string;
@@ -28,6 +30,8 @@ export default function ExecuteTradeForm() {
   const [response, setResponse] = useState<ExecuteResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastRequestId, setLastRequestId] = useState<string | null>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [pendingOrder, setPendingOrder] = useState<Order | null>(null);
 
   const generateRequestId = () =>
     `req-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
@@ -49,13 +53,6 @@ export default function ExecuteTradeForm() {
       return;
     }
 
-    setLoading(true);
-    setError(null);
-    setResponse(null);
-
-    const requestId = generateRequestId();
-    setLastRequestId(requestId);
-
     const order: Order = {
       symbol: symbol.trim().toUpperCase(),
       side,
@@ -67,10 +64,26 @@ export default function ExecuteTradeForm() {
       order.limitPrice = parseFloat(limitPrice);
     }
 
+    // Show confirmation dialog
+    setPendingOrder(order);
+    setShowConfirmDialog(true);
+  };
+
+  const executeOrder = async () => {
+    if (!pendingOrder) return;
+
+    setShowConfirmDialog(false);
+    setLoading(true);
+    setError(null);
+    setResponse(null);
+
+    const requestId = generateRequestId();
+    setLastRequestId(requestId);
+
     const body = {
       dryRun: true, // Always dry-run for now
       requestId,
-      orders: [order],
+      orders: [pendingOrder],
     };
 
     try {
@@ -86,10 +99,22 @@ export default function ExecuteTradeForm() {
 
       const data: ExecuteResponse = await res.json();
       setResponse(data);
+
+      // Add to order history
+      addOrderToHistory({
+        symbol: pendingOrder.symbol,
+        side: pendingOrder.side,
+        qty: pendingOrder.qty,
+        type: pendingOrder.type,
+        limitPrice: pendingOrder.limitPrice,
+        status: data.accepted ? "dry-run" : "cancelled",
+        dryRun: true,
+      });
     } catch (err: any) {
       setError(err.message);
     } finally {
       setLoading(false);
+      setPendingOrder(null);
     }
   };
 
@@ -140,8 +165,32 @@ export default function ExecuteTradeForm() {
     }
   };
 
+  const getConfirmMessage = () => {
+    if (!pendingOrder) return "";
+    const priceStr =
+      pendingOrder.type === "limit" && pendingOrder.limitPrice
+        ? ` at $${pendingOrder.limitPrice.toFixed(2)}`
+        : " at market price";
+    return `${pendingOrder.side.toUpperCase()} ${pendingOrder.qty} shares of ${pendingOrder.symbol}${priceStr}?`;
+  };
+
   return (
-    <Card glow="green">
+    <>
+      <ConfirmDialog
+        isOpen={showConfirmDialog}
+        title="Confirm Order"
+        message={getConfirmMessage()}
+        confirmText="Execute Order"
+        cancelText="Cancel"
+        confirmVariant={pendingOrder?.side === "sell" ? "danger" : "primary"}
+        onConfirm={executeOrder}
+        onCancel={() => {
+          setShowConfirmDialog(false);
+          setPendingOrder(null);
+        }}
+      />
+
+      <Card glow="green">
       <h2 style={{
         marginTop: 0,
         marginBottom: theme.spacing.lg,
@@ -295,5 +344,6 @@ export default function ExecuteTradeForm() {
         </div>
       )}
     </Card>
+    </>
   );
 }
