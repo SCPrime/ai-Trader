@@ -235,7 +235,13 @@ export default function ExecuteTradeForm() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Symbol */}
                 <div>
-                  <label className="block text-sm font-semibold text-slate-300 mb-2">
+                  <label style={{
+                    display: 'block',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: theme.colors.textMuted,
+                    marginBottom: theme.spacing.sm
+                  }}>
                     Symbol
                   </label>
                   <input
@@ -245,20 +251,46 @@ export default function ExecuteTradeForm() {
                     placeholder="SPY, AAPL, QQQ..."
                     disabled={loading}
                     required
-                    className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500/50 transition-all disabled:opacity-50"
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      background: theme.background.input,
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: theme.borderRadius.md,
+                      color: theme.colors.text,
+                      fontSize: '14px',
+                      transition: theme.transitions.normal,
+                      opacity: loading ? 0.5 : 1
+                    }}
                   />
                 </div>
 
                 {/* Side */}
                 <div>
-                  <label className="block text-sm font-semibold text-slate-300 mb-2">
+                  <label style={{
+                    display: 'block',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: theme.colors.textMuted,
+                    marginBottom: theme.spacing.sm
+                  }}>
                     Side
                   </label>
                   <select
                     value={side}
                     onChange={(e) => setSide(e.target.value as "buy" | "sell")}
                     disabled={loading}
-                    className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500/50 transition-all disabled:opacity-50"
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      background: theme.background.input,
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: theme.borderRadius.md,
+                      color: theme.colors.text,
+                      fontSize: '14px',
+                      transition: theme.transitions.normal,
+                      opacity: loading ? 0.5 : 1
+                    }}
                   >
                     <option value="buy">Buy</option>
                     <option value="sell">Sell</option>
@@ -267,7 +299,13 @@ export default function ExecuteTradeForm() {
 
                 {/* Quantity */}
                 <div>
-                  <label className="block text-sm font-semibold text-slate-300 mb-2">
+                  <label style={{
+                    display: 'block',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: theme.colors.textMuted,
+                    marginBottom: theme.spacing.sm
+                  }}>
                     Quantity
                   </label>
                   <input
@@ -278,20 +316,46 @@ export default function ExecuteTradeForm() {
                     step="1"
                     disabled={loading}
                     required
-                    className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500/50 transition-all disabled:opacity-50"
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      background: theme.background.input,
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: theme.borderRadius.md,
+                      color: theme.colors.text,
+                      fontSize: '14px',
+                      transition: theme.transitions.normal,
+                      opacity: loading ? 0.5 : 1
+                    }}
                   />
                 </div>
 
                 {/* Order Type */}
                 <div>
-                  <label className="block text-sm font-semibold text-slate-300 mb-2">
+                  <label style={{
+                    display: 'block',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: theme.colors.textMuted,
+                    marginBottom: theme.spacing.sm
+                  }}>
                     Order Type
                   </label>
                   <select
                     value={orderType}
                     onChange={(e) => setOrderType(e.target.value as "market" | "limit")}
                     disabled={loading}
-                    className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500/50 transition-all disabled:opacity-50"
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      background: theme.background.input,
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: theme.borderRadius.md,
+                      color: theme.colors.text,
+                      fontSize: '14px',
+                      transition: theme.transitions.normal,
+                      opacity: loading ? 0.5 : 1
+                    }}
                   >
                     <option value="market">Market</option>
                     <option value="limit">Limit</option>
@@ -301,7 +365,13 @@ export default function ExecuteTradeForm() {
                 {/* Limit Price (conditional) */}
                 {orderType === "limit" && (
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-slate-300 mb-2">
+                    <label style={{
+                      display: 'block',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: theme.colors.textMuted,
+                      marginBottom: theme.spacing.sm
+                    }}>
                       Limit Price
                     </label>
                     <input
@@ -313,95 +383,95 @@ export default function ExecuteTradeForm() {
                       placeholder="0.00"
                       disabled={loading}
                       required
-                      className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500/50 transition-all disabled:opacity-50"
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        background: theme.background.input,
+                        border: `1px solid ${theme.colors.border}`,
+                        borderRadius: theme.borderRadius.md,
+                        color: theme.colors.text,
+                        fontSize: '14px',
+                        transition: theme.transitions.normal,
+                        opacity: loading ? 0.5 : 1
+                      }}
                     />
                   </div>
                 )}
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-4 pt-4">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex-1 px-6 py-3 bg-gradient-to-r from-teal-500 to-cyan-500 text-white font-semibold rounded-xl shadow-lg shadow-teal-500/30 hover:shadow-teal-500/50 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <TrendingUp className="w-5 h-5" />
-                      Submit Order (Dry-Run)
-                    </>
-                  )}
-                </button>
+              <div style={{ display: 'flex', gap: theme.spacing.md, marginTop: theme.spacing.lg }}>
+                <Button type="submit" loading={loading} variant="primary" style={{ flex: 1 }}>
+                  {loading ? 'Processing...' : 'Submit Order (Dry-Run)'}
+                </Button>
 
                 {lastRequestId && (
-                  <button
+                  <Button
                     type="button"
                     onClick={testDuplicate}
-                    disabled={loading}
-                    className="px-6 py-3 bg-slate-700/50 border border-slate-600/50 text-slate-300 font-semibold rounded-xl hover:bg-slate-700 hover:border-slate-500 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    loading={loading}
+                    variant="secondary"
                   >
                     Test Duplicate
-                  </button>
+                  </Button>
                 )}
               </div>
             </form>
 
             {/* Last Request ID */}
             {lastRequestId && (
-              <div className="mt-6 p-4 bg-slate-900/50 border border-slate-700/50 rounded-xl">
-                <p className="text-xs text-slate-400 font-mono">
-                  <span className="font-semibold">Last Request ID:</span> {lastRequestId}
-                </p>
+              <div style={{
+                marginTop: theme.spacing.lg,
+                padding: theme.spacing.md,
+                background: theme.background.input,
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: theme.borderRadius.sm,
+                fontSize: '12px',
+                color: theme.colors.textMuted,
+                fontFamily: 'monospace'
+              }}>
+                <strong>Last Request ID:</strong> {lastRequestId}
               </div>
             )}
 
             {/* Success Response */}
             {response && !error && (
-              <div className="mt-6 space-y-4">
-                <div
-                  className={`p-6 rounded-xl border-2 ${
-                    response.duplicate
-                      ? "bg-amber-500/10 border-amber-500/30"
-                      : "bg-teal-500/10 border-teal-500/30"
-                  }`}
-                >
-                  <div className="flex items-start gap-4">
-                    <div
-                      className={`p-2 rounded-lg ${
-                        response.duplicate ? "bg-amber-500/20" : "bg-teal-500/20"
-                      }`}
-                    >
+              <div style={{ marginTop: theme.spacing.lg }}>
+                <div style={{
+                  padding: theme.spacing.lg,
+                  background: response.duplicate ? 'rgba(255, 136, 0, 0.2)' : 'rgba(16, 185, 129, 0.2)',
+                  border: `2px solid ${response.duplicate ? theme.colors.warning : theme.colors.primary}`,
+                  borderRadius: theme.borderRadius.md,
+                  boxShadow: response.duplicate ? theme.glow.orange : theme.glow.green,
+                  marginBottom: theme.spacing.md
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.md }}>
+                    <div style={{
+                      padding: theme.spacing.sm,
+                      background: response.duplicate ? 'rgba(255, 136, 0, 0.2)' : 'rgba(16, 185, 129, 0.2)',
+                      borderRadius: theme.borderRadius.sm
+                    }}>
                       {response.duplicate ? (
-                        <AlertCircle className="w-6 h-6 text-amber-400" />
+                        <AlertCircle style={{ width: 24, height: 24, color: theme.colors.warning }} />
                       ) : (
-                        <Check className="w-6 h-6 text-teal-400" />
+                        <Check style={{ width: 24, height: 24, color: theme.colors.primary }} />
                       )}
                     </div>
-                    <div className="flex-1">
-                      <h3
-                        className={`text-lg font-bold mb-2 ${
-                          response.duplicate ? "text-amber-400" : "text-teal-400"
-                        }`}
-                      >
-                        {response.duplicate ? "Duplicate Detected" : "Order Accepted"}
+                    <div style={{ flex: 1 }}>
+                      <h3 style={{
+                        fontSize: '18px',
+                        fontWeight: '700',
+                        color: response.duplicate ? theme.colors.warning : theme.colors.primary,
+                        marginBottom: theme.spacing.sm
+                      }}>
+                        {response.duplicate ? "⚠️ Duplicate Detected" : "✅ Order Accepted"}
                       </h3>
-                      <div className="space-y-2 text-sm text-slate-300">
-                        <p>
-                          <span className="text-slate-400">Status:</span>{" "}
-                          <span className="font-semibold">
-                            {response.accepted ? "Accepted" : "Rejected"}
-                          </span>
+                      <div style={{ fontSize: '14px', color: theme.colors.textMuted }}>
+                        <p style={{ marginBottom: theme.spacing.xs }}>
+                          <strong>Status:</strong> {response.accepted ? "Accepted" : "Rejected"}
                         </p>
                         {response.dryRun && (
-                          <p>
-                            <span className="text-slate-400">Mode:</span>{" "}
-                            <span className="font-semibold text-cyan-400">Dry Run</span>
+                          <p><strong>Mode:</strong> <span style={{ color: theme.colors.info }}>Dry Run</span>
                           </p>
                         )}
                       </div>
@@ -409,22 +479,50 @@ export default function ExecuteTradeForm() {
                   </div>
                 </div>
 
-                {/* Collapsible Raw JSON */}
                 <button
                   onClick={() => setShowRawJson(!showRawJson)}
-                  className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700/50 rounded-xl text-slate-300 font-medium hover:bg-slate-900 transition-all flex items-center justify-between"
+                  style={{
+                    width: '100%',
+                    padding: `${theme.spacing.md} ${theme.spacing.lg}`,
+                    background: theme.background.input,
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: theme.borderRadius.md,
+                    color: theme.colors.textMuted,
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: theme.transitions.normal,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}
                 >
                   <span>View Raw Response</span>
-                  <ChevronDown
-                    className={`w-5 h-5 transition-transform ${
-                      showRawJson ? "rotate-180" : ""
-                    }`}
-                  />
+                  <ChevronDown style={{
+                    width: 20,
+                    height: 20,
+                    transform: showRawJson ? 'rotate(180deg)' : 'rotate(0deg)',
+                    transition: theme.transitions.normal
+                  }} />
                 </button>
 
                 {showRawJson && (
-                  <div className="p-4 bg-slate-950/50 border border-slate-700/50 rounded-xl overflow-auto">
-                    <pre className="text-xs text-slate-400 font-mono whitespace-pre-wrap">
+                  <div style={{
+                    marginTop: theme.spacing.md,
+                    padding: theme.spacing.md,
+                    background: theme.background.input,
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: theme.borderRadius.md,
+                    overflowX: 'auto'
+                  }}>
+                    <pre style={{
+                      fontSize: '12px',
+                      fontFamily: 'monospace',
+                      margin: 0,
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                      color: theme.colors.textMuted
+                    }}>
                       {JSON.stringify(response, null, 2)}
                     </pre>
                   </div>
@@ -434,14 +532,34 @@ export default function ExecuteTradeForm() {
 
             {/* Error Display */}
             {error && (
-              <div className="mt-6 p-6 bg-red-500/10 border-2 border-red-500/30 rounded-xl">
-                <div className="flex items-start gap-4">
-                  <div className="p-2 bg-red-500/20 rounded-lg">
-                    <AlertCircle className="w-6 h-6 text-red-400" />
+              <div style={{
+                marginTop: theme.spacing.lg,
+                padding: theme.spacing.lg,
+                background: 'rgba(255, 68, 68, 0.2)',
+                border: `2px solid ${theme.colors.danger}`,
+                borderRadius: theme.borderRadius.md,
+                boxShadow: theme.glow.red
+              }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.md }}>
+                  <div style={{
+                    padding: theme.spacing.sm,
+                    background: 'rgba(255, 68, 68, 0.2)',
+                    borderRadius: theme.borderRadius.sm
+                  }}>
+                    <AlertCircle style={{ width: 24, height: 24, color: theme.colors.danger }} />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-red-400 mb-2">Error</h3>
-                    <p className="text-sm text-slate-300">{error}</p>
+                    <h3 style={{
+                      fontSize: '18px',
+                      fontWeight: '700',
+                      color: theme.colors.danger,
+                      marginBottom: theme.spacing.sm
+                    }}>
+                      ❌ Error
+                    </h3>
+                    <p style={{ fontSize: '14px', color: theme.colors.text, margin: 0 }}>
+                      {error}
+                    </p>
                   </div>
                 </div>
               </div>
