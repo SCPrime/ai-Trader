@@ -23,7 +23,7 @@ export default function AIRecommendations() {
     setError(null);
 
     try {
-      const res = await fetch("/api/proxy/api/ai/recommendations");
+      const res = await fetch("/api/proxy/ai/recommendations");
 
       if (!res.ok) {
         throw new Error(`Failed to fetch: ${res.statusText}`);
