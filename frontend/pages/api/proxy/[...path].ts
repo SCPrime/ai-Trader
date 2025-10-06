@@ -46,7 +46,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const parts = (req.query.path as string[]) || [];
-  const path = parts.join("/");
+  let path = parts.join("/");
+
+  // Handle legacy URLs with /api/ prefix (e.g., /api/proxy/api/health)
+  // Strip leading "api/" if present
+  if (path.startsWith("api/")) {
+    path = path.substring(4);
+  }
 
   if (req.method === "GET" && !ALLOW_GET.has(path)) {
     return res.status(405).json({ error: "Not allowed" });
