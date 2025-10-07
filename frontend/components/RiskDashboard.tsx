@@ -72,7 +72,7 @@ export default function RiskDashboard() {
       const calculatedMetrics: RiskMetrics = {
         portfolioValue,
         buyingPower,
-        dayTradeBuyingPower: parseFloat(account.daytrading_buying_power || account.buying_power),
+        dayTradeBuyingPower: buyingPower, // Use buying_power as fallback
         cashBalance,
         portfolioRisk: (marginUsed / portfolioValue) * 100,
         maxDailyLoss,
