@@ -10,6 +10,9 @@ import ProposalReview from '../components/trading/ProposalReview';
 import Settings from '../components/Settings';
 import UserSetup from '../components/UserSetup';
 import NewsReview from '../components/NewsReview';
+import ActivePositions from '../components/ActivePositions';
+import StrategyBuilder from '../components/StrategyBuilder';
+import Backtesting from '../components/Backtesting';
 import { isUserLoggedIn, initializeSession } from '../lib/userManagement';
 
 export default function Dashboard() {
@@ -63,7 +66,7 @@ export default function Dashboard() {
           return <MorningRoutine />;
 
         case 'active-positions':
-          return <PositionsTable />;
+          return <ActivePositions />;
 
         case 'execute':
           return <ExecuteTradeForm />;
@@ -106,48 +109,10 @@ export default function Dashboard() {
 
 
         case 'strategy-builder':
-          return (
-            <div style={{
-              background: 'rgba(30, 41, 59, 0.8)',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid #5E35B140',
-              borderRadius: '16px',
-              padding: '24px',
-              minHeight: '200px'
-            }}>
-              <h4 style={{ color: '#5E35B1', fontSize: '1.5rem', margin: 0, marginBottom: '16px' }}>
-                🎯 Strategy Builder
-              </h4>
-              <p style={{ color: '#cbd5e1', lineHeight: 1.6, margin: 0, marginBottom: '12px' }}>
-                Design, test, and refine custom trading strategies with drag-and-drop rule builder.
-              </p>
-              <p style={{ color: '#94a3b8', fontStyle: 'italic', margin: 0 }}>
-                Coming soon: Visual strategy designer, rule templates, and parameter optimization.
-              </p>
-            </div>
-          );
+          return <StrategyBuilder />;
 
         case 'backtesting':
-          return (
-            <div style={{
-              background: 'rgba(30, 41, 59, 0.8)',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid #00BCD440',
-              borderRadius: '16px',
-              padding: '24px',
-              minHeight: '200px'
-            }}>
-              <h4 style={{ color: '#00BCD4', fontSize: '1.5rem', margin: 0, marginBottom: '16px' }}>
-                📈 Backtesting
-              </h4>
-              <p style={{ color: '#cbd5e1', lineHeight: 1.6, margin: 0, marginBottom: '12px' }}>
-                Test strategies against historical data to validate performance before live deployment.
-              </p>
-              <p style={{ color: '#94a3b8', fontStyle: 'italic', margin: 0 }}>
-                Coming soon: Historical simulation, performance metrics, and risk analysis.
-              </p>
-            </div>
-          );
+          return <Backtesting />;
 
         default:
           return null;
