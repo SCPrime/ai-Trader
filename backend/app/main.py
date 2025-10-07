@@ -25,7 +25,13 @@ app = FastAPI(title="AI Trader Backend", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.ALLOW_ORIGIN] if settings.ALLOW_ORIGIN else ["*"],
+    allow_origins=[
+        "http://localhost:3000",
+        "https://ai-trader-snowy.vercel.app",
+        "https://ai-trader-scprimes-projects.vercel.app",
+        "https://ai-trader-git-main-scprimes-projects.vercel.app",
+        settings.ALLOW_ORIGIN
+    ] if settings.ALLOW_ORIGIN else ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
