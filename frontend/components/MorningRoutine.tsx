@@ -86,18 +86,18 @@ export default function MorningRoutine() {
       } else {
         // Fallback mock data
         setOpportunities([
-          { symbol: 'AAPL', price: 182.30, signal: 'BUY', confidence: 85 },
-          { symbol: 'NVDA', price: 485.20, signal: 'BUY', confidence: 90 },
-          { symbol: 'MSFT', price: 378.45, signal: 'HOLD', confidence: 70 }
+          { symbol: 'AAPL', type: 'stock' as const, strategy: 'Bullish breakout', reason: 'Strong momentum', currentPrice: 182.30, targetPrice: 195.50, confidence: 85, risk: 'low' as const },
+          { symbol: 'NVDA', type: 'stock' as const, strategy: 'AI chip demand', reason: 'Sector strength', currentPrice: 485.20, targetPrice: 525.00, confidence: 90, risk: 'medium' as const },
+          { symbol: 'MSFT', type: 'stock' as const, strategy: 'Hold position', reason: 'Consolidation', currentPrice: 378.45, targetPrice: 390.00, confidence: 70, risk: 'low' as const }
         ]);
       }
     } catch (e) {
       console.error("Failed to fetch opportunities:", e);
       // Fallback mock data
       setOpportunities([
-        { symbol: 'AAPL', price: 182.30, signal: 'BUY', confidence: 85 },
-        { symbol: 'NVDA', price: 485.20, signal: 'BUY', confidence: 90 },
-        { symbol: 'MSFT', price: 378.45, signal: 'HOLD', confidence: 70 }
+        { symbol: 'AAPL', type: 'stock' as const, strategy: 'Bullish breakout', reason: 'Strong momentum', currentPrice: 182.30, targetPrice: 195.50, confidence: 85, risk: 'low' as const },
+        { symbol: 'NVDA', type: 'stock' as const, strategy: 'AI chip demand', reason: 'Sector strength', currentPrice: 485.20, targetPrice: 525.00, confidence: 90, risk: 'medium' as const },
+        { symbol: 'MSFT', type: 'stock' as const, strategy: 'Hold position', reason: 'Consolidation', currentPrice: 378.45, targetPrice: 390.00, confidence: 70, risk: 'low' as const }
       ]);
     }
 
