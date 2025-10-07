@@ -9,6 +9,7 @@ import AIRecommendations from '../components/AIRecommendations';
 import ProposalReview from '../components/trading/ProposalReview';
 import Settings from '../components/Settings';
 import UserSetup from '../components/UserSetup';
+import NewsReview from '../components/NewsReview';
 import { isUserLoggedIn, initializeSession } from '../lib/userManagement';
 
 export default function Dashboard() {
@@ -101,26 +102,7 @@ export default function Dashboard() {
           );
 
         case 'news-review':
-          return (
-            <div style={{
-              background: 'rgba(30, 41, 59, 0.8)',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid #7E57C240',
-              borderRadius: '16px',
-              padding: '24px',
-              minHeight: '200px'
-            }}>
-              <h4 style={{ color: '#7E57C2', fontSize: '1.5rem', margin: 0, marginBottom: '16px' }}>
-                📰 News Review
-              </h4>
-              <p style={{ color: '#cbd5e1', lineHeight: 1.6, margin: 0, marginBottom: '12px' }}>
-                Real-time market news aggregation with AI-powered sentiment analysis and breaking news alerts.
-              </p>
-              <p style={{ color: '#94a3b8', fontStyle: 'italic', margin: 0 }}>
-                Coming soon: Live news feed, sentiment indicators, and market-moving events.
-              </p>
-            </div>
-          );
+          return <NewsReview />;
 
 
         case 'strategy-builder':
