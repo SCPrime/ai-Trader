@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Card, Button } from "./ui";
 import { theme } from "../styles/theme";
+import { TrendingUp, TrendingDown, AlertCircle, CheckCircle, Clock, Target, DollarSign } from "lucide-react";
 
 type Result = {
   name: string;
@@ -11,6 +12,23 @@ type Result = {
   ms: number | "n/a";
   body?: any;
   error?: string;
+};
+
+type Opportunity = {
+  symbol: string;
+  type: 'stock' | 'option' | 'multileg';
+  strategy: string;
+  reason: string;
+  currentPrice: number;
+  targetPrice?: number;
+  confidence: number;
+  risk: 'low' | 'medium' | 'high';
+};
+
+type MarketCondition = {
+  name: string;
+  value: string;
+  status: 'favorable' | 'neutral' | 'unfavorable';
 };
 
 async function timedJson(url: string, init?: RequestInit): Promise<Result> {
@@ -33,144 +51,475 @@ export default function MorningRoutine() {
   const [running, setRunning] = useState(false);
   const [results, setResults] = useState<Result[]>([]);
   const [summary, setSummary] = useState<string>("");
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const [marketConditions, setMarketConditions] = useState<MarketCondition[]>([]);
+  const [portfolioAnalysis, setPortfolioAnalysis] = useState<any>(null);
 
   async function run() {
     setRunning(true);
     setResults([]);
     setSummary("");
+    setOpportunities([]);
+    setMarketConditions([]);
+    setPortfolioAnalysis(null);
 
     const out: Result[] = [];
 
-    // 1) Health
+    // 1) System Health Checks
     out.push(await timedJson("/api/proxy/api/health"));
-
-    // 2) Settings
     out.push(await timedJson("/api/proxy/api/settings"));
-
-    // 3) Positions
     out.push(await timedJson("/api/proxy/api/portfolio/positions"));
-
-    // (Optional future) any other checks your backend exposes
 
     setResults(out);
     const okCount = out.filter((r) => r.ok).length;
-    setSummary(`${okCount}/${out.length} checks passed`);
+    setSummary(`${okCount}/${out.length} system checks passed`);
+
+    // 2) Strategy-Based Opportunity Screening (Mock data - replace with real API)
+    // TODO: Connect to backend endpoint /api/screening/opportunities
+    const mockOpportunities: Opportunity[] = [
+      {
+        symbol: 'AAPL',
+        type: 'stock',
+        strategy: 'Momentum Breakout',
+        reason: 'Breaking above 20-day MA with strong volume',
+        currentPrice: 184.10,
+        targetPrice: 192.50,
+        confidence: 85,
+        risk: 'medium'
+      },
+      {
+        symbol: 'SPY 450C 30DTE',
+        type: 'option',
+        strategy: 'Bullish Trend Following',
+        reason: 'Market uptrend, low IV, good risk/reward',
+        currentPrice: 5.20,
+        targetPrice: 8.50,
+        confidence: 72,
+        risk: 'medium'
+      },
+      {
+        symbol: 'TSLA Iron Condor',
+        type: 'multileg',
+        strategy: 'Range-Bound Premium Collection',
+        reason: 'High IV, consolidation pattern, theta decay favorable',
+        currentPrice: 250.00,
+        confidence: 68,
+        risk: 'low'
+      }
+    ];
+    setOpportunities(mockOpportunities);
+
+    // 3) Market Conditions Analysis (Mock data - replace with real API)
+    // TODO: Connect to backend endpoint /api/market/conditions
+    const mockConditions: MarketCondition[] = [
+      { name: 'VIX (Volatility)', value: '14.2', status: 'favorable' },
+      { name: 'SPY Trend', value: 'Uptrend', status: 'favorable' },
+      { name: 'Market Breadth', value: '68% bullish', status: 'favorable' },
+      { name: 'Volume', value: 'Above average', status: 'neutral' }
+    ];
+    setMarketConditions(mockConditions);
+
+    // 4) Portfolio Analysis (from positions data)
+    const positionsResult = out.find(r => r.name === 'portfolio/positions');
+    if (positionsResult?.ok && positionsResult.body) {
+      const positions = Array.isArray(positionsResult.body) ? positionsResult.body : [];
+      const totalValue = positions.reduce((sum: number, pos: any) =>
+        sum + (pos.qty * pos.marketPrice), 0
+      );
+      const totalUnrealized = positions.reduce((sum: number, pos: any) =>
+        sum + (pos.unrealized || 0), 0
+      );
+
+      setPortfolioAnalysis({
+        positionCount: positions.length,
+        totalValue,
+        totalUnrealized,
+        percentGain: totalValue > 0 ? (totalUnrealized / totalValue) * 100 : 0
+      });
+    }
+
     setRunning(false);
   }
 
+  const getRiskColor = (risk: string) => {
+    switch (risk) {
+      case 'low': return theme.colors.primary;
+      case 'medium': return theme.colors.warning;
+      case 'high': return theme.colors.danger;
+      default: return theme.colors.textMuted;
+    }
+  };
+
+  const getConditionColor = (status: string) => {
+    switch (status) {
+      case 'favorable': return theme.colors.primary;
+      case 'neutral': return theme.colors.warning;
+      case 'unfavorable': return theme.colors.danger;
+      default: return theme.colors.textMuted;
+    }
+  };
+
   return (
     <div style={{ padding: theme.spacing.lg }}>
-      <Card glow="teal">
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: theme.spacing.lg
+      {/* Header */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: theme.spacing.lg
+      }}>
+        <h2 style={{
+          margin: 0,
+          fontSize: '28px',
+          fontWeight: '700',
+          color: theme.colors.text,
+          textShadow: theme.glow.teal
         }}>
-          <h2 style={{
-            margin: 0,
-            fontSize: '28px',
-            fontWeight: '700',
-            color: theme.colors.text,
-            textShadow: theme.glow.teal
-          }}>
-            🌅 Morning Checks
-          </h2>
-          <Button onClick={run} loading={running} variant="primary">
-            Run Checks
-          </Button>
+          🌅 Morning Routine
+        </h2>
+        <Button onClick={run} loading={running} variant="primary">
+          {running ? 'Running Analysis...' : 'Run Morning Checks'}
+        </Button>
+      </div>
+
+      {/* Summary */}
+      {summary && (
+        <div style={{
+          color: theme.colors.textMuted,
+          fontSize: '14px',
+          marginBottom: theme.spacing.lg,
+          fontWeight: '600'
+        }}>
+          {summary}
         </div>
+      )}
 
-        {summary && (
-          <div style={{
-            color: theme.colors.textMuted,
-            fontSize: '14px',
+      {/* Portfolio Overview */}
+      {portfolioAnalysis && (
+        <Card glow="green" style={{ marginBottom: theme.spacing.lg }}>
+          <h3 style={{
+            margin: 0,
             marginBottom: theme.spacing.md,
-            fontWeight: '600'
+            fontSize: '20px',
+            fontWeight: '600',
+            color: theme.colors.text
           }}>
-            {summary}
-          </div>
-        )}
-
-        <div style={{ display: 'grid', gap: theme.spacing.sm, marginTop: theme.spacing.md }}>
-          {results.map((r, i) => (
-            <div
-              key={i}
-              style={{
-                border: `1px solid ${r.ok ? theme.colors.primary : theme.colors.danger}`,
-                background: r.ok ? 'rgba(16, 185, 129, 0.1)' : 'rgba(255, 68, 68, 0.1)',
-                borderRadius: theme.borderRadius.md,
-                padding: theme.spacing.md,
-                boxShadow: r.ok ? theme.glow.green : theme.glow.red
-              }}
-            >
+            📊 Portfolio Overview
+          </h3>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+            gap: theme.spacing.md
+          }}>
+            <div>
+              <div style={{ fontSize: '12px', color: theme.colors.textMuted, marginBottom: '4px' }}>
+                Positions
+              </div>
+              <div style={{ fontSize: '24px', fontWeight: '700', color: theme.colors.text }}>
+                {portfolioAnalysis.positionCount}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: '12px', color: theme.colors.textMuted, marginBottom: '4px' }}>
+                Total Value
+              </div>
+              <div style={{ fontSize: '24px', fontWeight: '700', color: theme.colors.text }}>
+                ${portfolioAnalysis.totalValue.toFixed(2)}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: '12px', color: theme.colors.textMuted, marginBottom: '4px' }}>
+                Unrealized P/L
+              </div>
               <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                marginBottom: theme.spacing.xs,
-                alignItems: 'center'
+                fontSize: '24px',
+                fontWeight: '700',
+                color: portfolioAnalysis.totalUnrealized >= 0 ? theme.colors.primary : theme.colors.danger
               }}>
-                <strong style={{
-                  color: theme.colors.text,
-                  fontSize: '16px'
-                }}>
-                  {r.name}
-                </strong>
-                <span style={{
-                  color: r.ok ? theme.colors.primary : theme.colors.danger,
-                  fontWeight: '600',
-                  fontSize: '14px'
-                }}>
-                  {r.ok ? "✅" : "❌"} {r.status} / {r.ms}ms
+                {portfolioAnalysis.totalUnrealized >= 0 ? '+' : ''}${portfolioAnalysis.totalUnrealized.toFixed(2)}
+                <span style={{ fontSize: '14px', marginLeft: '8px' }}>
+                  ({portfolioAnalysis.percentGain >= 0 ? '+' : ''}{portfolioAnalysis.percentGain.toFixed(2)}%)
                 </span>
               </div>
+            </div>
+          </div>
+        </Card>
+      )}
 
-              {r.error && (
+      {/* Market Conditions */}
+      {marketConditions.length > 0 && (
+        <Card glow="teal" style={{ marginBottom: theme.spacing.lg }}>
+          <h3 style={{
+            margin: 0,
+            marginBottom: theme.spacing.md,
+            fontSize: '20px',
+            fontWeight: '600',
+            color: theme.colors.text
+          }}>
+            🌐 Market Conditions
+          </h3>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: theme.spacing.md
+          }}>
+            {marketConditions.map((condition, i) => (
+              <div
+                key={i}
+                style={{
+                  padding: theme.spacing.md,
+                  background: theme.background.input,
+                  border: `1px solid ${getConditionColor(condition.status)}`,
+                  borderRadius: theme.borderRadius.md
+                }}
+              >
                 <div style={{
-                  color: theme.colors.danger,
-                  fontSize: '14px',
-                  marginTop: theme.spacing.xs
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: theme.spacing.sm,
+                  marginBottom: '4px'
                 }}>
-                  Error: {r.error}
+                  {condition.status === 'favorable' && <CheckCircle size={16} color={theme.colors.primary} />}
+                  {condition.status === 'neutral' && <Clock size={16} color={theme.colors.warning} />}
+                  {condition.status === 'unfavorable' && <AlertCircle size={16} color={theme.colors.danger} />}
+                  <span style={{
+                    fontSize: '12px',
+                    color: theme.colors.textMuted,
+                    fontWeight: '600'
+                  }}>
+                    {condition.name}
+                  </span>
                 </div>
-              )}
+                <div style={{
+                  fontSize: '16px',
+                  fontWeight: '700',
+                  color: getConditionColor(condition.status)
+                }}>
+                  {condition.value}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
-              {r.body && (
-                <pre style={{
-                  margin: 0,
-                  marginTop: theme.spacing.sm,
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
+      {/* Trading Opportunities */}
+      {opportunities.length > 0 && (
+        <Card glow="purple" style={{ marginBottom: theme.spacing.lg }}>
+          <h3 style={{
+            margin: 0,
+            marginBottom: theme.spacing.md,
+            fontSize: '20px',
+            fontWeight: '600',
+            color: theme.colors.text
+          }}>
+            🎯 Strategy-Based Opportunities
+          </h3>
+          <div style={{ display: 'grid', gap: theme.spacing.md }}>
+            {opportunities.map((opp, i) => (
+              <div
+                key={i}
+                style={{
+                  padding: theme.spacing.md,
                   background: theme.background.input,
                   border: `1px solid ${theme.colors.border}`,
-                  borderRadius: theme.borderRadius.sm,
-                  padding: theme.spacing.sm,
-                  color: theme.colors.textMuted,
-                  fontSize: '12px',
-                  fontFamily: 'monospace',
-                  maxHeight: '200px',
-                  overflowY: 'auto'
+                  borderRadius: theme.borderRadius.md,
+                  transition: theme.transitions.normal
+                }}
+              >
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                  marginBottom: theme.spacing.sm
                 }}>
-                  {JSON.stringify(r.body, null, 2)}
-                </pre>
-              )}
-            </div>
-          ))}
-        </div>
+                  <div>
+                    <div style={{
+                      fontSize: '18px',
+                      fontWeight: '700',
+                      color: theme.colors.text,
+                      marginBottom: '4px'
+                    }}>
+                      {opp.symbol}
+                      <span style={{
+                        marginLeft: theme.spacing.sm,
+                        padding: `2px ${theme.spacing.sm}`,
+                        background: theme.background.card,
+                        border: `1px solid ${theme.colors.border}`,
+                        borderRadius: theme.borderRadius.sm,
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        color: theme.colors.secondary,
+                        textTransform: 'uppercase'
+                      }}>
+                        {opp.type}
+                      </span>
+                    </div>
+                    <div style={{
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: theme.colors.secondary
+                    }}>
+                      {opp.strategy}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{
+                      fontSize: '12px',
+                      color: theme.colors.textMuted,
+                      marginBottom: '4px'
+                    }}>
+                      Confidence
+                    </div>
+                    <div style={{
+                      fontSize: '18px',
+                      fontWeight: '700',
+                      color: opp.confidence >= 80 ? theme.colors.primary : theme.colors.warning
+                    }}>
+                      {opp.confidence}%
+                    </div>
+                  </div>
+                </div>
 
-        {results.length === 0 && !running && (
+                <div style={{
+                  fontSize: '14px',
+                  color: theme.colors.textMuted,
+                  marginBottom: theme.spacing.sm,
+                  lineHeight: '1.5'
+                }}>
+                  {opp.reason}
+                </div>
+
+                <div style={{
+                  display: 'flex',
+                  gap: theme.spacing.lg,
+                  fontSize: '14px'
+                }}>
+                  <div>
+                    <span style={{ color: theme.colors.textMuted }}>Current: </span>
+                    <span style={{ color: theme.colors.text, fontWeight: '600' }}>
+                      ${opp.currentPrice.toFixed(2)}
+                    </span>
+                  </div>
+                  {opp.targetPrice && (
+                    <>
+                      <div>
+                        <span style={{ color: theme.colors.textMuted }}>Target: </span>
+                        <span style={{ color: theme.colors.primary, fontWeight: '600' }}>
+                          ${opp.targetPrice.toFixed(2)}
+                        </span>
+                      </div>
+                      <div>
+                        <span style={{ color: theme.colors.textMuted }}>Potential: </span>
+                        <span style={{ color: theme.colors.primary, fontWeight: '600' }}>
+                          +{(((opp.targetPrice - opp.currentPrice) / opp.currentPrice) * 100).toFixed(1)}%
+                        </span>
+                      </div>
+                    </>
+                  )}
+                  <div>
+                    <span style={{ color: theme.colors.textMuted }}>Risk: </span>
+                    <span style={{
+                      color: getRiskColor(opp.risk),
+                      fontWeight: '600',
+                      textTransform: 'uppercase'
+                    }}>
+                      {opp.risk}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* System Health Checks */}
+      {results.length > 0 && (
+        <Card glow="green">
+          <h3 style={{
+            margin: 0,
+            marginBottom: theme.spacing.md,
+            fontSize: '20px',
+            fontWeight: '600',
+            color: theme.colors.text
+          }}>
+            ⚙️ System Health
+          </h3>
+          <div style={{ display: 'grid', gap: theme.spacing.sm }}>
+            {results.map((r, i) => (
+              <div
+                key={i}
+                style={{
+                  border: `1px solid ${r.ok ? theme.colors.primary : theme.colors.danger}`,
+                  background: r.ok ? 'rgba(16, 185, 129, 0.1)' : 'rgba(255, 68, 68, 0.1)',
+                  borderRadius: theme.borderRadius.md,
+                  padding: theme.spacing.md,
+                  boxShadow: r.ok ? theme.glow.green : theme.glow.red
+                }}
+              >
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <strong style={{ color: theme.colors.text, fontSize: '16px' }}>
+                    {r.name}
+                  </strong>
+                  <span style={{
+                    color: r.ok ? theme.colors.primary : theme.colors.danger,
+                    fontWeight: '600',
+                    fontSize: '14px'
+                  }}>
+                    {r.ok ? "✅" : "❌"} {r.status} / {r.ms}ms
+                  </span>
+                </div>
+                {r.error && (
+                  <div style={{ color: theme.colors.danger, fontSize: '14px', marginTop: theme.spacing.xs }}>
+                    Error: {r.error}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Empty State */}
+      {results.length === 0 && !running && (
+        <Card glow="teal">
           <div style={{
             textAlign: 'center',
             padding: theme.spacing.xl,
             color: theme.colors.textMuted
           }}>
             <div style={{ fontSize: '48px', marginBottom: theme.spacing.md }}>☀️</div>
-            <div style={{ fontSize: '16px' }}>
-              Click "Run Checks" to start your morning routine
-            </div>
+            <h3 style={{
+              fontSize: '20px',
+              fontWeight: '600',
+              color: theme.colors.text,
+              marginBottom: theme.spacing.sm
+            }}>
+              Ready to Start Your Trading Day
+            </h3>
+            <p style={{ fontSize: '16px', maxWidth: '500px', margin: '0 auto', lineHeight: '1.6' }}>
+              Run your morning checks to:
+            </p>
+            <ul style={{
+              listStyle: 'none',
+              padding: 0,
+              margin: `${theme.spacing.md} auto 0`,
+              maxWidth: '400px',
+              textAlign: 'left'
+            }}>
+              <li style={{ marginBottom: theme.spacing.sm }}>✅ Verify system health</li>
+              <li style={{ marginBottom: theme.spacing.sm }}>📊 Analyze portfolio positions</li>
+              <li style={{ marginBottom: theme.spacing.sm }}>🌐 Check market conditions</li>
+              <li style={{ marginBottom: theme.spacing.sm }}>🎯 Find strategy-based opportunities</li>
+            </ul>
           </div>
-        )}
-      </Card>
+        </Card>
+      )}
     </div>
   );
 }
