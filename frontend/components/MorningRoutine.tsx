@@ -74,50 +74,25 @@ export default function MorningRoutine() {
     const okCount = out.filter((r) => r.ok).length;
     setSummary(`${okCount}/${out.length} system checks passed`);
 
-    // 2) Strategy-Based Opportunity Screening (Mock data - replace with real API)
-    // TODO: Connect to backend endpoint /api/screening/opportunities
-    const mockOpportunities: Opportunity[] = [
-      {
-        symbol: 'AAPL',
-        type: 'stock',
-        strategy: 'Momentum Breakout',
-        reason: 'Breaking above 20-day MA with strong volume',
-        currentPrice: 184.10,
-        targetPrice: 192.50,
-        confidence: 85,
-        risk: 'medium'
-      },
-      {
-        symbol: 'SPY 450C 30DTE',
-        type: 'option',
-        strategy: 'Bullish Trend Following',
-        reason: 'Market uptrend, low IV, good risk/reward',
-        currentPrice: 5.20,
-        targetPrice: 8.50,
-        confidence: 72,
-        risk: 'medium'
-      },
-      {
-        symbol: 'TSLA Iron Condor',
-        type: 'multileg',
-        strategy: 'Range-Bound Premium Collection',
-        reason: 'High IV, consolidation pattern, theta decay favorable',
-        currentPrice: 250.00,
-        confidence: 68,
-        risk: 'low'
+    // 2) Strategy-Based Opportunity Screening
+    try {
+      const oppResult = await timedJson("/api/proxy/screening/opportunities");
+      if (oppResult.ok && oppResult.body?.opportunities) {
+        setOpportunities(oppResult.body.opportunities);
       }
-    ];
-    setOpportunities(mockOpportunities);
+    } catch (e) {
+      console.error("Failed to fetch opportunities:", e);
+    }
 
-    // 3) Market Conditions Analysis (Mock data - replace with real API)
-    // TODO: Connect to backend endpoint /api/market/conditions
-    const mockConditions: MarketCondition[] = [
-      { name: 'VIX (Volatility)', value: '14.2', status: 'favorable' },
-      { name: 'SPY Trend', value: 'Uptrend', status: 'favorable' },
-      { name: 'Market Breadth', value: '68% bullish', status: 'favorable' },
-      { name: 'Volume', value: 'Above average', status: 'neutral' }
-    ];
-    setMarketConditions(mockConditions);
+    // 3) Market Conditions Analysis
+    try {
+      const condResult = await timedJson("/api/proxy/market/conditions");
+      if (condResult.ok && condResult.body?.conditions) {
+        setMarketConditions(condResult.body.conditions);
+      }
+    } catch (e) {
+      console.error("Failed to fetch market conditions:", e);
+    }
 
     // 4) Portfolio Analysis (from positions data)
     const positionsResult = out.find(r => r.name === 'portfolio/positions');

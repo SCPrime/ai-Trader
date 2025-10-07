@@ -10,6 +10,11 @@ const ALLOW_GET = new Set<string>([
   "portfolio/positions",
   "ai/recommendations",
   "market/historical",
+  "screening/opportunities",
+  "screening/strategies",
+  "market/conditions",
+  "market/indices",
+  "market/sectors",
 ]);
 
 const ALLOW_POST = new Set<string>([

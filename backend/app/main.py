@@ -15,7 +15,7 @@ print(f"===========================\n", flush=True)
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .core.config import settings
-from .routers import health, settings as settings_router, portfolio, orders, stream
+from .routers import health, settings as settings_router, portfolio, orders, stream, screening, market
 
 print(f"\n===== SETTINGS LOADED =====")
 print(f"settings.API_TOKEN: {settings.API_TOKEN}")
@@ -36,3 +36,5 @@ app.include_router(settings_router.router, prefix="/api")
 app.include_router(portfolio.router, prefix="/api")
 app.include_router(orders.router, prefix="/api")
 app.include_router(stream.router, prefix="/api")
+app.include_router(screening.router, prefix="/api")
+app.include_router(market.router, prefix="/api")
