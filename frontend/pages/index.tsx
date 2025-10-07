@@ -13,6 +13,10 @@ import NewsReview from '../components/NewsReview';
 import ActivePositions from '../components/ActivePositions';
 import StrategyBuilder from '../components/StrategyBuilder';
 import Backtesting from '../components/Backtesting';
+import Analytics from '../components/Analytics';
+import TradingJournal from '../components/TradingJournal';
+import RiskDashboard from '../components/RiskDashboard';
+import MarketScanner from '../components/MarketScanner';
 import { isUserLoggedIn, initializeSession } from '../lib/userManagement';
 
 export default function Dashboard() {
@@ -113,6 +117,18 @@ export default function Dashboard() {
 
         case 'backtesting':
           return <Backtesting />;
+
+        case 'analytics':
+          return <Analytics />;
+
+        case 'journal':
+          return <TradingJournal />;
+
+        case 'risk':
+          return <RiskDashboard />;
+
+        case 'scanner':
+          return <MarketScanner />;
 
         default:
           return null;
