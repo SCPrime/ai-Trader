@@ -108,22 +108,20 @@ export default function MorningRoutine() {
         setMarketConditions(condResult.body.conditions);
       } else {
         // Fallback mock data
-        setMarketConditions({
-          trend: 'Bullish',
-          volatility: 'Moderate',
-          sentiment: 'Positive',
-          keyLevels: { support: 4500, resistance: 4650 }
-        });
+        setMarketConditions([
+          { name: 'Market Trend', value: 'Bullish', status: 'favorable' as const },
+          { name: 'Volatility', value: 'Moderate', status: 'neutral' as const },
+          { name: 'Sentiment', value: 'Positive', status: 'favorable' as const }
+        ]);
       }
     } catch (e) {
       console.error("Failed to fetch market conditions:", e);
       // Fallback mock data
-      setMarketConditions({
-        trend: 'Bullish',
-        volatility: 'Moderate',
-        sentiment: 'Positive',
-        keyLevels: { support: 4500, resistance: 4650 }
-      });
+      setMarketConditions([
+        { name: 'Market Trend', value: 'Bullish', status: 'favorable' as const },
+        { name: 'Volatility', value: 'Moderate', status: 'neutral' as const },
+        { name: 'Sentiment', value: 'Positive', status: 'favorable' as const }
+      ]);
     }
 
     // 4) Portfolio Analysis (from positions data)
