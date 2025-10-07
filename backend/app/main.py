@@ -10,6 +10,7 @@ print(f"\n===== BACKEND STARTUP =====")
 print(f".env path: {env_path}")
 print(f".env exists: {env_path.exists()}")
 print(f"API_TOKEN from env: {os.getenv('API_TOKEN', 'NOT_SET')}")
+print(f"Deployed from: main branch (auto-deploy test)")
 print(f"===========================\n", flush=True)
 
 from fastapi import FastAPI
