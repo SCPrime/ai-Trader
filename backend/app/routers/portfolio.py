@@ -1,12 +1,27 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional, Literal
 from ..core.auth import require_bearer
+from ..core.config import settings
+import requests
+import os
 
 router = APIRouter()
 
+# Alpaca API configuration
+ALPACA_API_KEY = os.getenv("ALPACA_API_KEY")
+ALPACA_SECRET_KEY = os.getenv("ALPACA_SECRET_KEY")
+ALPACA_BASE_URL = "https://paper-api.alpaca.markets"  # Paper trading
+
+def get_alpaca_headers():
+    """Get headers for Alpaca API requests"""
+    return {
+        "APCA-API-KEY-ID": ALPACA_API_KEY,
+        "APCA-API-SECRET-KEY": ALPACA_SECRET_KEY,
+    }
+
 class AlpacaAccount(BaseModel):
-    """Alpaca account information - mock data for now"""
+    """Alpaca account information"""
     id: str
     account_number: str
     status: Literal["ACTIVE", "INACTIVE"]
@@ -36,44 +51,53 @@ class AlpacaAccount(BaseModel):
 
 @router.get("/account", response_model=AlpacaAccount)
 def get_account(_=Depends(require_bearer)):
-    """Get Alpaca account information - mock data for now"""
-    return {
-        "id": "demo-account-id",
-        "account_number": "PA3XXXXXXX",
-        "status": "ACTIVE",
-        "currency": "USD",
-        "buying_power": "25000.00",
-        "cash": "10000.00",
-        "portfolio_value": "15000.00",
-        "equity": "15000.00",
-        "last_equity": "14850.00",
-        "long_market_value": "5000.00",
-        "short_market_value": "0.00",
-        "initial_margin": "0.00",
-        "maintenance_margin": "0.00",
-        "last_maintenance_margin": "0.00",
-        "daytrade_count": 0,
-        "daytrading_buying_power": "100000.00",
-        "pattern_day_trader": False,
-        "trading_blocked": False,
-        "transfers_blocked": False,
-        "account_blocked": False,
-        "created_at": "2024-01-01T00:00:00Z",
-        "trade_suspended_by_user": False,
-        "multiplier": "4",
-        "shorting_enabled": True,
-        "long_market_value_change": "150.00",
-        "short_market_value_change": "0.00"
-    }
+    """Get real Alpaca account information"""
+    try:
+        response = requests.get(
+            f"{ALPACA_BASE_URL}/v2/account",
+            headers=get_alpaca_headers(),
+            timeout=10
+        )
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch Alpaca account: {str(e)}"
+        )
 
-@router.get("/portfolio/positions")
-def positions(_=Depends(require_bearer)):
-    return [
-        {
-            "symbol": "AAPL",
-            "qty": 10,
-            "avgPrice": 182.34,
-            "marketPrice": 184.10,
-            "unrealized": 17.6
-        }
-    ]
+@router.get("/positions")
+def get_positions(_=Depends(require_bearer)):
+    """Get real Alpaca positions"""
+    try:
+        response = requests.get(
+            f"{ALPACA_BASE_URL}/v2/positions",
+            headers=get_alpaca_headers(),
+            timeout=10
+        )
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch Alpaca positions: {str(e)}"
+        )
+
+@router.get("/positions/{symbol}")
+def get_position(symbol: str, _=Depends(require_bearer)):
+    """Get a specific position by symbol"""
+    try:
+        response = requests.get(
+            f"{ALPACA_BASE_URL}/v2/positions/{symbol}",
+            headers=get_alpaca_headers(),
+            timeout=10
+        )
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        if hasattr(e, 'response') and e.response.status_code == 404:
+            raise HTTPException(status_code=404, detail=f"No position found for {symbol}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch position for {symbol}: {str(e)}"
+        )
