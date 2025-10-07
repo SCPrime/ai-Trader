@@ -15,12 +15,30 @@ const ALLOW_GET = new Set<string>([
   "market/conditions",
   "market/indices",
   "market/sectors",
+  // Alpaca endpoints
+  "account",
+  "positions",
+  "orders",
+  "assets",
+  "clock",
+  "calendar",
+  "watchlists",
 ]);
 
 const ALLOW_POST = new Set<string>([
   "trading/execute",
   "settings",
   "admin/kill",
+  // Alpaca endpoints
+  "orders",
+  "watchlists",
+]);
+
+const ALLOW_DELETE = new Set<string>([
+  // Alpaca endpoints
+  "positions",
+  "orders",
+  "watchlists",
 ]);
 
 function isAllowedOrigin(req: NextApiRequest) {
@@ -39,7 +57,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // CORS preflight
   if (req.method === "OPTIONS") {
     res.setHeader("access-control-allow-origin", req.headers.origin ?? "");
-    res.setHeader("access-control-allow-methods", "GET,POST,OPTIONS");
+    res.setHeader("access-control-allow-methods", "GET,POST,DELETE,OPTIONS");
     res.setHeader("access-control-allow-headers", "content-type,x-request-id");
     res.status(204).end();
     return;
@@ -59,11 +77,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     path = path.substring(4);
   }
 
+  // Check if path is allowed based on method
   if (req.method === "GET" && !ALLOW_GET.has(path)) {
-    return res.status(405).json({ error: "Not allowed" });
+    // Allow wildcard patterns for dynamic routes
+    const isAllowedPattern = Array.from(ALLOW_GET).some(allowed =>
+      path.startsWith(allowed + "/") || path === allowed
+    );
+    if (!isAllowedPattern) {
+      return res.status(405).json({ error: "Not allowed" });
+    }
   }
   if (req.method === "POST" && !ALLOW_POST.has(path)) {
-    return res.status(405).json({ error: "Not allowed" });
+    const isAllowedPattern = Array.from(ALLOW_POST).some(allowed =>
+      path.startsWith(allowed + "/") || path === allowed
+    );
+    if (!isAllowedPattern) {
+      return res.status(405).json({ error: "Not allowed" });
+    }
+  }
+  if (req.method === "DELETE" && !ALLOW_DELETE.has(path)) {
+    const isAllowedPattern = Array.from(ALLOW_DELETE).some(allowed =>
+      path.startsWith(allowed + "/") || path === allowed
+    );
+    if (!isAllowedPattern) {
+      return res.status(405).json({ error: "Not allowed" });
+    }
   }
 
   const url = `${BACKEND}/api/${path}`;
@@ -92,7 +130,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const upstream = await fetch(url, {
       method: req.method,
       headers,
-      body: req.method === "POST" ? JSON.stringify(req.body ?? {}) : undefined,
+      body: (req.method === "POST" || req.method === "DELETE") ? JSON.stringify(req.body ?? {}) : undefined,
       // avoid any CDN caching at the edge
       cache: "no-store",
     });

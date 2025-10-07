@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, DollarSign, Percent, RefreshCw } from 'lucide-react';
 import { Card, Button } from './ui';
 import { theme } from '../styles/theme';
+import { alpaca, formatPosition } from '../lib/alpaca';
 
 interface Position {
   symbol: string;
@@ -42,78 +43,40 @@ export default function ActivePositions() {
   const loadPositions = async () => {
     setLoading(true);
 
-    // Mock data - replace with actual API call
-    const mockPositions: Position[] = [
-      {
-        symbol: 'AAPL',
-        qty: 50,
-        avgEntryPrice: 178.50,
-        currentPrice: 182.30,
-        marketValue: 9115.00,
-        unrealizedPL: 190.00,
-        unrealizedPLPercent: 2.13,
-        side: 'long',
-        dayChange: 2.80,
-        dayChangePercent: 1.56,
-      },
-      {
-        symbol: 'MSFT',
-        qty: 30,
-        avgEntryPrice: 372.80,
-        currentPrice: 378.45,
-        marketValue: 11353.50,
-        unrealizedPL: 169.50,
-        unrealizedPLPercent: 1.52,
-        side: 'long',
-        dayChange: 5.65,
-        dayChangePercent: 1.52,
-      },
-      {
-        symbol: 'TSLA',
-        qty: 25,
-        avgEntryPrice: 245.30,
-        currentPrice: 238.90,
-        marketValue: 5972.50,
-        unrealizedPL: -160.00,
-        unrealizedPLPercent: -2.61,
-        side: 'long',
-        dayChange: -6.40,
-        dayChangePercent: -2.61,
-      },
-      {
-        symbol: 'SPY',
-        qty: 100,
-        avgEntryPrice: 458.20,
-        currentPrice: 462.15,
-        marketValue: 46215.00,
-        unrealizedPL: 395.00,
-        unrealizedPLPercent: 0.86,
-        side: 'long',
-        dayChange: 3.95,
-        dayChangePercent: 0.86,
-      },
-    ];
+    try {
+      // Fetch positions and account data from Alpaca
+      const [alpacaPositions, account] = await Promise.all([
+        alpaca.getPositions(),
+        alpaca.getAccount(),
+      ]);
 
-    const totalValue = mockPositions.reduce((sum, p) => sum + p.marketValue, 0);
-    const totalPL = mockPositions.reduce((sum, p) => sum + p.unrealizedPL, 0);
-    const totalCost = mockPositions.reduce((sum, p) => sum + (p.avgEntryPrice * p.qty), 0);
-    const dayPL = mockPositions.reduce((sum, p) => sum + (p.dayChange * p.qty), 0);
+      // Format positions for UI
+      const formattedPositions: Position[] = alpacaPositions.map(formatPosition);
 
-    const mockMetrics: PortfolioMetrics = {
-      totalValue,
-      buyingPower: 52345.68,
-      totalPL,
-      totalPLPercent: (totalPL / totalCost) * 100,
-      dayPL,
-      dayPLPercent: (dayPL / (totalValue - dayPL)) * 100,
-      positionCount: mockPositions.length,
-    };
+      // Calculate metrics
+      const totalValue = formattedPositions.reduce((sum, p) => sum + p.marketValue, 0);
+      const totalPL = formattedPositions.reduce((sum, p) => sum + p.unrealizedPL, 0);
+      const totalCost = formattedPositions.reduce((sum, p) => sum + (p.avgEntryPrice * p.qty), 0);
+      const dayPL = formattedPositions.reduce((sum, p) => sum + (p.dayChange * p.qty), 0);
 
-    setTimeout(() => {
-      setPositions(mockPositions);
-      setMetrics(mockMetrics);
+      const calculatedMetrics: PortfolioMetrics = {
+        totalValue,
+        buyingPower: parseFloat(account.buying_power),
+        totalPL,
+        totalPLPercent: totalCost > 0 ? (totalPL / totalCost) * 100 : 0,
+        dayPL,
+        dayPLPercent: (totalValue - dayPL) > 0 ? (dayPL / (totalValue - dayPL)) * 100 : 0,
+        positionCount: formattedPositions.length,
+      };
+
+      setPositions(formattedPositions);
+      setMetrics(calculatedMetrics);
+    } catch (error) {
+      console.error('Failed to load positions:', error);
+      // Keep existing data if refresh fails
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   const sortPositions = (positions: Position[]) => {
@@ -318,9 +281,16 @@ export default function ActivePositions() {
                     variant="danger"
                     size="sm"
                     style={{ marginTop: theme.spacing.md, width: '100%' }}
-                    onClick={() => {
+                    onClick={async () => {
                       if (confirm(`Close entire position in ${position.symbol}?`)) {
-                        console.log(`Closing position: ${position.symbol}`);
+                        try {
+                          await alpaca.closePosition(position.symbol);
+                          // Refresh positions after close
+                          await loadPositions();
+                        } catch (error) {
+                          console.error(`Failed to close position ${position.symbol}:`, error);
+                          alert(`Failed to close position: ${error}`);
+                        }
                       }
                     }}
                   >
