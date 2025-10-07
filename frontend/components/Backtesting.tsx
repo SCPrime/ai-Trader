@@ -1,159 +1,126 @@
 "use client";
 import { useState } from 'react';
-import { TrendingUp, BarChart3, Calendar, DollarSign } from 'lucide-react';
+import { BarChart3, TrendingUp, TrendingDown, Activity, DollarSign, Percent, Play } from 'lucide-react';
 import { Card, Button, Input, Select } from './ui';
 import { theme } from '../styles/theme';
 
-interface BacktestResult {
+interface BacktestConfig {
+  symbol: string;
+  startDate: string;
+  endDate: string;
+  initialCapital: string;
+  strategyName: string;
+}
+
+interface BacktestResults {
   totalReturn: number;
+  totalReturnPercent: number;
   annualizedReturn: number;
   sharpeRatio: number;
   maxDrawdown: number;
   winRate: number;
   totalTrades: number;
-  profitableTrades: number;
-  averageWin: number;
-  averageLoss: number;
+  winningTrades: number;
+  losingTrades: number;
+  avgWin: number;
+  avgLoss: number;
   profitFactor: number;
   equityCurve: { date: string; value: number }[];
-  trades: Trade[];
-}
-
-interface Trade {
-  date: string;
-  symbol: string;
-  side: 'buy' | 'sell';
-  quantity: number;
-  price: number;
-  pnl: number;
-  pnlPercent: number;
+  tradeHistory: {
+    date: string;
+    type: 'buy' | 'sell';
+    price: number;
+    quantity: number;
+    pnl: number;
+  }[];
 }
 
 export default function Backtesting() {
-  const [strategy, setStrategy] = useState('rsi-mean-reversion');
-  const [symbol, setSymbol] = useState('SPY');
-  const [startDate, setStartDate] = useState('2023-01-01');
-  const [endDate, setEndDate] = useState('2024-01-01');
-  const [initialCapital, setInitialCapital] = useState('10000');
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<BacktestResult | null>(null);
+  const [config, setConfig] = useState<BacktestConfig>({
+    symbol: 'SPY',
+    startDate: '2024-01-01',
+    endDate: '2024-12-31',
+    initialCapital: '10000',
+    strategyName: 'Select Strategy',
+  });
 
-  const strategyOptions = [
-    { value: 'rsi-mean-reversion', label: 'RSI Mean Reversion' },
-    { value: 'macd-trend-following', label: 'MACD Trend Following' },
-    { value: 'bollinger-breakout', label: 'Bollinger Band Breakout' },
-    { value: 'moving-average-cross', label: 'Moving Average Crossover' },
-    { value: 'custom-strategy', label: 'Custom Strategy' },
-  ];
+  const [results, setResults] = useState<BacktestResults | null>(null);
+  const [isRunning, setIsRunning] = useState(false);
 
   const runBacktest = async () => {
-    setLoading(true);
+    setIsRunning(true);
 
-    // Simulate backtest - replace with actual API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Simulate backtest
+    setTimeout(() => {
+      const mockResults: BacktestResults = {
+        totalReturn: 1847.32,
+        totalReturnPercent: 18.47,
+        annualizedReturn: 18.47,
+        sharpeRatio: 1.42,
+        maxDrawdown: -12.3,
+        winRate: 58.5,
+        totalTrades: 47,
+        winningTrades: 27,
+        losingTrades: 20,
+        avgWin: 142.50,
+        avgLoss: -87.30,
+        profitFactor: 2.13,
+        equityCurve: generateEquityCurve(),
+        tradeHistory: generateTradeHistory(),
+      };
 
-    // Mock results
-    const mockResult: BacktestResult = {
-      totalReturn: 24.5,
-      annualizedReturn: 18.3,
-      sharpeRatio: 1.45,
-      maxDrawdown: -8.2,
-      winRate: 58.3,
-      totalTrades: 127,
-      profitableTrades: 74,
-      averageWin: 2.8,
-      averageLoss: -1.9,
-      profitFactor: 1.62,
-      equityCurve: generateMockEquityCurve(),
-      trades: generateMockTrades(),
-    };
-
-    setResult(mockResult);
-    setLoading(false);
+      setResults(mockResults);
+      setIsRunning(false);
+    }, 2000);
   };
 
-  const generateMockEquityCurve = () => {
+  const generateEquityCurve = () => {
     const curve = [];
-    let value = parseFloat(initialCapital);
-    const days = 252; // Trading days in a year
-    for (let i = 0; i <= days; i++) {
+    let value = 10000;
+    const startDate = new Date('2024-01-01');
+
+    for (let i = 0; i < 365; i++) {
       const date = new Date(startDate);
       date.setDate(date.getDate() + i);
-      value *= (1 + (Math.random() * 0.02 - 0.008)); // Random daily returns
+      const change = (Math.random() - 0.45) * 150;
+      value += change;
       curve.push({
         date: date.toISOString().split('T')[0],
-        value: Math.round(value * 100) / 100,
+        value: Math.max(8000, value),
       });
     }
     return curve;
   };
 
-  const generateMockTrades = (): Trade[] => {
-    return [
-      {
-        date: '2023-02-15',
-        symbol: 'SPY',
-        side: 'buy',
-        quantity: 10,
-        price: 412.50,
-        pnl: 125.00,
-        pnlPercent: 3.03,
-      },
-      {
-        date: '2023-03-22',
-        symbol: 'SPY',
-        side: 'sell',
-        quantity: 10,
-        price: 405.30,
-        pnl: -72.00,
-        pnlPercent: -1.75,
-      },
-      {
-        date: '2023-04-10',
-        symbol: 'SPY',
-        side: 'buy',
-        quantity: 10,
-        price: 418.75,
-        pnl: 218.50,
-        pnlPercent: 5.22,
-      },
-      {
-        date: '2023-05-18',
-        symbol: 'SPY',
-        side: 'buy',
-        quantity: 10,
-        price: 422.90,
-        pnl: 164.00,
-        pnlPercent: 3.88,
-      },
-      {
-        date: '2023-06-25',
-        symbol: 'SPY',
-        side: 'sell',
-        quantity: 10,
-        price: 415.60,
-        pnl: -91.00,
-        pnlPercent: -2.15,
-      },
-    ];
+  const generateTradeHistory = () => {
+    const trades = [];
+    const types: ('buy' | 'sell')[] = ['buy', 'sell'];
+
+    for (let i = 0; i < 10; i++) {
+      const date = new Date('2024-01-01');
+      date.setDate(date.getDate() + i * 36);
+      trades.push({
+        date: date.toISOString().split('T')[0],
+        type: types[i % 2],
+        price: 450 + Math.random() * 50,
+        quantity: Math.floor(Math.random() * 20) + 1,
+        pnl: (Math.random() - 0.4) * 300,
+      });
+    }
+    return trades;
   };
 
   return (
     <div style={{ padding: theme.spacing.lg }}>
       {/* Header */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: theme.spacing.sm,
-        marginBottom: theme.spacing.lg
-      }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm, marginBottom: theme.spacing.lg }}>
         <BarChart3 size={32} color={theme.colors.info} />
         <h1 style={{
           margin: 0,
           fontSize: '32px',
           fontWeight: '700',
           color: theme.colors.text,
-          textShadow: theme.glow.teal,
+          textShadow: `0 0 20px ${theme.colors.info}40`,
         }}>
           Backtesting
         </h1>
@@ -161,62 +128,63 @@ export default function Backtesting() {
 
       {/* Configuration */}
       <Card glow="teal" style={{ marginBottom: theme.spacing.lg }}>
-        <h2 style={{
-          margin: 0,
-          marginBottom: theme.spacing.md,
-          fontSize: '20px',
-          fontWeight: '600',
-          color: theme.colors.text
-        }}>
-          Backtest Configuration
-        </h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: theme.spacing.md }}>
+        <h3 style={{ margin: `0 0 ${theme.spacing.md} 0`, color: theme.colors.text, fontSize: '18px' }}>
+          Configuration
+        </h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: theme.spacing.md, marginBottom: theme.spacing.md }}>
           <Select
             label="Strategy"
-            options={strategyOptions}
-            value={strategy}
-            onChange={(e) => setStrategy(e.target.value)}
+            options={[
+              { value: 'Select Strategy', label: 'Select Strategy' },
+              { value: 'rsi', label: 'RSI Reversal' },
+              { value: 'ma', label: 'Moving Average Crossover' },
+              { value: 'breakout', label: 'Breakout Strategy' },
+            ]}
+            value={config.strategyName}
+            onChange={(e) => setConfig({ ...config, strategyName: e.target.value })}
           />
           <Input
             label="Symbol"
-            value={symbol}
-            onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-            placeholder="SPY"
+            value={config.symbol}
+            onChange={(e) => setConfig({ ...config, symbol: e.target.value.toUpperCase() })}
           />
           <Input
             label="Start Date"
             type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
+            value={config.startDate}
+            onChange={(e) => setConfig({ ...config, startDate: e.target.value })}
           />
           <Input
             label="End Date"
             type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
+            value={config.endDate}
+            onChange={(e) => setConfig({ ...config, endDate: e.target.value })}
           />
           <Input
-            label="Initial Capital ($)"
-            value={initialCapital}
-            onChange={(e) => setInitialCapital(e.target.value)}
-            placeholder="10000"
+            label="Initial Capital"
+            type="number"
+            value={config.initialCapital}
+            onChange={(e) => setConfig({ ...config, initialCapital: e.target.value })}
           />
         </div>
         <Button
           variant="primary"
-          size="lg"
-          loading={loading}
+          size="md"
+          loading={isRunning}
           onClick={runBacktest}
-          style={{ marginTop: theme.spacing.md, width: '100%' }}
+          style={{ margin: '0 auto', display: 'block' }}
         >
-          {loading ? 'Running Backtest...' : 'Run Backtest'}
+          <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.xs }}>
+            <Play size={20} />
+            {isRunning ? 'Running...' : 'Run Backtest'}
+          </div>
         </Button>
       </Card>
 
       {/* Results */}
-      {result && (
+      {results && (
         <>
-          {/* Performance Metrics */}
+          {/* Metrics Grid */}
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
@@ -224,201 +192,135 @@ export default function Backtesting() {
             marginBottom: theme.spacing.lg,
           }}>
             <MetricCard
-              icon={<TrendingUp size={20} color={theme.colors.primary} />}
+              icon={<DollarSign size={20} color={results.totalReturn >= 0 ? theme.colors.primary : theme.colors.danger} />}
               label="Total Return"
-              value={`${result.totalReturn >= 0 ? '+' : ''}${result.totalReturn.toFixed(2)}%`}
-              valueColor={result.totalReturn >= 0 ? theme.colors.primary : theme.colors.danger}
+              value={`${results.totalReturn.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+              subValue={`${results.totalReturnPercent >= 0 ? '+' : ''}${results.totalReturnPercent.toFixed(2)}%`}
+              valueColor={results.totalReturn >= 0 ? theme.colors.primary : theme.colors.danger}
             />
             <MetricCard
-              icon={<TrendingUp size={20} color={theme.colors.secondary} />}
+              icon={<TrendingUp size={20} color={theme.colors.primary} />}
               label="Annualized Return"
-              value={`${result.annualizedReturn >= 0 ? '+' : ''}${result.annualizedReturn.toFixed(2)}%`}
-              valueColor={result.annualizedReturn >= 0 ? theme.colors.secondary : theme.colors.danger}
+              value={`${results.annualizedReturn >= 0 ? '+' : ''}${results.annualizedReturn.toFixed(2)}%`}
+              valueColor={results.annualizedReturn >= 0 ? theme.colors.primary : theme.colors.danger}
             />
             <MetricCard
-              icon={<BarChart3 size={20} color={theme.colors.info} />}
+              icon={<Activity size={20} color={theme.colors.info} />}
               label="Sharpe Ratio"
-              value={result.sharpeRatio.toFixed(2)}
+              value={results.sharpeRatio.toFixed(2)}
             />
             <MetricCard
-              icon={<TrendingUp size={20} color={theme.colors.danger} />}
+              icon={<TrendingDown size={20} color={theme.colors.danger} />}
               label="Max Drawdown"
-              value={`${result.maxDrawdown.toFixed(2)}%`}
+              value={`${results.maxDrawdown.toFixed(2)}%`}
               valueColor={theme.colors.danger}
             />
             <MetricCard
-              icon={<DollarSign size={20} color={theme.colors.accent} />}
+              icon={<Percent size={20} color={theme.colors.secondary} />}
               label="Win Rate"
-              value={`${result.winRate.toFixed(1)}%`}
+              value={`${results.winRate.toFixed(1)}%`}
             />
             <MetricCard
               icon={<BarChart3 size={20} color={theme.colors.primary} />}
               label="Profit Factor"
-              value={result.profitFactor.toFixed(2)}
+              value={results.profitFactor.toFixed(2)}
+              valueColor={results.profitFactor > 1 ? theme.colors.primary : theme.colors.danger}
             />
           </div>
 
           {/* Equity Curve */}
           <Card style={{ marginBottom: theme.spacing.lg }}>
-            <h3 style={{
-              margin: 0,
-              marginBottom: theme.spacing.md,
-              fontSize: '18px',
-              fontWeight: '600',
-              color: theme.colors.text
-            }}>
+            <h3 style={{ margin: `0 0 ${theme.spacing.md} 0`, color: theme.colors.text, fontSize: '18px' }}>
               Equity Curve
             </h3>
             <div style={{
               height: '300px',
-              background: theme.background.input,
-              borderRadius: theme.borderRadius.md,
+              display: 'flex',
+              alignItems: 'flex-end',
+              gap: '2px',
               padding: theme.spacing.md,
-              position: 'relative',
+              background: theme.background.input,
+              borderRadius: theme.borderRadius.sm,
             }}>
-              {/* Simple SVG line chart */}
-              <svg width="100%" height="100%" style={{ overflow: 'visible' }}>
-                <polyline
-                  points={result.equityCurve.map((point, i) => {
-                    const x = (i / (result.equityCurve.length - 1)) * 100;
-                    const minVal = Math.min(...result.equityCurve.map(p => p.value));
-                    const maxVal = Math.max(...result.equityCurve.map(p => p.value));
-                    const y = 90 - ((point.value - minVal) / (maxVal - minVal)) * 80;
-                    return `${x}%,${y}%`;
-                  }).join(' ')}
-                  fill="none"
-                  stroke={theme.colors.primary}
-                  strokeWidth="2"
-                />
-              </svg>
-              <div style={{
-                position: 'absolute',
-                bottom: theme.spacing.sm,
-                left: theme.spacing.sm,
-                fontSize: '12px',
-                color: theme.colors.textMuted,
-              }}>
-                {result.equityCurve[0].date}
-              </div>
-              <div style={{
-                position: 'absolute',
-                bottom: theme.spacing.sm,
-                right: theme.spacing.sm,
-                fontSize: '12px',
-                color: theme.colors.textMuted,
-              }}>
-                {result.equityCurve[result.equityCurve.length - 1].date}
-              </div>
+              {results.equityCurve.filter((_, i) => i % 10 === 0).map((point, index) => {
+                const height = ((point.value - 8000) / 4000) * 100;
+                return (
+                  <div
+                    key={index}
+                    style={{
+                      flex: 1,
+                      height: `${height}%`,
+                      background: point.value > 10000 ? theme.colors.primary : theme.colors.danger,
+                      borderRadius: '2px 2px 0 0',
+                      transition: theme.transitions.fast,
+                    }}
+                    title={`${point.date}: ${point.value.toFixed(2)}`}
+                  />
+                );
+              })}
             </div>
           </Card>
 
           {/* Trade Statistics */}
           <Card style={{ marginBottom: theme.spacing.lg }}>
-            <h3 style={{
-              margin: 0,
-              marginBottom: theme.spacing.md,
-              fontSize: '18px',
-              fontWeight: '600',
-              color: theme.colors.text
-            }}>
+            <h3 style={{ margin: `0 0 ${theme.spacing.md} 0`, color: theme.colors.text, fontSize: '18px' }}>
               Trade Statistics
             </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: theme.spacing.md }}>
-              <div>
-                <p style={{ fontSize: '12px', color: theme.colors.textMuted, margin: 0 }}>Total Trades</p>
-                <p style={{ fontSize: '20px', fontWeight: '600', color: theme.colors.text, margin: `${theme.spacing.xs} 0 0 0` }}>
-                  {result.totalTrades}
-                </p>
-              </div>
-              <div>
-                <p style={{ fontSize: '12px', color: theme.colors.textMuted, margin: 0 }}>Profitable Trades</p>
-                <p style={{ fontSize: '20px', fontWeight: '600', color: theme.colors.primary, margin: `${theme.spacing.xs} 0 0 0` }}>
-                  {result.profitableTrades}
-                </p>
-              </div>
-              <div>
-                <p style={{ fontSize: '12px', color: theme.colors.textMuted, margin: 0 }}>Losing Trades</p>
-                <p style={{ fontSize: '20px', fontWeight: '600', color: theme.colors.danger, margin: `${theme.spacing.xs} 0 0 0` }}>
-                  {result.totalTrades - result.profitableTrades}
-                </p>
-              </div>
-              <div>
-                <p style={{ fontSize: '12px', color: theme.colors.textMuted, margin: 0 }}>Average Win</p>
-                <p style={{ fontSize: '20px', fontWeight: '600', color: theme.colors.primary, margin: `${theme.spacing.xs} 0 0 0` }}>
-                  +{result.averageWin.toFixed(2)}%
-                </p>
-              </div>
-              <div>
-                <p style={{ fontSize: '12px', color: theme.colors.textMuted, margin: 0 }}>Average Loss</p>
-                <p style={{ fontSize: '20px', fontWeight: '600', color: theme.colors.danger, margin: `${theme.spacing.xs} 0 0 0` }}>
-                  {result.averageLoss.toFixed(2)}%
-                </p>
-              </div>
-              <div>
-                <p style={{ fontSize: '12px', color: theme.colors.textMuted, margin: 0 }}>Expectancy</p>
-                <p style={{ fontSize: '20px', fontWeight: '600', color: theme.colors.text, margin: `${theme.spacing.xs} 0 0 0` }}>
-                  {((result.averageWin * (result.winRate / 100)) + (result.averageLoss * (1 - result.winRate / 100))).toFixed(2)}%
-                </p>
-              </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: theme.spacing.md }}>
+              <StatItem label="Total Trades" value={results.totalTrades.toString()} />
+              <StatItem label="Winning" value={results.winningTrades.toString()} color={theme.colors.primary} />
+              <StatItem label="Losing" value={results.losingTrades.toString()} color={theme.colors.danger} />
+              <StatItem label="Avg Win" value={`${results.avgWin.toFixed(2)}`} color={theme.colors.primary} />
+              <StatItem label="Avg Loss" value={`${Math.abs(results.avgLoss).toFixed(2)}`} color={theme.colors.danger} />
             </div>
           </Card>
 
           {/* Trade History */}
           <Card>
-            <h3 style={{
-              margin: 0,
-              marginBottom: theme.spacing.md,
-              fontSize: '18px',
-              fontWeight: '600',
-              color: theme.colors.text
-            }}>
+            <h3 style={{ margin: `0 0 ${theme.spacing.md} 0`, color: theme.colors.text, fontSize: '18px' }}>
               Recent Trades
             </h3>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ borderBottom: `1px solid ${theme.colors.border}` }}>
-                    {['Date', 'Symbol', 'Side', 'Quantity', 'Price', 'P&L', 'P&L %'].map((header) => (
-                      <th key={header} style={{
-                        textAlign: 'left',
-                        padding: theme.spacing.sm,
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        color: theme.colors.textMuted,
-                      }}>
-                        {header}
-                      </th>
-                    ))}
+                    <th style={{ padding: theme.spacing.sm, textAlign: 'left', fontSize: '14px', fontWeight: '600', color: theme.colors.textMuted }}>Date</th>
+                    <th style={{ padding: theme.spacing.sm, textAlign: 'left', fontSize: '14px', fontWeight: '600', color: theme.colors.textMuted }}>Type</th>
+                    <th style={{ padding: theme.spacing.sm, textAlign: 'right', fontSize: '14px', fontWeight: '600', color: theme.colors.textMuted }}>Price</th>
+                    <th style={{ padding: theme.spacing.sm, textAlign: 'right', fontSize: '14px', fontWeight: '600', color: theme.colors.textMuted }}>Qty</th>
+                    <th style={{ padding: theme.spacing.sm, textAlign: 'right', fontSize: '14px', fontWeight: '600', color: theme.colors.textMuted }}>P&L</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {result.trades.map((trade, i) => (
-                    <tr key={i} style={{ borderBottom: `1px solid ${theme.colors.border}` }}>
-                      <td style={{ padding: theme.spacing.sm, color: theme.colors.text }}>{trade.date}</td>
-                      <td style={{ padding: theme.spacing.sm, color: theme.colors.text, fontWeight: '600' }}>{trade.symbol}</td>
-                      <td style={{
-                        padding: theme.spacing.sm,
-                        color: trade.side === 'buy' ? theme.colors.primary : theme.colors.danger,
-                        textTransform: 'uppercase',
-                        fontWeight: '600',
-                      }}>
-                        {trade.side}
+                  {results.tradeHistory.map((trade, index) => (
+                    <tr key={index} style={{ borderBottom: `1px solid ${theme.colors.border}40` }}>
+                      <td style={{ padding: theme.spacing.sm, fontSize: '14px', color: theme.colors.text }}>{trade.date}</td>
+                      <td style={{ padding: theme.spacing.sm }}>
+                        <span style={{
+                          padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+                          borderRadius: theme.borderRadius.sm,
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          background: trade.type === 'buy' ? `${theme.colors.primary}20` : `${theme.colors.danger}20`,
+                          color: trade.type === 'buy' ? theme.colors.primary : theme.colors.danger,
+                        }}>
+                          {trade.type.toUpperCase()}
+                        </span>
                       </td>
-                      <td style={{ padding: theme.spacing.sm, color: theme.colors.text }}>{trade.quantity}</td>
-                      <td style={{ padding: theme.spacing.sm, color: theme.colors.text }}>${trade.price.toFixed(2)}</td>
+                      <td style={{ padding: theme.spacing.sm, textAlign: 'right', fontSize: '14px', color: theme.colors.text }}>
+                        ${trade.price.toFixed(2)}
+                      </td>
+                      <td style={{ padding: theme.spacing.sm, textAlign: 'right', fontSize: '14px', color: theme.colors.text }}>
+                        {trade.quantity}
+                      </td>
                       <td style={{
                         padding: theme.spacing.sm,
-                        color: trade.pnl >= 0 ? theme.colors.primary : theme.colors.danger,
+                        textAlign: 'right',
+                        fontSize: '14px',
                         fontWeight: '600',
+                        color: trade.pnl >= 0 ? theme.colors.primary : theme.colors.danger,
                       }}>
                         {trade.pnl >= 0 ? '+' : ''}${trade.pnl.toFixed(2)}
-                      </td>
-                      <td style={{
-                        padding: theme.spacing.sm,
-                        color: trade.pnlPercent >= 0 ? theme.colors.primary : theme.colors.danger,
-                        fontWeight: '600',
-                      }}>
-                        {trade.pnlPercent >= 0 ? '+' : ''}{trade.pnlPercent.toFixed(2)}%
                       </td>
                     </tr>
                   ))}
@@ -432,10 +334,11 @@ export default function Backtesting() {
   );
 }
 
-function MetricCard({ icon, label, value, valueColor }: {
+function MetricCard({ icon, label, value, subValue, valueColor }: {
   icon: React.ReactNode;
   label: string;
   value: string;
+  subValue?: string;
   valueColor?: string;
 }) {
   return (
@@ -448,10 +351,30 @@ function MetricCard({ icon, label, value, valueColor }: {
         fontSize: '24px',
         fontWeight: 'bold',
         color: valueColor || theme.colors.text,
-        margin: 0
+        margin: 0,
       }}>
         {value}
       </p>
+      {subValue && (
+        <p style={{ fontSize: '14px', color: theme.colors.textMuted, margin: `${theme.spacing.xs} 0 0 0` }}>
+          {subValue}
+        </p>
+      )}
     </Card>
+  );
+}
+
+function StatItem({ label, value, color }: {
+  label: string;
+  value: string;
+  color?: string;
+}) {
+  return (
+    <div>
+      <p style={{ fontSize: '12px', color: theme.colors.textMuted, margin: 0 }}>{label}</p>
+      <p style={{ fontSize: '20px', fontWeight: '600', color: color || theme.colors.text, margin: `${theme.spacing.xs} 0 0 0` }}>
+        {value}
+      </p>
+    </div>
   );
 }

@@ -1,125 +1,119 @@
 "use client";
 import { useState } from 'react';
-import { Target, Plus, X, AlertTriangle } from 'lucide-react';
+import { Target, Plus, Trash2, Save, Play, AlertCircle } from 'lucide-react';
 import { Card, Button, Input, Select } from './ui';
 import { theme } from '../styles/theme';
 
 interface Condition {
   id: string;
-  indicator: string;
-  operator: string;
+  type: 'price' | 'indicator' | 'time' | 'volume';
+  operator: 'greater' | 'less' | 'equal' | 'between';
   value: string;
 }
 
 interface Action {
   id: string;
-  type: string;
+  type: 'buy' | 'sell' | 'notify';
   quantity: string;
+  orderType: 'market' | 'limit';
+}
+
+interface Strategy {
+  name: string;
+  description: string;
+  symbol: string;
+  entryConditions: Condition[];
+  exitConditions: Condition[];
+  entryActions: Action[];
+  exitActions: Action[];
+  riskManagement: {
+    maxPositionSize: string;
+    stopLoss: string;
+    takeProfit: string;
+  };
 }
 
 export default function StrategyBuilder() {
-  const [strategyName, setStrategyName] = useState('');
-  const [symbol, setSymbol] = useState('SPY');
+  const [strategy, setStrategy] = useState<Strategy>({
+    name: 'New Strategy',
+    description: '',
+    symbol: '',
+    entryConditions: [],
+    exitConditions: [],
+    entryActions: [],
+    exitActions: [],
+    riskManagement: {
+      maxPositionSize: '100',
+      stopLoss: '2',
+      takeProfit: '5',
+    },
+  });
+
   const [activeTab, setActiveTab] = useState<'entry' | 'exit' | 'risk'>('entry');
-
-  const [entryConditions, setEntryConditions] = useState<Condition[]>([
-    { id: '1', indicator: 'RSI', operator: '>', value: '30' }
-  ]);
-  const [entryActions, setEntryActions] = useState<Action[]>([
-    { id: '1', type: 'buy', quantity: '100' }
-  ]);
-
-  const [exitConditions, setExitConditions] = useState<Condition[]>([
-    { id: '1', indicator: 'RSI', operator: '<', value: '70' }
-  ]);
-  const [exitActions, setExitActions] = useState<Action[]>([
-    { id: '1', type: 'sell', quantity: '100' }
-  ]);
-
-  const [positionSize, setPositionSize] = useState('1000');
-  const [stopLoss, setStopLoss] = useState('2');
-  const [takeProfit, setTakeProfit] = useState('5');
-  const [loading, setLoading] = useState(false);
-
-  const indicatorOptions = [
-    { value: 'RSI', label: 'RSI - Relative Strength Index' },
-    { value: 'MACD', label: 'MACD - Moving Average Convergence Divergence' },
-    { value: 'SMA', label: 'SMA - Simple Moving Average' },
-    { value: 'EMA', label: 'EMA - Exponential Moving Average' },
-    { value: 'BB', label: 'Bollinger Bands' },
-    { value: 'PRICE', label: 'Price' },
-  ];
-
-  const operatorOptions = [
-    { value: '>', label: 'Greater than' },
-    { value: '<', label: 'Less than' },
-    { value: '>=', label: 'Greater than or equal' },
-    { value: '<=', label: 'Less than or equal' },
-    { value: '==', label: 'Equal to' },
-    { value: 'crosses_above', label: 'Crosses above' },
-    { value: 'crosses_below', label: 'Crosses below' },
-  ];
-
-  const actionTypeOptions = [
-    { value: 'buy', label: 'Buy' },
-    { value: 'sell', label: 'Sell' },
-    { value: 'sell_short', label: 'Sell Short' },
-    { value: 'buy_to_cover', label: 'Buy to Cover' },
-  ];
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
   const addCondition = (type: 'entry' | 'exit') => {
     const newCondition: Condition = {
-      id: Date.now().toString(),
-      indicator: 'RSI',
-      operator: '>',
-      value: '50'
+      id: `cond-${Date.now()}`,
+      type: 'price',
+      operator: 'greater',
+      value: '',
     };
     if (type === 'entry') {
-      setEntryConditions([...entryConditions, newCondition]);
+      setStrategy({ ...strategy, entryConditions: [...strategy.entryConditions, newCondition] });
     } else {
-      setExitConditions([...exitConditions, newCondition]);
+      setStrategy({ ...strategy, exitConditions: [...strategy.exitConditions, newCondition] });
     }
   };
 
   const removeCondition = (type: 'entry' | 'exit', id: string) => {
     if (type === 'entry') {
-      setEntryConditions(entryConditions.filter(c => c.id !== id));
+      setStrategy({
+        ...strategy,
+        entryConditions: strategy.entryConditions.filter(c => c.id !== id),
+      });
     } else {
-      setExitConditions(exitConditions.filter(c => c.id !== id));
+      setStrategy({
+        ...strategy,
+        exitConditions: strategy.exitConditions.filter(c => c.id !== id),
+      });
     }
   };
 
   const addAction = (type: 'entry' | 'exit') => {
     const newAction: Action = {
-      id: Date.now().toString(),
-      type: 'buy',
-      quantity: '100'
+      id: `action-${Date.now()}`,
+      type: type === 'entry' ? 'buy' : 'sell',
+      quantity: '10',
+      orderType: 'market',
     };
     if (type === 'entry') {
-      setEntryActions([...entryActions, newAction]);
+      setStrategy({ ...strategy, entryActions: [...strategy.entryActions, newAction] });
     } else {
-      setExitActions([...exitActions, newAction]);
+      setStrategy({ ...strategy, exitActions: [...strategy.exitActions, newAction] });
     }
   };
 
   const removeAction = (type: 'entry' | 'exit', id: string) => {
     if (type === 'entry') {
-      setEntryActions(entryActions.filter(a => a.id !== id));
+      setStrategy({
+        ...strategy,
+        entryActions: strategy.entryActions.filter(a => a.id !== id),
+      });
     } else {
-      setExitActions(exitActions.filter(a => a.id !== id));
+      setStrategy({
+        ...strategy,
+        exitActions: strategy.exitActions.filter(a => a.id !== id),
+      });
     }
   };
 
-  const handleSave = async () => {
-    setLoading(true);
-    // Simulate save
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setLoading(false);
-    alert('Strategy saved successfully!');
-  };
-
-  const handleTest = () => {
-    alert('Strategy testing feature coming soon!');
+  const saveStrategy = async () => {
+    setSaveStatus('saving');
+    setTimeout(() => {
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2000);
+    }, 1000);
   };
 
   return (
@@ -128,44 +122,83 @@ export default function StrategyBuilder() {
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        gap: theme.spacing.sm,
-        marginBottom: theme.spacing.lg
+        justifyContent: 'space-between',
+        marginBottom: theme.spacing.lg,
       }}>
-        <Target size={32} color={theme.colors.accent} />
-        <h1 style={{
-          margin: 0,
-          fontSize: '32px',
-          fontWeight: '700',
-          color: theme.colors.text,
-          textShadow: theme.glow.purple,
-        }}>
-          Strategy Builder
-        </h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
+          <Target size={32} color={theme.colors.accent} />
+          <h1 style={{
+            margin: 0,
+            fontSize: '32px',
+            fontWeight: '700',
+            color: theme.colors.text,
+            textShadow: theme.glow.purple,
+          }}>
+            Strategy Builder
+          </h1>
+        </div>
+        <div style={{ display: 'flex', gap: theme.spacing.sm }}>
+          <Button variant="secondary" size="sm" onClick={() => alert('Test strategy')}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.xs }}>
+              <Play size={16} />
+              Test
+            </div>
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            loading={saveStatus === 'saving'}
+            onClick={saveStrategy}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.xs }}>
+              <Save size={16} />
+              {saveStatus === 'saved' ? 'Saved!' : 'Save'}
+            </div>
+          </Button>
+        </div>
       </div>
 
-      {/* Strategy Configuration */}
+      {/* Strategy Info */}
       <Card glow="purple" style={{ marginBottom: theme.spacing.lg }}>
-        <h2 style={{
-          margin: 0,
-          marginBottom: theme.spacing.md,
-          fontSize: '20px',
-          fontWeight: '600',
-          color: theme.colors.text
-        }}>
-          Strategy Configuration
-        </h2>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: theme.spacing.md }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: theme.spacing.md }}>
           <Input
             label="Strategy Name"
-            value={strategyName}
-            onChange={(e) => setStrategyName(e.target.value)}
-            placeholder="My Trading Strategy"
+            value={strategy.name}
+            onChange={(e) => setStrategy({ ...strategy, name: e.target.value })}
           />
           <Input
             label="Symbol"
-            value={symbol}
-            onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-            placeholder="SPY"
+            value={strategy.symbol}
+            onChange={(e) => setStrategy({ ...strategy, symbol: e.target.value.toUpperCase() })}
+            placeholder="SPY, AAPL, etc."
+          />
+        </div>
+        <div style={{ marginTop: theme.spacing.md }}>
+          <label style={{
+            display: 'block',
+            marginBottom: theme.spacing.xs,
+            color: theme.colors.text,
+            fontSize: '14px',
+            fontWeight: '500',
+          }}>
+            Description
+          </label>
+          <textarea
+            value={strategy.description}
+            onChange={(e) => setStrategy({ ...strategy, description: e.target.value })}
+            placeholder="Describe your strategy..."
+            rows={2}
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              background: theme.background.input,
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: theme.borderRadius.sm,
+              color: theme.colors.text,
+              fontSize: '14px',
+              outline: 'none',
+              resize: 'vertical',
+            }}
           />
         </div>
       </Card>
@@ -178,322 +211,336 @@ export default function StrategyBuilder() {
             onClick={() => setActiveTab(tab)}
             style={{
               padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
-              background: activeTab === tab ? theme.colors.accent : theme.background.card,
+              background: activeTab === tab ? theme.colors.primary : theme.background.card,
               color: activeTab === tab ? '#fff' : theme.colors.text,
-              border: `1px solid ${activeTab === tab ? theme.colors.accent : theme.colors.border}`,
               borderRadius: theme.borderRadius.sm,
-              fontSize: '16px',
-              fontWeight: '600',
+              border: 'none',
               cursor: 'pointer',
-              transition: theme.transitions.normal,
-              boxShadow: activeTab === tab ? theme.glow.purple : 'none',
+              fontSize: '14px',
+              fontWeight: activeTab === tab ? '600' : '400',
+              transition: theme.transitions.fast,
+              boxShadow: activeTab === tab ? theme.glow.green : 'none',
             }}
           >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)} {tab !== 'risk' ? 'Rules' : 'Management'}
+            {tab === 'entry' ? 'Entry Rules' : tab === 'exit' ? 'Exit Rules' : 'Risk Management'}
           </button>
         ))}
       </div>
 
-      {/* Entry Rules */}
+      {/* Entry Tab */}
       {activeTab === 'entry' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.md }}>
           <Card>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.md }}>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: theme.colors.text }}>
-                Entry Conditions
-              </h3>
+              <h3 style={{ margin: 0, color: theme.colors.text, fontSize: '18px' }}>Entry Conditions</h3>
               <Button variant="secondary" size="sm" onClick={() => addCondition('entry')}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.xs }}>
                   <Plus size={16} />
-                  Add Condition
+                  Add
                 </div>
               </Button>
             </div>
-            {entryConditions.map((condition, index) => (
-              <div key={condition.id} style={{
-                display: 'grid',
-                gridTemplateColumns: '2fr 1fr 1fr auto',
-                gap: theme.spacing.sm,
-                marginBottom: theme.spacing.sm
-              }}>
-                <Select
-                  options={indicatorOptions}
-                  value={condition.indicator}
-                  onChange={(e) => {
-                    const updated = [...entryConditions];
-                    updated[index].indicator = e.target.value;
-                    setEntryConditions(updated);
-                  }}
-                />
-                <Select
-                  options={operatorOptions}
-                  value={condition.operator}
-                  onChange={(e) => {
-                    const updated = [...entryConditions];
-                    updated[index].operator = e.target.value;
-                    setEntryConditions(updated);
-                  }}
-                />
-                <Input
-                  value={condition.value}
-                  onChange={(e) => {
-                    const updated = [...entryConditions];
-                    updated[index].value = e.target.value;
-                    setEntryConditions(updated);
-                  }}
-                  placeholder="Value"
-                />
-                {entryConditions.length > 1 && (
-                  <button
-                    onClick={() => removeCondition('entry', condition.id)}
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      color: theme.colors.danger,
-                      cursor: 'pointer',
-                      padding: theme.spacing.sm,
-                    }}
-                  >
-                    <X size={20} />
-                  </button>
-                )}
+            {strategy.entryConditions.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: theme.spacing.lg, color: theme.colors.textMuted }}>
+                No conditions. Click "Add" to start.
               </div>
-            ))}
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.sm }}>
+                {strategy.entryConditions.map((condition) => (
+                  <ConditionRow
+                    key={condition.id}
+                    condition={condition}
+                    onRemove={() => removeCondition('entry', condition.id)}
+                  />
+                ))}
+              </div>
+            )}
           </Card>
 
           <Card>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.md }}>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: theme.colors.text }}>
-                Entry Actions
-              </h3>
-              <Button variant="secondary" size="sm" onClick={() => addAction('entry')}>
+              <h3 style={{ margin: 0, color: theme.colors.text, fontSize: '18px' }}>Entry Actions</h3>
+              <Button variant="primary" size="sm" onClick={() => addAction('entry')}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.xs }}>
                   <Plus size={16} />
-                  Add Action
+                  Add
                 </div>
               </Button>
             </div>
-            {entryActions.map((action, index) => (
-              <div key={action.id} style={{
-                display: 'grid',
-                gridTemplateColumns: '2fr 1fr auto',
-                gap: theme.spacing.sm,
-                marginBottom: theme.spacing.sm
-              }}>
-                <Select
-                  options={actionTypeOptions}
-                  value={action.type}
-                  onChange={(e) => {
-                    const updated = [...entryActions];
-                    updated[index].type = e.target.value;
-                    setEntryActions(updated);
-                  }}
-                />
-                <Input
-                  value={action.quantity}
-                  onChange={(e) => {
-                    const updated = [...entryActions];
-                    updated[index].quantity = e.target.value;
-                    setEntryActions(updated);
-                  }}
-                  placeholder="Quantity"
-                />
-                {entryActions.length > 1 && (
-                  <button
-                    onClick={() => removeAction('entry', action.id)}
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      color: theme.colors.danger,
-                      cursor: 'pointer',
-                      padding: theme.spacing.sm,
-                    }}
-                  >
-                    <X size={20} />
-                  </button>
-                )}
+            {strategy.entryActions.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: theme.spacing.lg, color: theme.colors.textMuted }}>
+                No actions. Click "Add" to start.
               </div>
-            ))}
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.sm }}>
+                {strategy.entryActions.map((action) => (
+                  <ActionRow
+                    key={action.id}
+                    action={action}
+                    onRemove={() => removeAction('entry', action.id)}
+                  />
+                ))}
+              </div>
+            )}
           </Card>
         </div>
       )}
 
-      {/* Exit Rules */}
+      {/* Exit Tab */}
       {activeTab === 'exit' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.md }}>
           <Card>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.md }}>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: theme.colors.text }}>
-                Exit Conditions
-              </h3>
+              <h3 style={{ margin: 0, color: theme.colors.text, fontSize: '18px' }}>Exit Conditions</h3>
               <Button variant="secondary" size="sm" onClick={() => addCondition('exit')}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.xs }}>
                   <Plus size={16} />
-                  Add Condition
+                  Add
                 </div>
               </Button>
             </div>
-            {exitConditions.map((condition, index) => (
-              <div key={condition.id} style={{
-                display: 'grid',
-                gridTemplateColumns: '2fr 1fr 1fr auto',
-                gap: theme.spacing.sm,
-                marginBottom: theme.spacing.sm
-              }}>
-                <Select
-                  options={indicatorOptions}
-                  value={condition.indicator}
-                  onChange={(e) => {
-                    const updated = [...exitConditions];
-                    updated[index].indicator = e.target.value;
-                    setExitConditions(updated);
-                  }}
-                />
-                <Select
-                  options={operatorOptions}
-                  value={condition.operator}
-                  onChange={(e) => {
-                    const updated = [...exitConditions];
-                    updated[index].operator = e.target.value;
-                    setExitConditions(updated);
-                  }}
-                />
-                <Input
-                  value={condition.value}
-                  onChange={(e) => {
-                    const updated = [...exitConditions];
-                    updated[index].value = e.target.value;
-                    setExitConditions(updated);
-                  }}
-                  placeholder="Value"
-                />
-                {exitConditions.length > 1 && (
-                  <button
-                    onClick={() => removeCondition('exit', condition.id)}
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      color: theme.colors.danger,
-                      cursor: 'pointer',
-                      padding: theme.spacing.sm,
-                    }}
-                  >
-                    <X size={20} />
-                  </button>
-                )}
+            {strategy.exitConditions.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: theme.spacing.lg, color: theme.colors.textMuted }}>
+                No conditions. Click "Add" to start.
               </div>
-            ))}
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.sm }}>
+                {strategy.exitConditions.map((condition) => (
+                  <ConditionRow
+                    key={condition.id}
+                    condition={condition}
+                    onRemove={() => removeCondition('exit', condition.id)}
+                  />
+                ))}
+              </div>
+            )}
           </Card>
 
           <Card>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: theme.spacing.md }}>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: theme.colors.text }}>
-                Exit Actions
-              </h3>
-              <Button variant="secondary" size="sm" onClick={() => addAction('exit')}>
+              <h3 style={{ margin: 0, color: theme.colors.text, fontSize: '18px' }}>Exit Actions</h3>
+              <Button variant="danger" size="sm" onClick={() => addAction('exit')}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.xs }}>
                   <Plus size={16} />
-                  Add Action
+                  Add
                 </div>
               </Button>
             </div>
-            {exitActions.map((action, index) => (
-              <div key={action.id} style={{
-                display: 'grid',
-                gridTemplateColumns: '2fr 1fr auto',
-                gap: theme.spacing.sm,
-                marginBottom: theme.spacing.sm
-              }}>
-                <Select
-                  options={actionTypeOptions}
-                  value={action.type}
-                  onChange={(e) => {
-                    const updated = [...exitActions];
-                    updated[index].type = e.target.value;
-                    setExitActions(updated);
-                  }}
-                />
-                <Input
-                  value={action.quantity}
-                  onChange={(e) => {
-                    const updated = [...exitActions];
-                    updated[index].quantity = e.target.value;
-                    setExitActions(updated);
-                  }}
-                  placeholder="Quantity"
-                />
-                {exitActions.length > 1 && (
-                  <button
-                    onClick={() => removeAction('exit', action.id)}
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      color: theme.colors.danger,
-                      cursor: 'pointer',
-                      padding: theme.spacing.sm,
-                    }}
-                  >
-                    <X size={20} />
-                  </button>
-                )}
+            {strategy.exitActions.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: theme.spacing.lg, color: theme.colors.textMuted }}>
+                No actions. Click "Add" to start.
               </div>
-            ))}
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.sm }}>
+                {strategy.exitActions.map((action) => (
+                  <ActionRow
+                    key={action.id}
+                    action={action}
+                    onRemove={() => removeAction('exit', action.id)}
+                  />
+                ))}
+              </div>
+            )}
           </Card>
         </div>
       )}
 
-      {/* Risk Management */}
+      {/* Risk Tab */}
       {activeTab === 'risk' && (
-        <Card>
-          <h3 style={{ margin: 0, marginBottom: theme.spacing.md, fontSize: '18px', fontWeight: '600', color: theme.colors.text }}>
-            Risk Management Parameters
+        <Card glow="orange">
+          <h3 style={{ margin: `0 0 ${theme.spacing.lg} 0`, color: theme.colors.text, fontSize: '18px' }}>
+            Risk Management
           </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.md }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: theme.spacing.md }}>
             <Input
-              label="Position Size ($)"
-              value={positionSize}
-              onChange={(e) => setPositionSize(e.target.value)}
-              placeholder="1000"
+              label="Max Position Size (shares)"
+              type="number"
+              value={strategy.riskManagement.maxPositionSize}
+              onChange={(e) => setStrategy({
+                ...strategy,
+                riskManagement: { ...strategy.riskManagement, maxPositionSize: e.target.value }
+              })}
             />
             <Input
               label="Stop Loss (%)"
-              value={stopLoss}
-              onChange={(e) => setStopLoss(e.target.value)}
-              placeholder="2"
+              type="number"
+              step="0.1"
+              value={strategy.riskManagement.stopLoss}
+              onChange={(e) => setStrategy({
+                ...strategy,
+                riskManagement: { ...strategy.riskManagement, stopLoss: e.target.value }
+              })}
             />
             <Input
               label="Take Profit (%)"
-              value={takeProfit}
-              onChange={(e) => setTakeProfit(e.target.value)}
-              placeholder="5"
+              type="number"
+              step="0.1"
+              value={strategy.riskManagement.takeProfit}
+              onChange={(e) => setStrategy({
+                ...strategy,
+                riskManagement: { ...strategy.riskManagement, takeProfit: e.target.value }
+              })}
             />
-            <div style={{
-              padding: theme.spacing.md,
-              background: 'rgba(255, 136, 0, 0.1)',
-              border: `1px solid ${theme.colors.warning}`,
-              borderRadius: theme.borderRadius.sm,
-              display: 'flex',
-              alignItems: 'center',
-              gap: theme.spacing.sm,
-            }}>
-              <AlertTriangle size={20} color={theme.colors.warning} />
-              <p style={{ margin: 0, fontSize: '14px', color: theme.colors.text }}>
-                Risk-reward ratio: 1:{(parseFloat(takeProfit) / parseFloat(stopLoss)).toFixed(2)}
+          </div>
+          <div style={{
+            marginTop: theme.spacing.lg,
+            padding: theme.spacing.md,
+            background: `${theme.colors.warning}20`,
+            border: `1px solid ${theme.colors.warning}40`,
+            borderRadius: theme.borderRadius.sm,
+            display: 'flex',
+            gap: theme.spacing.sm,
+          }}>
+            <AlertCircle size={20} color={theme.colors.warning} style={{ flexShrink: 0 }} />
+            <div>
+              <p style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: theme.colors.warning }}>
+                Risk Warning
+              </p>
+              <p style={{ margin: `${theme.spacing.xs} 0 0 0`, fontSize: '12px', color: theme.colors.textMuted }}>
+                Always test strategies with historical data before deploying with real capital.
               </p>
             </div>
           </div>
         </Card>
       )}
+    </div>
+  );
+}
 
-      {/* Action Buttons */}
-      <div style={{ display: 'flex', gap: theme.spacing.md, marginTop: theme.spacing.lg }}>
-        <Button variant="primary" size="lg" loading={loading} onClick={handleSave} style={{ flex: 1 }}>
-          Save Strategy
-        </Button>
-        <Button variant="secondary" size="lg" onClick={handleTest} style={{ flex: 1 }}>
-          Test Strategy
-        </Button>
-      </div>
+function ConditionRow({ condition, onRemove }: {
+  condition: Condition;
+  onRemove: () => void;
+}) {
+  return (
+    <div style={{
+      display: 'flex',
+      gap: theme.spacing.sm,
+      padding: theme.spacing.md,
+      background: theme.background.input,
+      borderRadius: theme.borderRadius.sm,
+      border: `1px solid ${theme.colors.border}`,
+    }}>
+      <select style={{
+        flex: 1,
+        padding: theme.spacing.sm,
+        background: theme.background.card,
+        border: `1px solid ${theme.colors.border}`,
+        borderRadius: theme.borderRadius.sm,
+        color: theme.colors.text,
+        outline: 'none',
+      }}>
+        <option>Price</option>
+        <option>Indicator</option>
+        <option>Time</option>
+        <option>Volume</option>
+      </select>
+      <select style={{
+        flex: 1,
+        padding: theme.spacing.sm,
+        background: theme.background.card,
+        border: `1px solid ${theme.colors.border}`,
+        borderRadius: theme.borderRadius.sm,
+        color: theme.colors.text,
+        outline: 'none',
+      }}>
+        <option>Greater Than</option>
+        <option>Less Than</option>
+        <option>Equal To</option>
+      </select>
+      <input
+        type="text"
+        placeholder="Value"
+        style={{
+          flex: 1,
+          padding: theme.spacing.sm,
+          background: theme.background.card,
+          border: `1px solid ${theme.colors.border}`,
+          borderRadius: theme.borderRadius.sm,
+          color: theme.colors.text,
+          outline: 'none',
+        }}
+      />
+      <button
+        onClick={onRemove}
+        style={{
+          padding: theme.spacing.sm,
+          background: `${theme.colors.danger}20`,
+          border: `1px solid ${theme.colors.danger}40`,
+          borderRadius: theme.borderRadius.sm,
+          color: theme.colors.danger,
+          cursor: 'pointer',
+        }}
+      >
+        <Trash2 size={16} />
+      </button>
+    </div>
+  );
+}
+
+function ActionRow({ action, onRemove }: {
+  action: Action;
+  onRemove: () => void;
+}) {
+  return (
+    <div style={{
+      display: 'flex',
+      gap: theme.spacing.sm,
+      padding: theme.spacing.md,
+      background: theme.background.input,
+      borderRadius: theme.borderRadius.sm,
+      border: `1px solid ${theme.colors.border}`,
+    }}>
+      <select style={{
+        flex: 1,
+        padding: theme.spacing.sm,
+        background: theme.background.card,
+        border: `1px solid ${theme.colors.border}`,
+        borderRadius: theme.borderRadius.sm,
+        color: theme.colors.text,
+        outline: 'none',
+      }}>
+        <option>Buy</option>
+        <option>Sell</option>
+        <option>Notify</option>
+      </select>
+      <input
+        type="number"
+        placeholder="Quantity"
+        style={{
+          flex: 1,
+          padding: theme.spacing.sm,
+          background: theme.background.card,
+          border: `1px solid ${theme.colors.border}`,
+          borderRadius: theme.borderRadius.sm,
+          color: theme.colors.text,
+          outline: 'none',
+        }}
+      />
+      <select style={{
+        flex: 1,
+        padding: theme.spacing.sm,
+        background: theme.background.card,
+        border: `1px solid ${theme.colors.border}`,
+        borderRadius: theme.borderRadius.sm,
+        color: theme.colors.text,
+        outline: 'none',
+      }}>
+        <option>Market</option>
+        <option>Limit</option>
+      </select>
+      <button
+        onClick={onRemove}
+        style={{
+          padding: theme.spacing.sm,
+          background: `${theme.colors.danger}20`,
+          border: `1px solid ${theme.colors.danger}40`,
+          borderRadius: theme.borderRadius.sm,
+          color: theme.colors.danger,
+          cursor: 'pointer',
+        }}
+      >
+        <Trash2 size={16} />
+      </button>
     </div>
   );
 }
