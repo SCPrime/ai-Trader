@@ -9,9 +9,9 @@ import os
 router = APIRouter()
 
 # Alpaca API configuration
-ALPACA_API_KEY = os.getenv("ALPACA_API_KEY")
-ALPACA_SECRET_KEY = os.getenv("ALPACA_SECRET_KEY")
-ALPACA_BASE_URL = "https://paper-api.alpaca.markets"  # Paper trading
+ALPACA_API_KEY = os.getenv("APCA_API_KEY_ID") or os.getenv("ALPACA_API_KEY")
+ALPACA_SECRET_KEY = os.getenv("APCA_API_SECRET_KEY") or os.getenv("ALPACA_SECRET_KEY")
+ALPACA_BASE_URL = os.getenv("APCA_API_BASE_URL") or "https://paper-api.alpaca.markets"  # Paper trading
 
 def get_alpaca_headers():
     """Get headers for Alpaca API requests"""
