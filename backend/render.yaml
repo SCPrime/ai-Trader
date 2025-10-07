@@ -2,18 +2,22 @@ services:
 - type: web
   name: ai-trader-backend
   runtime: python
-  plan: starter
-  region: virginia
-  branch: feat/option-a-cloud-backend
+  plan: free
+  region: oregon
+  branch: main
   rootDir: backend
   buildCommand: pip install -r requirements.txt
   startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
   envVars:
     - key: API_TOKEN
-      sync: false
+      value: AKF6WG4GNJZWOSMX03EE
+    - key: ALPACA_API_KEY
+      value: PKZOA0NRY3QYX6N04X7E
+    - key: ALPACA_SECRET_KEY
+      value: 2zPcmhcYvT2QtQcNsra8QIVALEvwKPcCk6pwSmEe
     - key: ALLOW_ORIGIN
       value: https://ai-trader-snowy.vercel.app
     - key: LIVE_TRADING
       value: "false"
     - key: REDIS_URL
-      sync: false
+      generateValue: true
