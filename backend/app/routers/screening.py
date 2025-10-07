@@ -4,7 +4,7 @@ Strategy-based opportunity screening endpoints
 from fastapi import APIRouter, Depends
 from typing import List, Literal
 from pydantic import BaseModel
-from ..core.auth import require_api_token
+from ..core.auth import require_bearer
 
 router = APIRouter(tags=["screening"])
 
@@ -20,10 +20,13 @@ class Opportunity(BaseModel):
     risk: Literal["low", "medium", "high"]
 
 
-@router.get("/screening/opportunities", dependencies=[Depends(require_api_token)])
-async def get_opportunities() -> dict:
+@router.get("/screening/opportunities", dependencies=[Depends(require_bearer)])
+async def get_opportunities(max_price: float | None = None) -> dict:
     """
     Get strategy-based trading opportunities
+
+    Args:
+        max_price: Optional maximum price to filter opportunities (based on available account balance)
 
     TODO: Implement real screening logic based on:
     - User's selected strategies from settings
@@ -34,7 +37,7 @@ async def get_opportunities() -> dict:
     """
 
     # Mock opportunities - replace with real screening logic
-    opportunities: List[Opportunity] = [
+    all_opportunities: List[Opportunity] = [
         Opportunity(
             symbol="AAPL",
             type="stock",
@@ -87,14 +90,33 @@ async def get_opportunities() -> dict:
         )
     ]
 
+    # Filter by max price if provided
+    opportunities = all_opportunities
+    if max_price is not None:
+        opportunities = [opp for opp in all_opportunities if opp.currentPrice <= max_price]
+
+    # Ensure we have diverse investment types in the results
+    # Group by type to show variety
+    type_groups = {"stock": [], "option": [], "multileg": []}
+    for opp in opportunities:
+        type_groups[opp.type].append(opp)
+
+    # Build diverse list: at least one of each type if available
+    diverse_opportunities = []
+    for opp_type in ["stock", "option", "multileg"]:
+        if type_groups[opp_type]:
+            diverse_opportunities.extend(type_groups[opp_type])
+
     return {
-        "opportunities": [opp.model_dump() for opp in opportunities],
+        "opportunities": [opp.model_dump() for opp in diverse_opportunities],
         "timestamp": "2025-10-06T00:00:00Z",
-        "strategyCount": len(set(opp.strategy for opp in opportunities))
+        "strategyCount": len(set(opp.strategy for opp in diverse_opportunities)),
+        "filteredByPrice": max_price is not None,
+        "maxPrice": max_price
     }
 
 
-@router.get("/screening/strategies", dependencies=[Depends(require_api_token)])
+@router.get("/screening/strategies", dependencies=[Depends(require_bearer)])
 async def get_available_strategies() -> dict:
     """
     Get list of available screening strategies

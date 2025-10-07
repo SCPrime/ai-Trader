@@ -4,7 +4,7 @@ Market conditions and analysis endpoints
 from fastapi import APIRouter, Depends
 from typing import List, Literal
 from pydantic import BaseModel
-from ..core.auth import require_api_token
+from ..core.auth import require_bearer
 
 router = APIRouter(tags=["market"])
 
@@ -16,7 +16,7 @@ class MarketCondition(BaseModel):
     details: str | None = None
 
 
-@router.get("/market/conditions", dependencies=[Depends(require_api_token)])
+@router.get("/market/conditions", dependencies=[Depends(require_bearer)])
 async def get_market_conditions() -> dict:
     """
     Get current market conditions for trading analysis
@@ -81,7 +81,7 @@ async def get_market_conditions() -> dict:
     }
 
 
-@router.get("/market/indices", dependencies=[Depends(require_api_token)])
+@router.get("/market/indices", dependencies=[Depends(require_bearer)])
 async def get_major_indices() -> dict:
     """
     Get current prices and trends for major indices
@@ -129,7 +129,7 @@ async def get_major_indices() -> dict:
     }
 
 
-@router.get("/market/sectors", dependencies=[Depends(require_api_token)])
+@router.get("/market/sectors", dependencies=[Depends(require_bearer)])
 async def get_sector_performance() -> dict:
     """
     Get performance of major market sectors

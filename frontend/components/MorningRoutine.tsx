@@ -76,7 +76,11 @@ export default function MorningRoutine() {
 
     // 2) Strategy-Based Opportunity Screening
     try {
-      const oppResult = await timedJson("/api/proxy/screening/opportunities");
+      // Get available cash from settings to filter opportunities
+      const settingsResult = out.find(r => r.name === 'settings');
+      const availableCash = settingsResult?.body?.buyingPower || settingsResult?.body?.cash || 10000; // fallback to 10k
+
+      const oppResult = await timedJson(`/api/proxy/screening/opportunities?max_price=${availableCash}`);
       if (oppResult.ok && oppResult.body?.opportunities) {
         setOpportunities(oppResult.body.opportunities);
       }
