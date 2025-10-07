@@ -31,9 +31,9 @@ app = FastAPI(title="AI Trader Backend", version="0.1.0")
 async def startup_event():
     try:
         scheduler_instance = init_scheduler()
-        print("✅ Scheduler initialized and started", flush=True)
+        print("[OK] Scheduler initialized and started", flush=True)
     except Exception as e:
-        print(f"❌ Failed to initialize scheduler: {str(e)}", flush=True)
+        print(f"[ERROR] Failed to initialize scheduler: {str(e)}", flush=True)
 
 # Shutdown scheduler gracefully
 @app.on_event("shutdown")
@@ -42,9 +42,9 @@ async def shutdown_event():
         from .scheduler import get_scheduler
         scheduler_instance = get_scheduler()
         scheduler_instance.shutdown()
-        print("✅ Scheduler shut down gracefully", flush=True)
+        print("[OK] Scheduler shut down gracefully", flush=True)
     except Exception as e:
-        print(f"❌ Scheduler shutdown error: {str(e)}", flush=True)
+        print(f"[ERROR] Scheduler shutdown error: {str(e)}", flush=True)
 
 app.add_middleware(
     CORSMiddleware,
