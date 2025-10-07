@@ -16,13 +16,35 @@ print(f"===========================\n", flush=True)
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .core.config import settings
-from .routers import health, settings as settings_router, portfolio, orders, stream, screening, market, ai, telemetry, strategies
+from .routers import health, settings as settings_router, portfolio, orders, stream, screening, market, ai, telemetry, strategies, scheduler
+from .scheduler import init_scheduler
+import atexit
 
 print(f"\n===== SETTINGS LOADED =====")
 print(f"settings.API_TOKEN: {settings.API_TOKEN}")
 print(f"===========================\n", flush=True)
 
 app = FastAPI(title="AI Trader Backend", version="0.1.0")
+
+# Initialize scheduler on startup
+@app.on_event("startup")
+async def startup_event():
+    try:
+        scheduler_instance = init_scheduler()
+        print("✅ Scheduler initialized and started", flush=True)
+    except Exception as e:
+        print(f"❌ Failed to initialize scheduler: {str(e)}", flush=True)
+
+# Shutdown scheduler gracefully
+@app.on_event("shutdown")
+async def shutdown_event():
+    try:
+        from .scheduler import get_scheduler
+        scheduler_instance = get_scheduler()
+        scheduler_instance.shutdown()
+        print("✅ Scheduler shut down gracefully", flush=True)
+    except Exception as e:
+        print(f"❌ Scheduler shutdown error: {str(e)}", flush=True)
 
 app.add_middleware(
     CORSMiddleware,
@@ -47,4 +69,5 @@ app.include_router(screening.router, prefix="/api")
 app.include_router(market.router, prefix="/api")
 app.include_router(ai.router, prefix="/api")
 app.include_router(strategies.router, prefix="/api")
+app.include_router(scheduler.router, prefix="/api")
 app.include_router(telemetry.router)
