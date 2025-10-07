@@ -21,15 +21,12 @@ export const workflows: Workflow[] = [
   { id: 'news-review', name: 'NEWS\nREVIEW', color: '#7E57C2', icon: '📰', description: 'Real-time market news aggregation with AI-powered sentiment analysis.' },
   { id: 'proposals', name: 'AI\nRECS', color: '#0097A7', icon: '🤖', description: 'Review AI-generated trading recommendations and strategy proposals.' },
   { id: 'active-positions', name: 'ACTIVE\nPOSITIONS', color: '#00C851', icon: '📊', description: 'Monitor and manage your current open positions and orders.' },
-  { id: 'analytics', name: 'ANALYTICS', color: '#00BCD4', icon: '📊', description: 'Track performance metrics, equity curves, and trading statistics.' },
-  { id: 'journal', name: 'TRADING\nJOURNAL', color: '#9C27B0', icon: '📖', description: 'Log trades with emotional tracking, mistakes, and lessons learned.' },
-  { id: 'risk', name: 'RISK\nCONTROL', color: '#FFA726', icon: '🛡️', description: 'Real-time risk monitoring with position limits and margin alerts.' },
-  { id: 'scanner', name: 'MARKET\nSCANNER', color: '#00ACC1', icon: '🔍', description: 'Scan markets for technical setups and trading opportunities.' },
+  { id: 'pnl-dashboard', name: 'P&L\nDASHBOARD', color: '#FF8800', icon: '💰', description: 'Analytics, performance metrics, equity curves, and trading statistics.' },
   { id: 'strategy-builder', name: 'STRATEGY\nBUILDER', color: '#5E35B1', icon: '🎯', description: 'Design and test custom trading strategies with drag-and-drop rules.' },
   { id: 'backtesting', name: 'BACK\nTESTING', color: '#00BCD4', icon: '📈', description: 'Test strategies against historical data to validate performance.' },
   { id: 'execute', name: 'EXECUTE', color: '#FF4444', icon: '⚡', description: 'Execute trades with pre-filled orders and real-time confirmation.' },
-  { id: 'research', name: 'RESEARCH', color: '#F97316', icon: '🔍', description: 'Deep dive into technical analysis, charts, and market indicators.' },
-  { id: 'settings', name: 'SETTINGS', color: '#64748b', icon: '⚙️', description: 'Configure your trading preferences and system settings.' }
+  { id: 'research', name: 'RESEARCH', color: '#F97316', icon: '🔍', description: 'Market scanner, technical analysis, charts, and trading opportunities.' },
+  { id: 'settings', name: 'SETTINGS', color: '#64748b', icon: '⚙️', description: 'Trading journal, risk control, and system configuration.' }
 ];
 
 export default function RadialMenu({ onWorkflowSelect, onWorkflowHover, selectedWorkflow, compact }: RadialMenuProps) {

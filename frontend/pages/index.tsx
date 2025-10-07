@@ -76,7 +76,7 @@ export default function Dashboard() {
           return <ExecuteTradeForm />;
 
         case 'research':
-          return <ResearchDashboardSimple />;
+          return <MarketScanner />;
 
         case 'proposals':
           return <AIRecommendations />;
@@ -87,26 +87,7 @@ export default function Dashboard() {
           return null;
 
         case 'pnl-dashboard':
-          return (
-            <div style={{
-              background: 'rgba(30, 41, 59, 0.8)',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid #FF880040',
-              borderRadius: '16px',
-              padding: '24px',
-              minHeight: '200px'
-            }}>
-              <h4 style={{ color: '#FF8800', fontSize: '1.5rem', margin: 0, marginBottom: '16px' }}>
-                💰 P&L Dashboard
-              </h4>
-              <p style={{ color: '#cbd5e1', lineHeight: 1.6, margin: 0, marginBottom: '12px' }}>
-                Comprehensive profit and loss analysis with daily, weekly, and monthly performance metrics.
-              </p>
-              <p style={{ color: '#94a3b8', fontStyle: 'italic', margin: 0 }}>
-                Coming soon: Interactive charts, performance analytics, and detailed trade history.
-              </p>
-            </div>
-          );
+          return <Analytics />;
 
         case 'news-review':
           return <NewsReview />;
@@ -117,18 +98,6 @@ export default function Dashboard() {
 
         case 'backtesting':
           return <Backtesting />;
-
-        case 'analytics':
-          return <Analytics />;
-
-        case 'journal':
-          return <TradingJournal />;
-
-        case 'risk':
-          return <RiskDashboard />;
-
-        case 'scanner':
-          return <MarketScanner />;
 
         default:
           return null;

@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Users, Palette, Shield, Database, Activity, Save, AlertTriangle, CheckCircle2, ToggleLeft, ToggleRight, FileText, Bell, TrendingUp, Lock } from 'lucide-react';
+import { Settings as SettingsIcon, Users, Palette, Shield, Database, Activity, Save, AlertTriangle, CheckCircle2, ToggleLeft, ToggleRight, FileText, Bell, TrendingUp, Lock, BookOpen } from 'lucide-react';
+import TradingJournal from './TradingJournal';
+import RiskDashboard from './RiskDashboard';
 import { getCurrentUser, getUserAnalytics, clearUserData } from '../lib/userManagement';
 import type { User as UserType } from '../lib/userManagement';
 
@@ -67,7 +69,7 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
   const isAdmin = currentUser.role === 'owner' || currentUser.role === 'admin';
 
   // Tab state - show different tabs based on role
-  const [activeTab, setActiveTab] = useState<'personal' | 'users' | 'theme' | 'permissions' | 'telemetry' | 'trading'>('personal');
+  const [activeTab, setActiveTab] = useState<'personal' | 'users' | 'theme' | 'permissions' | 'telemetry' | 'trading' | 'journal' | 'risk'>('personal');
 
   // Personal settings
   const [settings, setSettings] = useState<SettingsData>({
@@ -294,9 +296,11 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
   // Define tabs based on role
   const tabs = [
     { id: 'personal', label: 'Personal Settings', icon: SettingsIcon, alwaysShow: true },
+    { id: 'journal', label: 'Trading Journal', icon: BookOpen, alwaysShow: true },
+    { id: 'risk', label: 'Risk Control', icon: Shield, alwaysShow: true },
     { id: 'users', label: 'User Management', icon: Users, adminOnly: true },
     { id: 'theme', label: 'Theme', icon: Palette, adminOnly: true },
-    { id: 'permissions', label: 'Permissions', icon: Shield, adminOnly: true },
+    { id: 'permissions', label: 'Permissions', icon: Lock, adminOnly: true },
     { id: 'telemetry', label: 'Telemetry', icon: Database, adminOnly: true },
     { id: 'trading', label: 'Trading Control', icon: Activity, adminOnly: true },
   ].filter(tab => tab.alwaysShow || (tab.adminOnly && isAdmin));
@@ -545,6 +549,16 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* Trading Journal Tab */}
+          {activeTab === 'journal' && (
+            <TradingJournal />
+          )}
+
+          {/* Risk Control Tab */}
+          {activeTab === 'risk' && (
+            <RiskDashboard />
           )}
 
           {/* Admin Tabs (remaining content truncated for space - see next message) */}
