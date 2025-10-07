@@ -1,190 +1,254 @@
 // Telemetry Service
 // Tracks user interactions, errors, and performance metrics
 
-export interface TelemetryEvent {
+interface TelemetryEvent {
   userId: string;
-  userRole: 'owner' | 'admin' | 'beta' | 'alpha' | 'user';
   sessionId: string;
-  timestamp: string;
   component: string;
   action: string;
-  metadata?: Record<string, any>;
+  timestamp: string;
+  metadata: Record<string, any>;
+  userRole: 'admin' | 'beta' | 'alpha' | 'user';
 }
 
-export interface TelemetryStats {
-  totalEvents: number;
-  uniqueUsers: number;
-  eventsByComponent: Record<string, number>;
-  eventsByAction: Record<string, number>;
-  eventsByRole: Record<string, number>;
+interface TelemetryConfig {
+  endpoint: string;
+  batchSize: number;
+  flushInterval: number;
+  enabled: boolean;
 }
 
 class TelemetryService {
-  private events: TelemetryEvent[] = [];
-  private sessionId: string;
-  private flushInterval: number = 30000; // 30 seconds
+  private config: TelemetryConfig;
+  private buffer: TelemetryEvent[] = [];
   private flushTimer: NodeJS.Timeout | null = null;
-  private backendUrl: string;
+  private sessionId: string;
 
-  constructor() {
+  constructor(config: Partial<TelemetryConfig> = {}) {
+    this.config = {
+      endpoint: config.endpoint || '/api/telemetry',
+      batchSize: config.batchSize || 50,
+      flushInterval: config.flushInterval || 10000, // 10 seconds
+      enabled: config.enabled !== false,
+    };
+
     this.sessionId = this.generateSessionId();
-    this.backendUrl = process.env.NEXT_PUBLIC_BACKEND_API_BASE_URL || 'http://localhost:8000';
 
-    if (typeof window !== 'undefined') {
+    if (this.config.enabled) {
       this.startAutoFlush();
-
-      // Flush before page unload
-      window.addEventListener('beforeunload', () => {
-        this.flush();
-      });
+      this.setupEventListeners();
     }
   }
 
-  private generateSessionId(): string {
-    return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  }
+  /**
+   * Track a user action/event
+   */
+  track(event: Omit<TelemetryEvent, 'timestamp' | 'sessionId'>) {
+    if (!this.config.enabled) return;
 
-  private startAutoFlush() {
-    this.flushTimer = setInterval(() => {
-      if (this.events.length > 0) {
-        this.flush();
-      }
-    }, this.flushInterval);
-  }
-
-  track(event: Omit<TelemetryEvent, 'sessionId' | 'timestamp'>) {
     const telemetryEvent: TelemetryEvent = {
       ...event,
       sessionId: this.sessionId,
       timestamp: new Date().toISOString(),
     };
 
-    this.events.push(telemetryEvent);
+    this.buffer.push(telemetryEvent);
 
-    // Auto-flush if we have too many events
-    if (this.events.length >= 50) {
+    // Auto-flush if buffer is full
+    if (this.buffer.length >= this.config.batchSize) {
       this.flush();
     }
   }
 
-  trackClick(userId: string, userRole: TelemetryEvent['userRole'], component: string, elementId: string, metadata?: Record<string, any>) {
+  /**
+   * Track page view
+   */
+  trackPageView(userId: string, userRole: string, component: string) {
     this.track({
       userId,
-      userRole,
+      userRole: userRole as any,
       component,
-      action: 'click',
-      metadata: { elementId, ...metadata },
-    });
-  }
-
-  trackPageView(userId: string, userRole: TelemetryEvent['userRole'], pageName: string) {
-    this.track({
-      userId,
-      userRole,
-      component: pageName,
       action: 'page_view',
+      metadata: {
+        path: typeof window !== 'undefined' ? window.location.pathname : '',
+        referrer: typeof document !== 'undefined' ? document.referrer : '',
+        timestamp: Date.now(),
+      },
     });
   }
 
-  trackError(userId: string, userRole: TelemetryEvent['userRole'], component: string, error: Error | string, metadata?: Record<string, any>) {
+  /**
+   * Track button click
+   */
+  trackClick(userId: string, userRole: string, component: string, buttonName: string) {
     this.track({
       userId,
-      userRole,
+      userRole: userRole as any,
+      component,
+      action: 'button_click',
+      metadata: { buttonName },
+    });
+  }
+
+  /**
+   * Track form submission
+   */
+  trackFormSubmit(userId: string, userRole: string, component: string, formData: any) {
+    this.track({
+      userId,
+      userRole: userRole as any,
+      component,
+      action: 'form_submit',
+      metadata: formData,
+    });
+  }
+
+  /**
+   * Track error
+   */
+  trackError(userId: string, userRole: string, component: string, error: Error | string) {
+    this.track({
+      userId,
+      userRole: userRole as any,
       component,
       action: 'error',
       metadata: {
-        error: typeof error === 'string' ? error : error.message,
-        stack: typeof error === 'object' ? error.stack : undefined,
+        message: typeof error === 'string' ? error : error.message,
+        stack: typeof error === 'string' ? undefined : error.stack,
+        timestamp: Date.now(),
+      },
+    });
+  }
+
+  /**
+   * Track feature usage
+   */
+  trackFeature(userId: string, userRole: string, feature: string, metadata?: any) {
+    this.track({
+      userId,
+      userRole: userRole as any,
+      component: 'App',
+      action: 'feature_used',
+      metadata: {
+        feature,
         ...metadata,
       },
     });
   }
 
-  trackPerformance(userId: string, userRole: TelemetryEvent['userRole'], component: string, metric: string, value: number) {
-    this.track({
-      userId,
-      userRole,
-      component,
-      action: 'performance',
-      metadata: { metric, value },
-    });
-  }
-
-  trackFormSubmit(userId: string, userRole: TelemetryEvent['userRole'], component: string, formId: string, success: boolean, metadata?: Record<string, any>) {
-    this.track({
-      userId,
-      userRole,
-      component,
-      action: 'form_submit',
-      metadata: { formId, success, ...metadata },
-    });
-  }
-
+  /**
+   * Flush events to server
+   */
   async flush() {
-    if (this.events.length === 0) return;
+    if (this.buffer.length === 0) return;
 
-    const eventsToSend = [...this.events];
-    this.events = [];
+    const events = [...this.buffer];
+    this.buffer = [];
 
     try {
-      await fetch(`${this.backendUrl}/api/telemetry/track`, {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_API_BASE_URL || 'http://localhost:8000';
+      const response = await fetch(`${backendUrl}${this.config.endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ events: eventsToSend }),
+        body: JSON.stringify({ events }),
       });
 
-      console.log(`[Telemetry] Flushed ${eventsToSend.length} events`);
+      if (!response.ok) {
+        throw new Error(`Telemetry flush failed: ${response.status}`);
+      }
+
+      console.log(`[Telemetry] Flushed ${events.length} events`);
     } catch (error) {
-      console.error('[Telemetry] Failed to flush events:', error);
-      // Re-add events to queue
-      this.events.unshift(...eventsToSend);
+      console.error('[Telemetry] Flush error:', error);
+      // Re-add failed events to buffer
+      this.buffer.unshift(...events);
     }
   }
 
-  async getStats(): Promise<TelemetryStats> {
-    try {
-      const response = await fetch(`${this.backendUrl}/api/telemetry/stats`);
-      if (!response.ok) throw new Error('Failed to fetch stats');
-      return await response.json();
-    } catch (error) {
-      console.error('[Telemetry] Failed to get stats:', error);
-      throw error;
-    }
+  /**
+   * Enable telemetry
+   */
+  enable() {
+    this.config.enabled = true;
+    this.startAutoFlush();
+    this.setupEventListeners();
   }
 
-  async getEvents(limit?: number): Promise<TelemetryEvent[]> {
-    try {
-      const url = limit
-        ? `${this.backendUrl}/api/telemetry/events?limit=${limit}`
-        : `${this.backendUrl}/api/telemetry/events`;
-
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Failed to fetch events');
-      return await response.json();
-    } catch (error) {
-      console.error('[Telemetry] Failed to get events:', error);
-      throw error;
-    }
+  /**
+   * Disable telemetry
+   */
+  disable() {
+    this.config.enabled = false;
+    this.stopAutoFlush();
   }
 
+  /**
+   * Export all buffered events as JSON
+   */
   exportEvents(): TelemetryEvent[] {
-    return [...this.events];
+    return [...this.buffer];
   }
 
+  /**
+   * Clear all buffered events
+   */
   clear() {
-    this.events = [];
+    this.buffer = [];
   }
 
-  destroy() {
+  // Private methods
+
+  private generateSessionId(): string {
+    return `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  private startAutoFlush() {
+    if (this.flushTimer) return;
+
+    this.flushTimer = setInterval(() => {
+      this.flush();
+    }, this.config.flushInterval);
+  }
+
+  private stopAutoFlush() {
     if (this.flushTimer) {
       clearInterval(this.flushTimer);
       this.flushTimer = null;
     }
-    this.flush();
+  }
+
+  private setupEventListeners() {
+    if (typeof window === 'undefined') return;
+
+    // Track page unload
+    window.addEventListener('beforeunload', () => {
+      this.flush();
+    });
+
+    // Track errors
+    window.addEventListener('error', (event) => {
+      // Get user from localStorage or context
+      const userId = localStorage.getItem('userId') || 'anonymous';
+      const userRole = localStorage.getItem('userRole') || 'user';
+
+      this.trackError(userId, userRole, 'Global', event.error || event.message);
+    });
+
+    // Track unhandled promise rejections
+    window.addEventListener('unhandledrejection', (event) => {
+      const userId = localStorage.getItem('userId') || 'anonymous';
+      const userRole = localStorage.getItem('userRole') || 'user';
+
+      this.trackError(userId, userRole, 'Global', event.reason);
+    });
   }
 }
 
 // Singleton instance
-export const telemetry = new TelemetryService();
+export const telemetry = new TelemetryService({
+  enabled: process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_ENABLE_TELEMETRY === 'true',
+});
+
+export default telemetry;
