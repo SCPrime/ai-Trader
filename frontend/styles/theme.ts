@@ -12,16 +12,17 @@ export const theme = {
     glass: 'rgba(30, 41, 59, 0.8)',
   },
   colors: {
-    primary: '#10b981',      // Green accent
+    primary: '#16a394',      // Teal accent (prototype primary)
     secondary: '#00ACC1',    // Teal
     accent: '#7E57C2',       // Purple
+    aiGlow: '#45f0c0',       // Bright cyan for AI logo glow
     warning: '#FF8800',      // Orange
     danger: '#FF4444',       // Red
     info: '#00BCD4',         // Cyan
     text: '#f1f5f9',         // Bright light text
     textMuted: '#cbd5e1',    // Muted text
-    border: 'rgba(16, 185, 129, 0.3)',
-    borderHover: 'rgba(16, 185, 129, 0.6)',
+    border: 'rgba(22, 163, 148, 0.3)',
+    borderHover: 'rgba(22, 163, 148, 0.6)',
   },
   // Exact workflow colors from RadialMenu.tsx
   workflow: {
@@ -37,8 +38,9 @@ export const theme = {
     settings: '#64748b',          // Slate Gray
   },
   glow: {
-    green: '0 0 20px rgba(16, 185, 129, 0.3), 0 0 40px rgba(16, 185, 129, 0.15)',
-    teal: '0 0 20px rgba(0, 172, 193, 0.3), 0 0 40px rgba(0, 172, 193, 0.15)',
+    green: '0 0 20px rgba(22, 163, 148, 0.3), 0 0 40px rgba(22, 163, 148, 0.15)',
+    teal: '0 0 20px rgba(22, 163, 148, 0.3), 0 0 40px rgba(22, 163, 148, 0.15)',
+    aiGlow: '0 0 15px rgba(69, 240, 192, 0.8), 0 0 25px rgba(88, 255, 218, 0.5)',
     purple: '0 0 20px rgba(126, 87, 194, 0.3), 0 0 40px rgba(126, 87, 194, 0.15)',
     darkPurple: '0 0 20px rgba(94, 53, 177, 0.3), 0 0 40px rgba(94, 53, 177, 0.15)',
     orange: '0 0 20px rgba(255, 136, 0, 0.3), 0 0 40px rgba(255, 136, 0, 0.15)',

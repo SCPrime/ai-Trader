@@ -205,21 +205,29 @@ interface AILogoTriggerProps {
 export function AILogoTrigger({ onClick }: AILogoTriggerProps) {
   return (
     <div className="flex flex-col select-none">
-      <div className="flex items-center gap-1 text-2xl font-bold">
-        <span className="text-blue-600">P</span>
+      <div className="flex items-center text-2xl font-bold" style={{ letterSpacing: '-0.08em' }}>
+        <span style={{ color: '#1a7560' }}>P</span>
         <span
-          className="text-purple-600 cursor-pointer hover:scale-110 transition-transform relative group"
+          className="cursor-pointer hover:scale-110 transition-transform relative group"
           onClick={onClick}
+          style={{
+            color: '#45f0c0',
+            fontStyle: 'italic',
+            textShadow: '0 0 15px rgba(69, 240, 192, 0.8), 0 0 25px rgba(88, 255, 218, 0.5)'
+          }}
         >
           ai
-          <Sparkles className="absolute -top-1 -right-1 w-3 h-3 text-yellow-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <Sparkles
+            className="absolute -top-1 -right-1 w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity"
+            style={{ color: '#45f0c0' }}
+          />
         </span>
-        <span className="text-blue-600">D</span>
+        <span style={{ color: '#0d5a4a' }}>D</span>
       </div>
-      <div className="text-xs text-gray-500 mt-0.5">
-        Personal Artificial Intelligence Dashboard
+      <div className="text-[10px] mt-0.5" style={{ color: '#64748b', letterSpacing: '0.05em' }}>
+        Personal <span style={{ color: '#45f0c0', fontStyle: 'italic' }}>artificial intelligence</span> Dashboard
       </div>
-      <div className="text-[10px] text-gray-400">
+      <div className="text-[9px]" style={{ color: '#475569', letterSpacing: '0.05em' }}>
         10 Stage Workflow
       </div>
     </div>
