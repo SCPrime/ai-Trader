@@ -1,0 +1,23 @@
+{
+  "name": "ai-trader-frontend",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@types/d3": "^7.4.3",
+    "@types/node": "^20.19.18",
+    "@types/react": "^18.3.25",
+    "@types/react-dom": "^18.3.7",
+    "d3": "^7.9.0",
+    "lightweight-charts": "^5.0.9",
+    "lucide-react": "^0.545.0",
+    "next": "^14.2.33",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-split": "^2.0.14",
+    "typescript": "^5.9.2"
+  }
+}

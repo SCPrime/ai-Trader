@@ -19,6 +19,11 @@ export interface User {
   };
   // Onboarding profile data
   onboarding?: {
+    // Setup method
+    setupMethod?: 'manual' | 'ai-guided';
+    aiConversation?: Array<{ role: 'user' | 'assistant'; content: string }>;
+
+    // Financial profile
     financialGoals?: string;
     investmentHorizon?: string;
     availableCapital?: string;
@@ -26,16 +31,36 @@ export interface User {
     riskTolerance?: string;
     tradingExperience?: string;
     preferredStrategy?: string;
+
+    // Enhanced investment amount
+    investmentAmount?: {
+      mode: 'range' | 'custom' | 'unlimited';
+      value?: number;
+      range?: string;
+    };
+
     // Investment details
     investmentTypes?: string[];
     investmentRangeMin?: string;
     investmentRangeMax?: string;
     amountToInvest?: string;
+
     // Automation settings
     automationLevel?: string;
     executionMode?: string;
+
     // Custom morning routine workflow
     morningRoutineWorkflow?: string[];
+
+    // Morning routine schedule
+    morningRoutine?: {
+      enabled: boolean;
+      time: string;
+      briefing: boolean;
+      recommendations: boolean;
+      portfolioReview: boolean;
+    };
+
     completedAt?: string;
   };
 }
