@@ -128,7 +128,7 @@ export default function UserSetupAI({ onComplete }: UserSetupAIProps) {
         style={{
           minHeight: '100vh',
           width: '100vw',
-          background: 'linear-gradient(135deg, #0f1828 0%, #1a2a3f 100%)',
+          background: theme.background.primary,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -142,7 +142,7 @@ export default function UserSetupAI({ onComplete }: UserSetupAIProps) {
               style={{
                 fontSize: '48px',
                 fontWeight: 'bold',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: `linear-gradient(135deg, ${theme.colors.secondary} 0%, ${theme.colors.accent} 100%)`,
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 marginBottom: theme.spacing.sm,
@@ -254,7 +254,7 @@ export default function UserSetupAI({ onComplete }: UserSetupAIProps) {
         style={{
           minHeight: '100vh',
           width: '100vw',
-          background: 'linear-gradient(135deg, #0f1828 0%, #1a2a3f 100%)',
+          background: theme.background.primary,
           display: 'flex',
           flexDirection: 'column',
           padding: theme.spacing.lg,
@@ -403,7 +403,7 @@ export default function UserSetupAI({ onComplete }: UserSetupAIProps) {
         style={{
           minHeight: '100vh',
           width: '100vw',
-          background: 'linear-gradient(135deg, #0f1828 0%, #1a2a3f 100%)',
+          background: theme.background.primary,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',

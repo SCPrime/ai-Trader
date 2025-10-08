@@ -99,7 +99,7 @@ export function AIChat({
           <div
             className="px-6 py-4 border-b"
             style={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              background: `linear-gradient(135deg, ${theme.colors.secondary} 0%, ${theme.colors.accent} 100%)`,
               borderColor: 'rgba(255, 255, 255, 0.1)',
             }}
           >
@@ -204,16 +204,24 @@ interface AILogoTriggerProps {
 
 export function AILogoTrigger({ onClick }: AILogoTriggerProps) {
   return (
-    <div className="flex items-center gap-1 text-2xl font-bold select-none">
-      <span className="text-blue-600">P</span>
-      <span
-        className="text-purple-600 cursor-pointer hover:scale-110 transition-transform relative group"
-        onClick={onClick}
-      >
-        ai
-        <Sparkles className="absolute -top-1 -right-1 w-3 h-3 text-yellow-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-      </span>
-      <span className="text-blue-600">D</span>
+    <div className="flex flex-col select-none">
+      <div className="flex items-center gap-1 text-2xl font-bold">
+        <span className="text-blue-600">P</span>
+        <span
+          className="text-purple-600 cursor-pointer hover:scale-110 transition-transform relative group"
+          onClick={onClick}
+        >
+          ai
+          <Sparkles className="absolute -top-1 -right-1 w-3 h-3 text-yellow-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+        </span>
+        <span className="text-blue-600">D</span>
+      </div>
+      <div className="text-xs text-gray-500 mt-0.5">
+        Personal Artificial Intelligence Dashboard
+      </div>
+      <div className="text-[10px] text-gray-400">
+        10 Stage Workflow
+      </div>
     </div>
   );
 }
