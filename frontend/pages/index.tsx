@@ -324,7 +324,7 @@ export default function Dashboard() {
         sizes={[40, 60]}
         minSize={[350, 400]}
         expandToMin={false}
-        gutterSize={1}
+        gutterSize={8}
         gutterAlign="center"
         snapOffset={30}
         dragInterval={1}
@@ -414,31 +414,72 @@ export default function Dashboard() {
           }
         }
 
-        /* React-split gutter styles */
+        /* React-split gutter styles - Claude-inspired */
         :global(.split-container) {
           width: 100%;
         }
 
         :global(.gutter) {
-          background-color: #10b981 !important;
+          background-color: rgba(30, 41, 59, 0.8) !important;
           background-repeat: no-repeat;
-          background-position: 50%;
-          transition: background-color 0.2s ease;
+          background-position: center;
+          transition: all 0.2s ease;
           border: none !important;
+          position: relative;
+          backdrop-filter: blur(10px);
         }
 
         :global(.gutter:hover) {
-          background-color: #059669 !important;
+          background-color: rgba(16, 185, 129, 0.15) !important;
+        }
+
+        :global(.gutter:active) {
+          background-color: rgba(16, 185, 129, 0.25) !important;
         }
 
         :global(.gutter-horizontal) {
           cursor: col-resize !important;
-          background-color: #10b981 !important;
+          position: relative;
         }
 
-        :global(.gutter.gutter-horizontal) {
-          cursor: col-resize !important;
-          background-color: #10b981 !important;
+        /* Grip indicator - vertical dots like Claude */
+        :global(.gutter-horizontal::before) {
+          content: '';
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          width: 3px;
+          height: 40px;
+          background: linear-gradient(
+            to bottom,
+            transparent 0%,
+            rgba(16, 185, 129, 0.4) 20%,
+            rgba(16, 185, 129, 0.6) 50%,
+            rgba(16, 185, 129, 0.4) 80%,
+            transparent 100%
+          );
+          border-radius: 2px;
+          transition: all 0.2s ease;
+        }
+
+        :global(.gutter-horizontal:hover::before) {
+          background: linear-gradient(
+            to bottom,
+            transparent 0%,
+            rgba(16, 185, 129, 0.6) 20%,
+            rgba(16, 185, 129, 0.9) 50%,
+            rgba(16, 185, 129, 0.6) 80%,
+            transparent 100%
+          );
+          height: 60px;
+          box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+        }
+
+        :global(.gutter-horizontal:active::before) {
+          background: rgba(16, 185, 129, 1);
+          height: 80px;
+          box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
         }
 
         :global(.left-panel),
