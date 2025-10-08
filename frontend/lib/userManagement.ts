@@ -26,6 +26,16 @@ export interface User {
     riskTolerance?: string;
     tradingExperience?: string;
     preferredStrategy?: string;
+    // Investment details
+    investmentTypes?: string[];
+    investmentRangeMin?: string;
+    investmentRangeMax?: string;
+    amountToInvest?: string;
+    // Automation settings
+    automationLevel?: string;
+    executionMode?: string;
+    // Custom morning routine workflow
+    morningRoutineWorkflow?: string[];
     completedAt?: string;
   };
 }
