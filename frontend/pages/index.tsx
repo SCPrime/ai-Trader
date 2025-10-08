@@ -27,12 +27,18 @@ export default function Dashboard() {
   const [selectedWorkflow, setSelectedWorkflow] = useState<string>('');
   const [hoveredWorkflow, setHoveredWorkflow] = useState<Workflow | null>(null);
   const [showSettings, setShowSettings] = useState(false);
-  const [isUserSetup, setIsUserSetup] = useState(true); // TEMP: Skip UserSetup for testing
+  const [isUserSetup, setIsUserSetup] = useState(false); // Start with onboarding
   const [isLoading, setIsLoading] = useState(true);
   const [aiChatOpen, setAiChatOpen] = useState(false);
 
   // Check if user is set up on mount
   useEffect(() => {
+    // Clear localStorage to force fresh start
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('ai_trader_user');
+      localStorage.removeItem('ai_trader_strategies');
+    }
+
     const userExists = isUserLoggedIn();
     setIsUserSetup(userExists);
 
