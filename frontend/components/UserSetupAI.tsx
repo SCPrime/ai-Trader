@@ -20,7 +20,6 @@ import {
 import { theme } from '../styles/theme';
 import { claudeAI, UserPreferences } from '../lib/aiAdapter';
 import { createUser } from '../lib/userManagement';
-import { AILogoTrigger } from './AIChat';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -138,35 +137,20 @@ export default function UserSetupAI({ onComplete }: UserSetupAIProps) {
       >
         <div style={{ maxWidth: '800px', width: '100%' }}>
           {/* Logo */}
-          <div style={{ marginBottom: theme.spacing.xl }}>
-            <AILogoTrigger onClick={() => {}} />
-          </div>
-
-          {/* Header */}
           <div style={{ textAlign: 'center', marginBottom: theme.spacing.xl }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: theme.spacing.md, marginBottom: theme.spacing.md }}>
-              <div
-                style={{
-                  padding: theme.spacing.md,
-                  background: `${theme.colors.accent}20`,
-                  borderRadius: theme.borderRadius.lg,
-                  boxShadow: theme.glow.purple,
-                }}
-              >
-                <Brain style={{ width: '32px', height: '32px', color: theme.colors.accent }} />
-              </div>
-              <h1
-                style={{
-                  fontSize: '32px',
-                  fontWeight: 'bold',
-                  color: theme.colors.text,
-                  margin: 0,
-                }}
-              >
-                Welcome to PaiD
-              </h1>
+            <div
+              style={{
+                fontSize: '48px',
+                fontWeight: 'bold',
+                background: `linear-gradient(135deg, ${theme.colors.primary} 0%, ${theme.colors.secondary} 100%)`,
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                marginBottom: theme.spacing.sm,
+              }}
+            >
+              Welcome to PaiD
             </div>
-            <p style={{ color: theme.colors.textMuted, fontSize: '16px', margin: 0 }}>
+            <p style={{ color: theme.colors.textMuted, fontSize: '18px' }}>
               Let's set up your trading account
             </p>
           </div>
@@ -277,11 +261,6 @@ export default function UserSetupAI({ onComplete }: UserSetupAIProps) {
         }}
       >
         <div style={{ maxWidth: '900px', width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', flex: 1 }}>
-          {/* Logo */}
-          <div style={{ marginBottom: theme.spacing.lg }}>
-            <AILogoTrigger onClick={() => {}} />
-          </div>
-
           {/* Header */}
           <div
             style={{
@@ -432,11 +411,6 @@ export default function UserSetupAI({ onComplete }: UserSetupAIProps) {
         }}
       >
         <div style={{ maxWidth: '700px', width: '100%' }}>
-          {/* Logo */}
-          <div style={{ marginBottom: theme.spacing.xl }}>
-            <AILogoTrigger onClick={() => {}} />
-          </div>
-
           {/* Header */}
           <div style={{ textAlign: 'center', marginBottom: theme.spacing.xl }}>
             <Check

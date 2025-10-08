@@ -21,7 +21,6 @@ import {
 import { GlassCard, GlassButton, GlassInput, GlassBadge } from './GlassmorphicComponents';
 import { theme } from '../styles/theme';
 import { claudeAI, Strategy } from '../lib/aiAdapter';
-import { AILogoTrigger } from './AIChat';
 
 interface SavedStrategy extends Strategy {
   backtestResults?: {
@@ -130,11 +129,6 @@ export default function StrategyBuilderAI() {
       }}
     >
       <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: theme.spacing.lg }}>
-        {/* Logo */}
-        <div>
-          <AILogoTrigger onClick={() => {}} />
-        </div>
-
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.md }}>

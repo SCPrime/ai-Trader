@@ -26,7 +26,6 @@ import { GlassCard, GlassButton, GlassBadge } from './GlassmorphicComponents';
 import { theme } from '../styles/theme';
 import { claudeAI, MorningRoutine as MorningRoutineType } from '../lib/aiAdapter';
 import { getCurrentUser, updateUser } from '../lib/userManagement';
-import { AILogoTrigger } from './AIChat';
 
 interface PortfolioMetrics {
   totalValue: number;
@@ -393,11 +392,6 @@ export default function MorningRoutineAI() {
       }}
     >
       <div style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: theme.spacing.lg }}>
-        {/* Logo */}
-        <div>
-          <AILogoTrigger onClick={() => {}} />
-        </div>
-
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.md }}>
