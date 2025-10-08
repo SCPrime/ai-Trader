@@ -9,6 +9,7 @@ import AIRecommendations from '../components/AIRecommendations';
 import ProposalReview from '../components/trading/ProposalReview';
 import Settings from '../components/Settings';
 import UserSetup from '../components/UserSetup';
+import UserSetupAI from '../components/UserSetupAI';
 import NewsReview from '../components/NewsReview';
 import ActivePositions from '../components/ActivePositions';
 import StrategyBuilder from '../components/StrategyBuilder';
@@ -55,7 +56,7 @@ export default function Dashboard() {
 
   // Show user setup modal if not set up
   if (!isUserSetup) {
-    return <UserSetup onComplete={handleUserSetupComplete} />;
+    return <UserSetupAI onComplete={handleUserSetupComplete} />;
   }
 
   const getWorkflowById = (id: string) => {
