@@ -1,14 +1,10 @@
 'use client';
 
 import { useState } from 'react';
+import { Rocket, User, Mail, Users } from 'lucide-react';
 import { createUser } from '../lib/userManagement';
-
-/**
- * User Setup Component
- *
- * First-time user onboarding for paper testing.
- * Collects user info and creates unique userId.
- */
+import { GlassCard, GlassButton, GlassInput } from './GlassmorphicComponents';
+import { theme } from '../styles/theme';
 
 interface UserSetupProps {
   onComplete: () => void;
@@ -44,7 +40,6 @@ export default function UserSetup({ onComplete }: UserSetupProps) {
     setIsSubmitting(true);
 
     try {
-      // Create user with unique ID
       const user = createUser(
         displayName.trim(),
         email.trim() || undefined,
@@ -53,7 +48,6 @@ export default function UserSetup({ onComplete }: UserSetupProps) {
 
       console.log('User created successfully:', user.userId);
 
-      // Complete setup
       setTimeout(() => {
         onComplete();
       }, 500);
@@ -64,145 +58,256 @@ export default function UserSetup({ onComplete }: UserSetupProps) {
     }
   };
 
+  const accentColor = theme.workflow.morningRoutine;
+
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900"
-      style={{
-        background: 'radial-gradient(ellipse at top, #0f172a 0%, #1e293b 50%, #0f172a 100%)',
-      }}
-    >
-      <div className="bg-slate-800 border border-white/20 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-fadeIn">
-        {/* Header */}
-        <div className="px-6 py-8 border-b border-white/10 bg-gradient-to-r from-cyan-500/20 to-purple-500/20">
-          <div className="text-center">
-            <div className="text-5xl mb-4">🚀</div>
-            <h2 className="text-3xl font-bold text-white mb-2">Welcome to Allessandra</h2>
-            <p className="text-sm text-slate-300">
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      background: theme.background.primary,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '20px',
+      overflowY: 'auto',
+    }}>
+      <div style={{
+        width: '100%',
+        maxWidth: '500px',
+        margin: 'auto',
+      }}>
+        <GlassCard style={{
+          position: 'relative',
+          zIndex: 1,
+        }} glow="teal">
+          {/* Header with PaiD Logo */}
+          <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+            <div style={{
+              fontSize: '48px',
+              fontWeight: '900',
+              fontStyle: 'italic',
+              lineHeight: '1',
+              marginBottom: '12px',
+            }}>
+              <span style={{ color: '#1a7560' }}>P</span>
+              <span style={{
+                fontFamily: 'Georgia, serif',
+                color: '#45f0c0',
+                textShadow: '0 0 20px #45f0c0',
+              }}>a</span>
+              <span style={{
+                fontFamily: 'Georgia, serif',
+                color: '#58ffda',
+                textShadow: '0 0 25px #58ffda',
+              }}>i</span>
+              <span style={{ color: '#0d5a4a' }}>D</span>
+            </div>
+
+            <h1 style={{
+              color: theme.colors.text,
+              fontSize: '24px',
+              fontWeight: 700,
+              margin: '0 0 6px',
+            }}>
+              Welcome to PaiD
+            </h1>
+            <p style={{
+              color: theme.colors.textMuted,
+              fontSize: '13px',
+              margin: 0,
+            }}>
               AI-Powered Options Trading Platform
             </p>
           </div>
-        </div>
 
-        {/* Content */}
-        <div className="p-6 space-y-5">
-          <div className="p-4 bg-cyan-500/10 border border-cyan-500/20 rounded-lg">
-            <div className="flex items-start gap-3">
-              <span className="text-cyan-400 text-xl">ℹ️</span>
-              <div className="text-sm text-slate-300">
-                <strong className="text-cyan-400">Paper Trading Mode:</strong> This is a testing environment. All trades are
-                simulated. Your unique user ID will track your performance across sessions.
+          {/* Info Banner */}
+          <div style={{
+            padding: '12px',
+            background: `${accentColor}20`,
+            border: `1px solid ${accentColor}50`,
+            borderRadius: theme.borderRadius.md,
+            marginBottom: '20px',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+              <div style={{ fontSize: '18px', flexShrink: 0 }}>ℹ️</div>
+              <div>
+                <div style={{
+                  color: theme.colors.text,
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  marginBottom: '4px',
+                }}>
+                  Paper Trading Mode
+                </div>
+                <div style={{
+                  color: theme.colors.textMuted,
+                  fontSize: '11px',
+                  lineHeight: '1.4',
+                }}>
+                  Testing environment - All trades are simulated
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Display Name */}
-          <div>
-            <label className="block text-sm font-medium text-cyan-400 mb-2">
-              Display Name <span className="text-red-400">*</span>
-            </label>
-            <input
-              type="text"
-              value={displayName}
-              onChange={e => setDisplayName(e.target.value)}
-              placeholder="e.g., John Doe"
-              className={`w-full px-4 py-3 bg-slate-900/80 border rounded-lg text-white placeholder-slate-500 outline-none focus:ring-2 transition-all ${
-                errors.displayName
-                  ? 'border-red-500 focus:ring-red-500/50'
-                  : 'border-white/10 focus:border-cyan-500/50 focus:ring-cyan-500/30'
-              }`}
-              disabled={isSubmitting}
-            />
-            {errors.displayName && (
-              <p className="mt-2 text-sm text-red-400">{errors.displayName}</p>
-            )}
-          </div>
-
-          {/* Email (Optional) */}
-          <div>
-            <label className="block text-sm font-medium text-cyan-400 mb-2">
-              Email <span className="text-xs text-slate-500">(Optional)</span>
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="your.email@example.com"
-              className={`w-full px-4 py-3 bg-slate-900/80 border rounded-lg text-white placeholder-slate-500 outline-none focus:ring-2 transition-all ${
-                errors.email
-                  ? 'border-red-500 focus:ring-red-500/50'
-                  : 'border-white/10 focus:border-cyan-500/50 focus:ring-cyan-500/30'
-              }`}
-              disabled={isSubmitting}
-            />
-            {errors.email && <p className="mt-2 text-sm text-red-400">{errors.email}</p>}
-            <p className="mt-2 text-xs text-slate-500">
-              For notifications and updates
-            </p>
-          </div>
-
-          {/* Test Group (Optional) */}
-          <div>
-            <label className="block text-sm font-medium text-cyan-400 mb-2">
-              Test Group <span className="text-xs text-slate-500">(Optional)</span>
-            </label>
-            <select
-              value={testGroup}
-              onChange={e => setTestGroup(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-900/80 border border-white/10 rounded-lg text-white outline-none focus:ring-2 focus:border-cyan-500/50 focus:ring-cyan-500/30 transition-all"
-              disabled={isSubmitting}
-            >
-              <option value="">No group</option>
-              <option value="alpha">Alpha Testers</option>
-              <option value="beta">Beta Testers</option>
-              <option value="control">Control Group</option>
-              <option value="advanced">Advanced Users</option>
-            </select>
-            <p className="mt-2 text-xs text-slate-500">
-              For organizing test cohorts
-            </p>
-          </div>
-
-          {errors.submit && (
-            <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-              <p className="text-sm text-red-400">{errors.submit}</p>
+          {/* Form */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {/* Display Name */}
+            <div>
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                color: theme.colors.textMuted,
+                fontSize: '12px',
+                fontWeight: 600,
+                marginBottom: '6px',
+              }}>
+                <User size={14} style={{ color: accentColor }} />
+                Display Name <span style={{ color: theme.colors.danger }}>*</span>
+              </label>
+              <GlassInput
+                value={displayName}
+                onChange={setDisplayName}
+                placeholder="e.g., John Doe"
+              />
+              {errors.displayName && (
+                <p style={{
+                  color: theme.colors.danger,
+                  fontSize: '11px',
+                  marginTop: '4px',
+                  margin: 0,
+                }}>
+                  {errors.displayName}
+                </p>
+              )}
             </div>
-          )}
-        </div>
 
-        {/* Footer */}
-        <div className="px-6 py-4 bg-slate-900/50 border-t border-white/10">
-          <button
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="w-full px-6 py-3 bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600 text-white font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-cyan-500/50 disabled:shadow-none"
-          >
-            {isSubmitting ? '⏳ Setting up...' : '🚀 Start Trading'}
-          </button>
+            {/* Email (Optional) */}
+            <div>
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                color: theme.colors.textMuted,
+                fontSize: '12px',
+                fontWeight: 600,
+                marginBottom: '6px',
+              }}>
+                <Mail size={14} style={{ color: accentColor }} />
+                Email <span style={{ fontSize: '10px', opacity: 0.7 }}>(Optional)</span>
+              </label>
+              <GlassInput
+                value={email}
+                onChange={setEmail}
+                type="email"
+                placeholder="your.email@example.com"
+              />
+              {errors.email && (
+                <p style={{
+                  color: theme.colors.danger,
+                  fontSize: '11px',
+                  marginTop: '4px',
+                  margin: 0,
+                }}>
+                  {errors.email}
+                </p>
+              )}
+            </div>
 
-          <p className="mt-4 text-center text-xs text-slate-500">
-            By continuing, you agree to participate in paper trading testing. Your data will be
-            used to improve the platform.
-          </p>
-        </div>
+            {/* Test Group (Optional) */}
+            <div>
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                color: theme.colors.textMuted,
+                fontSize: '12px',
+                fontWeight: 600,
+                marginBottom: '6px',
+              }}>
+                <Users size={14} style={{ color: accentColor }} />
+                Test Group <span style={{ fontSize: '10px', opacity: 0.7 }}>(Optional)</span>
+              </label>
+              <select
+                value={testGroup}
+                onChange={(e) => setTestGroup(e.target.value)}
+                disabled={isSubmitting}
+                style={{
+                  width: '100%',
+                  background: theme.background.input,
+                  backdropFilter: theme.blur.light,
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: theme.borderRadius.md,
+                  padding: '10px 12px',
+                  color: theme.colors.text,
+                  fontSize: '13px',
+                  outline: 'none',
+                  cursor: 'pointer',
+                  transition: theme.transitions.fast,
+                }}
+              >
+                <option value="">No group</option>
+                <option value="alpha">Alpha Testers</option>
+                <option value="beta">Beta Testers</option>
+                <option value="control">Control Group</option>
+                <option value="advanced">Advanced Users</option>
+              </select>
+            </div>
+
+            {/* Error Message */}
+            {errors.submit && (
+              <div style={{
+                padding: '10px',
+                background: `${theme.colors.danger}20`,
+                border: `1px solid ${theme.colors.danger}50`,
+                borderRadius: theme.borderRadius.md,
+              }}>
+                <p style={{
+                  color: theme.colors.danger,
+                  fontSize: '12px',
+                  margin: 0,
+                }}>
+                  {errors.submit}
+                </p>
+              </div>
+            )}
+
+            {/* Start Trading Button */}
+            <GlassButton
+              onClick={handleSubmit}
+              disabled={!displayName.trim() || isSubmitting}
+              variant="primary"
+              style={{
+                width: '100%',
+                fontSize: '15px',
+                padding: '12px 20px',
+                marginTop: '6px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                boxShadow: theme.glow.teal,
+              }}
+            >
+              <Rocket size={16} />
+              {isSubmitting ? 'Setting up...' : 'Start Trading'}
+            </GlassButton>
+
+            {/* Terms Notice */}
+            <p style={{
+              color: theme.colors.textMuted,
+              fontSize: '10px',
+              textAlign: 'center',
+              margin: '4px 0 0',
+              lineHeight: '1.4',
+              opacity: 0.7,
+            }}>
+              By continuing, you agree to participate in paper trading testing
+            </p>
+          </div>
+        </GlassCard>
       </div>
-
-      {/* Animation styles */}
-      <style jsx>{`
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(-20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        .animate-fadeIn {
-          animation: fadeIn 0.6s ease-out;
-        }
-      `}</style>
     </div>
   );
 }

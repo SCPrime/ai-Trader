@@ -82,9 +82,7 @@ export default function Dashboard() {
           return <AIRecommendations />;
 
         case 'settings':
-          setShowSettings(true);
-          setSelectedWorkflow(''); // Clear selection after opening modal
-          return null;
+          return <Settings isOpen={true} onClose={() => setSelectedWorkflow('')} />;
 
         case 'pnl-dashboard':
           return <Analytics />;
@@ -336,6 +334,7 @@ export default function Dashboard() {
           height: '100vh',
           background: 'linear-gradient(135deg, #0f1828 0%, #1a2a3f 100%)',
           padding: '20px',
+          color: '#e2e8f0'
         }}>
           {renderWorkflowContent()}
         </div>

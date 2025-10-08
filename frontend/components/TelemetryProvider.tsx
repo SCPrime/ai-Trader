@@ -17,7 +17,7 @@ const TelemetryContext = createContext<TelemetryContextValue | null>(null);
 interface TelemetryProviderProps {
   children: ReactNode;
   userId: string;
-  userRole: 'admin' | 'beta' | 'alpha' | 'user';
+  userRole: 'admin' | 'beta' | 'alpha' | 'user' | 'owner';
   enabled?: boolean;
 }
 

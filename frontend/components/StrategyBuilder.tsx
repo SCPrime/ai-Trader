@@ -1,256 +1,550 @@
 "use client";
-import React, { useState, useEffect } from 'react';
-import { Settings, DollarSign, Save, AlertCircle, CheckCircle } from 'lucide-react';
 
-type StrategyType = 'under4-multileg' | 'custom' | null;
+import { useState } from 'react';
+import { Settings, Plus, Trash2, Save, Play, Code2, AlertTriangle } from 'lucide-react';
+import { GlassCard, GlassInput } from './GlassmorphicComponents';
+import { theme } from '../styles/theme';
 
-interface Under4Config {
-  price_ceiling: number;
-  min_last_price: number;
-  max_positions: number;
-  max_new_positions_per_day: number;
-  risk: {
-    max_daily_loss_pct: number;
-    max_pos_risk_pct_of_equity: number;
-  };
-  buy_call: {
-    delta_target: number;
-    profit_target_pct: number;
-    stop_loss_pct: number;
-  };
-  sell_put: {
-    delta_target: number;
-    profit_take_pct: number;
-  };
-  sizing: {
-    per_trade_cash_pct: number;
-    max_contracts_per_leg: number;
-  };
+interface Condition {
+  id: string;
+  indicator: string;
+  operator: string;
+  value: string;
 }
 
-const defaultConfig: Under4Config = {
-  price_ceiling: 4.00,
-  min_last_price: 0.75,
-  max_positions: 8,
-  max_new_positions_per_day: 3,
-  risk: {
-    max_daily_loss_pct: 2.0,
-    max_pos_risk_pct_of_equity: 2.0
-  },
-  buy_call: {
-    delta_target: 0.60,
-    profit_target_pct: 50,
-    stop_loss_pct: 35
-  },
-  sell_put: {
-    delta_target: 0.20,
-    profit_take_pct: 50
-  },
-  sizing: {
-    per_trade_cash_pct: 4,
-    max_contracts_per_leg: 5
-  }
-};
+interface Action {
+  id: string;
+  type: string;
+  symbol: string;
+  quantity: string;
+}
 
 export default function StrategyBuilder() {
-  const [selectedStrategy, setSelectedStrategy] = useState<StrategyType>(null);
-  const [config, setConfig] = useState<Under4Config>(defaultConfig);
-  const [saved, setSaved] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [strategyName, setStrategyName] = useState('My New Strategy');
+  const [description, setDescription] = useState('');
+  const [conditions, setConditions] = useState<Condition[]>([
+    { id: '1', indicator: 'RSI', operator: '<', value: '30' },
+  ]);
+  const [actions, setActions] = useState<Action[]>([
+    { id: '1', type: 'buy', symbol: 'SPY', quantity: '100' },
+  ]);
 
-  const handleSaveStrategy = async () => {
-    try {
-      const response = await fetch('/api/proxy/strategies/save', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN}`
-        },
-        body: JSON.stringify({
-          strategy_type: selectedStrategy,
-          config: config
-        })
-      });
-
-      if (response.ok) {
-        setSaved(true);
-        setTimeout(() => setSaved(false), 3000);
-      } else {
-        throw new Error('Failed to save strategy');
-      }
-    } catch (err: any) {
-      setError(err.message);
-    }
+  const addCondition = () => {
+    setConditions([...conditions, {
+      id: Date.now().toString(),
+      indicator: 'RSI',
+      operator: '>',
+      value: '70'
+    }]);
   };
 
+  const removeCondition = (id: string) => {
+    setConditions(conditions.filter(c => c.id !== id));
+  };
+
+  const updateCondition = (id: string, field: keyof Condition, value: string) => {
+    setConditions(conditions.map(c =>
+      c.id === id ? { ...c, [field]: value } : c
+    ));
+  };
+
+  const addAction = () => {
+    setActions([...actions, {
+      id: Date.now().toString(),
+      type: 'buy',
+      symbol: 'SPY',
+      quantity: '100'
+    }]);
+  };
+
+  const removeAction = (id: string) => {
+    setActions(actions.filter(a => a.id !== id));
+  };
+
+  const updateAction = (id: string, field: keyof Action, value: string) => {
+    setActions(actions.map(a =>
+      a.id === id ? { ...a, [field]: value } : a
+    ));
+  };
+
+  const saveStrategy = () => {
+    console.log('Saving strategy:', { strategyName, description, conditions, actions });
+    alert('Strategy saved successfully!');
+  };
+
+  const accentColor = theme.workflow.strategyBuilder;
+  const secondaryColor = theme.workflow.backtesting;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
-            <Settings className="text-teal-400" size={32} />
-            Strategy Builder
-          </h1>
-          <p className="text-slate-400">Configure your trading strategies</p>
-        </div>
-
-        {/* Strategy Selection */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <div
-            onClick={() => setSelectedStrategy('under4-multileg')}
-            className={`p-6 rounded-xl cursor-pointer transition-all ${
-              selectedStrategy === 'under4-multileg'
-                ? 'bg-gradient-to-br from-teal-500/20 to-cyan-500/20 border-2 border-teal-400'
-                : 'bg-slate-800/50 border border-slate-700 hover:border-slate-600'
-            }`}
+    <div style={{
+      height: '100%',
+      background: theme.background.primary,
+      padding: theme.spacing.lg,
+      overflowY: 'auto',
+    }}>
+      <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: theme.spacing.lg }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.md }}>
+            <div style={{
+              padding: theme.spacing.md,
+              background: `${accentColor}20`,
+              borderRadius: theme.borderRadius.lg,
+              boxShadow: theme.glow.darkPurple,
+            }}>
+              <Code2 style={{ width: '32px', height: '32px', color: accentColor }} />
+            </div>
+            <div>
+              <h1 style={{
+                fontSize: '32px',
+                fontWeight: 'bold',
+                color: theme.colors.text,
+                margin: 0,
+              }}>
+                Strategy Builder
+              </h1>
+              <p style={{
+                color: theme.colors.textMuted,
+                margin: '4px 0 0 0',
+                fontSize: '14px',
+              }}>
+                Create custom trading strategies with conditions and actions
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={saveStrategy}
+            style={{
+              padding: `${theme.spacing.md} ${theme.spacing.lg}`,
+              background: `linear-gradient(to right, ${theme.colors.primary}, #00C851)`,
+              color: '#ffffff',
+              fontWeight: '600',
+              borderRadius: theme.borderRadius.lg,
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: theme.spacing.sm,
+              transition: theme.transitions.fast,
+              boxShadow: theme.glow.green,
+            }}
           >
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-teal-500/20 rounded-lg">
-                <DollarSign className="text-teal-400" size={24} />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-xl font-semibold text-white mb-2">Under-$4 Multileg</h3>
-                <p className="text-slate-300 text-sm">
-                  Scan stocks ≤$4.00 and execute Buy Call + Sell Put legs
-                </p>
-              </div>
-            </div>
-          </div>
+            <Save style={{ width: '20px', height: '20px' }} />
+            Save Strategy
+          </button>
         </div>
 
-        {/* Configuration */}
-        {selectedStrategy === 'under4-multileg' && (
-          <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-semibold text-white">Configure Under-$4 Multileg</h2>
-              <button
-                onClick={handleSaveStrategy}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                  saved
-                    ? 'bg-green-500/20 text-green-400 border border-green-500/50'
-                    : 'bg-teal-500 text-white hover:bg-teal-600'
-                }`}
-              >
-                {saved ? <CheckCircle size={18} /> : <Save size={18} />}
-                {saved ? 'Saved!' : 'Save Strategy'}
-              </button>
+        {/* Strategy Info */}
+        <GlassCard>
+          <h3 style={{
+            fontSize: '18px',
+            fontWeight: '600',
+            color: theme.colors.text,
+            margin: `0 0 ${theme.spacing.md} 0`,
+          }}>
+            Strategy Information
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.md }}>
+            <div>
+              <label style={{
+                display: 'block',
+                fontSize: '14px',
+                fontWeight: '500',
+                color: theme.colors.textMuted,
+                marginBottom: theme.spacing.sm,
+              }}>
+                Strategy Name
+              </label>
+              <GlassInput
+                value={strategyName}
+                onChange={(e) => setStrategyName(e.target.value)}
+                placeholder="e.g., RSI Momentum Strategy"
+              />
             </div>
-
-            {error && (
-              <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-6">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="text-red-400" size={20} />
-                  <p className="text-red-300 text-sm">{error}</p>
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-6">
-              {/* Basic Settings */}
-              <div>
-                <h3 className="text-lg font-semibold text-teal-400 mb-4">Basic Settings</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Price Ceiling ($)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={config.price_ceiling}
-                      onChange={(e) => setConfig({...config, price_ceiling: parseFloat(e.target.value)})}
-                      className="w-full px-3 py-2 bg-slate-900/50 border border-slate-600 rounded-lg text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Max Positions</label>
-                    <input
-                      type="number"
-                      value={config.max_positions}
-                      onChange={(e) => setConfig({...config, max_positions: parseInt(e.target.value)})}
-                      className="w-full px-3 py-2 bg-slate-900/50 border border-slate-600 rounded-lg text-white"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Risk Settings */}
-              <div>
-                <h3 className="text-lg font-semibold text-red-400 mb-4">Risk Management</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Max Daily Loss (%)</label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      value={config.risk.max_daily_loss_pct}
-                      onChange={(e) => setConfig({
-                        ...config,
-                        risk: {...config.risk, max_daily_loss_pct: parseFloat(e.target.value)}
-                      })}
-                      className="w-full px-3 py-2 bg-slate-900/50 border border-slate-600 rounded-lg text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Max Position Risk (%)</label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      value={config.risk.max_pos_risk_pct_of_equity}
-                      onChange={(e) => setConfig({
-                        ...config,
-                        risk: {...config.risk, max_pos_risk_pct_of_equity: parseFloat(e.target.value)}
-                      })}
-                      className="w-full px-3 py-2 bg-slate-900/50 border border-slate-600 rounded-lg text-white"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Call/Put Settings */}
-              <div>
-                <h3 className="text-lg font-semibold text-green-400 mb-4">Buy Call Settings</h3>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Delta Target</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={config.buy_call.delta_target}
-                      onChange={(e) => setConfig({
-                        ...config,
-                        buy_call: {...config.buy_call, delta_target: parseFloat(e.target.value)}
-                      })}
-                      className="w-full px-3 py-2 bg-slate-900/50 border border-slate-600 rounded-lg text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Profit Target (%)</label>
-                    <input
-                      type="number"
-                      value={config.buy_call.profit_target_pct}
-                      onChange={(e) => setConfig({
-                        ...config,
-                        buy_call: {...config.buy_call, profit_target_pct: parseInt(e.target.value)}
-                      })}
-                      className="w-full px-3 py-2 bg-slate-900/50 border border-slate-600 rounded-lg text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Stop Loss (%)</label>
-                    <input
-                      type="number"
-                      value={config.buy_call.stop_loss_pct}
-                      onChange={(e) => setConfig({
-                        ...config,
-                        buy_call: {...config.buy_call, stop_loss_pct: parseInt(e.target.value)}
-                      })}
-                      className="w-full px-3 py-2 bg-slate-900/50 border border-slate-600 rounded-lg text-white"
-                    />
-                  </div>
-                </div>
-              </div>
+            <div>
+              <label style={{
+                display: 'block',
+                fontSize: '14px',
+                fontWeight: '500',
+                color: theme.colors.textMuted,
+                marginBottom: theme.spacing.sm,
+              }}>
+                Description
+              </label>
+              <GlassInput
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Describe your strategy..."
+                multiline
+                rows={3}
+              />
             </div>
           </div>
-        )}
+        </GlassCard>
+
+        {/* Entry Conditions */}
+        <GlassCard glow="darkPurple">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.md }}>
+            <h3 style={{
+              fontSize: '18px',
+              fontWeight: '600',
+              color: theme.colors.text,
+              margin: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: theme.spacing.sm,
+            }}>
+              <Settings style={{ width: '20px', height: '20px', color: secondaryColor }} />
+              Entry Conditions
+            </h3>
+            <button
+              onClick={addCondition}
+              style={{
+                padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+                background: `${secondaryColor}20`,
+                border: `1px solid ${secondaryColor}50`,
+                color: secondaryColor,
+                borderRadius: theme.borderRadius.md,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: theme.spacing.sm,
+                transition: theme.transitions.fast,
+                fontWeight: '600',
+              }}
+            >
+              <Plus style={{ width: '16px', height: '16px' }} />
+              Add Condition
+            </button>
+          </div>
+
+          {conditions.length === 0 ? (
+            <div style={{
+              textAlign: 'center',
+              padding: `${theme.spacing.xl} ${theme.spacing.lg}`,
+              color: theme.colors.textMuted,
+              background: theme.background.input,
+              borderRadius: theme.borderRadius.md,
+              border: `1px solid ${theme.colors.border}`,
+            }}>
+              <AlertTriangle style={{ width: '48px', height: '48px', margin: '0 auto 12px', color: theme.colors.textMuted }} />
+              <p style={{ margin: 0 }}>No conditions added yet. Click "Add Condition" to start.</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.md }}>
+              {conditions.map((condition) => (
+                <div key={condition.id} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: theme.spacing.md,
+                  padding: theme.spacing.md,
+                  background: theme.background.input,
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: theme.borderRadius.md,
+                }}>
+                  <select
+                    value={condition.indicator}
+                    onChange={(e) => updateCondition(condition.id, 'indicator', e.target.value)}
+                    style={{
+                      flex: 1,
+                      padding: theme.spacing.sm,
+                      background: theme.background.input,
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: theme.borderRadius.md,
+                      color: theme.colors.text,
+                      fontSize: '14px',
+                      outline: 'none',
+                    }}
+                  >
+                    <option value="RSI">RSI</option>
+                    <option value="MACD">MACD</option>
+                    <option value="SMA_20">SMA (20)</option>
+                    <option value="SMA_50">SMA (50)</option>
+                    <option value="EMA_12">EMA (12)</option>
+                    <option value="EMA_26">EMA (26)</option>
+                    <option value="Volume">Volume</option>
+                    <option value="Price">Price</option>
+                  </select>
+
+                  <select
+                    value={condition.operator}
+                    onChange={(e) => updateCondition(condition.id, 'operator', e.target.value)}
+                    style={{
+                      width: '96px',
+                      padding: theme.spacing.sm,
+                      background: theme.background.input,
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: theme.borderRadius.md,
+                      color: theme.colors.text,
+                      fontSize: '14px',
+                      outline: 'none',
+                    }}
+                  >
+                    <option value=">">{'>'}</option>
+                    <option value="<">{'<'}</option>
+                    <option value="=">{'='}</option>
+                    <option value=">=">≥</option>
+                    <option value="<=">≤</option>
+                    <option value="!=">≠</option>
+                  </select>
+
+                  <input
+                    type="number"
+                    value={condition.value}
+                    onChange={(e) => updateCondition(condition.id, 'value', e.target.value)}
+                    style={{
+                      width: '128px',
+                      padding: theme.spacing.sm,
+                      background: theme.background.input,
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: theme.borderRadius.md,
+                      color: theme.colors.text,
+                      fontSize: '14px',
+                      outline: 'none',
+                    }}
+                    placeholder="Value"
+                  />
+
+                  <button
+                    onClick={() => removeCondition(condition.id)}
+                    style={{
+                      padding: theme.spacing.sm,
+                      color: theme.colors.danger,
+                      background: 'transparent',
+                      border: 'none',
+                      borderRadius: theme.borderRadius.md,
+                      cursor: 'pointer',
+                      transition: theme.transitions.fast,
+                    }}
+                  >
+                    <Trash2 style={{ width: '16px', height: '16px' }} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </GlassCard>
+
+        {/* Actions */}
+        <GlassCard>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.md }}>
+            <h3 style={{
+              fontSize: '18px',
+              fontWeight: '600',
+              color: theme.colors.text,
+              margin: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: theme.spacing.sm,
+            }}>
+              <Play style={{ width: '20px', height: '20px', color: accentColor }} />
+              Actions (What to Execute)
+            </h3>
+            <button
+              onClick={addAction}
+              style={{
+                padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+                background: `${accentColor}20`,
+                border: `1px solid ${accentColor}50`,
+                color: accentColor,
+                borderRadius: theme.borderRadius.md,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: theme.spacing.sm,
+                transition: theme.transitions.fast,
+                fontWeight: '600',
+              }}
+            >
+              <Plus style={{ width: '16px', height: '16px' }} />
+              Add Action
+            </button>
+          </div>
+
+          {actions.length === 0 ? (
+            <div style={{
+              textAlign: 'center',
+              padding: `${theme.spacing.xl} ${theme.spacing.lg}`,
+              color: theme.colors.textMuted,
+              background: theme.background.input,
+              borderRadius: theme.borderRadius.md,
+              border: `1px solid ${theme.colors.border}`,
+            }}>
+              <AlertTriangle style={{ width: '48px', height: '48px', margin: '0 auto 12px', color: theme.colors.textMuted }} />
+              <p style={{ margin: 0 }}>No actions added yet. Click "Add Action" to define what happens.</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.md }}>
+              {actions.map((action) => (
+                <div key={action.id} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: theme.spacing.md,
+                  padding: theme.spacing.md,
+                  background: theme.background.input,
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: theme.borderRadius.md,
+                }}>
+                  <select
+                    value={action.type}
+                    onChange={(e) => updateAction(action.id, 'type', e.target.value)}
+                    style={{
+                      width: '128px',
+                      padding: theme.spacing.sm,
+                      background: theme.background.input,
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: theme.borderRadius.md,
+                      color: theme.colors.text,
+                      fontSize: '14px',
+                      outline: 'none',
+                    }}
+                  >
+                    <option value="buy">Buy</option>
+                    <option value="sell">Sell</option>
+                    <option value="short">Short</option>
+                    <option value="cover">Cover</option>
+                    <option value="close">Close Position</option>
+                  </select>
+
+                  <input
+                    type="text"
+                    value={action.symbol}
+                    onChange={(e) => updateAction(action.id, 'symbol', e.target.value.toUpperCase())}
+                    style={{
+                      flex: 1,
+                      padding: theme.spacing.sm,
+                      background: theme.background.input,
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: theme.borderRadius.md,
+                      color: theme.colors.text,
+                      fontSize: '14px',
+                      outline: 'none',
+                    }}
+                    placeholder="Symbol (e.g., AAPL)"
+                  />
+
+                  <input
+                    type="number"
+                    value={action.quantity}
+                    onChange={(e) => updateAction(action.id, 'quantity', e.target.value)}
+                    style={{
+                      width: '128px',
+                      padding: theme.spacing.sm,
+                      background: theme.background.input,
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: theme.borderRadius.md,
+                      color: theme.colors.text,
+                      fontSize: '14px',
+                      outline: 'none',
+                    }}
+                    placeholder="Quantity"
+                  />
+
+                  <button
+                    onClick={() => removeAction(action.id)}
+                    style={{
+                      padding: theme.spacing.sm,
+                      color: theme.colors.danger,
+                      background: 'transparent',
+                      border: 'none',
+                      borderRadius: theme.borderRadius.md,
+                      cursor: 'pointer',
+                      transition: theme.transitions.fast,
+                    }}
+                  >
+                    <Trash2 style={{ width: '16px', height: '16px' }} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </GlassCard>
+
+        {/* Strategy Logic Preview */}
+        <GlassCard>
+          <h3 style={{
+            fontSize: '18px',
+            fontWeight: '600',
+            color: theme.colors.text,
+            margin: `0 0 ${theme.spacing.md} 0`,
+          }}>
+            Strategy Logic Preview
+          </h3>
+          <div style={{
+            background: theme.background.input,
+            border: `1px solid ${theme.colors.border}`,
+            borderRadius: theme.borderRadius.md,
+            padding: theme.spacing.md,
+            fontFamily: 'monospace',
+            fontSize: '14px',
+            color: theme.colors.textMuted,
+          }}>
+            <div style={{ color: secondaryColor, marginBottom: theme.spacing.sm }}>IF</div>
+            {conditions.map((cond, idx) => (
+              <div key={cond.id} style={{ marginLeft: theme.spacing.md, marginBottom: '4px' }}>
+                {idx > 0 && <span style={{ color: accentColor }}>AND </span>}
+                <span style={{ color: theme.colors.text }}>{cond.indicator}</span>
+                <span style={{ color: theme.colors.warning }}> {cond.operator} </span>
+                <span style={{ color: theme.colors.primary }}>{cond.value}</span>
+              </div>
+            ))}
+            <div style={{ color: secondaryColor, margin: `${theme.spacing.md} 0 ${theme.spacing.sm} 0` }}>THEN</div>
+            {actions.map((action) => (
+              <div key={action.id} style={{ marginLeft: theme.spacing.md, marginBottom: '4px' }}>
+                <span style={{ color: accentColor }}>{action.type.toUpperCase()}</span>
+                <span style={{ color: theme.colors.text }}> {action.quantity} shares of </span>
+                <span style={{ color: theme.colors.primary }}>{action.symbol}</span>
+              </div>
+            ))}
+          </div>
+        </GlassCard>
+
+        {/* Action Buttons */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: theme.spacing.md }}>
+          <button
+            onClick={() => alert('Testing strategy on historical data...')}
+            style={{
+              padding: theme.spacing.lg,
+              background: `${secondaryColor}20`,
+              border: `1px solid ${secondaryColor}50`,
+              color: secondaryColor,
+              fontWeight: '600',
+              fontSize: '16px',
+              borderRadius: theme.borderRadius.lg,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: theme.spacing.sm,
+              transition: theme.transitions.fast,
+            }}
+          >
+            <Play style={{ width: '20px', height: '20px' }} />
+            Test Strategy (Backtest)
+          </button>
+          <button
+            onClick={saveStrategy}
+            style={{
+              padding: theme.spacing.lg,
+              background: `linear-gradient(to right, ${theme.colors.primary}, #00C851)`,
+              color: '#ffffff',
+              fontWeight: '600',
+              fontSize: '16px',
+              borderRadius: theme.borderRadius.lg,
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: theme.spacing.sm,
+              transition: theme.transitions.fast,
+              boxShadow: theme.glow.green,
+            }}
+          >
+            <Save style={{ width: '20px', height: '20px' }} />
+            Save & Deploy Strategy
+          </button>
+        </div>
       </div>
     </div>
   );

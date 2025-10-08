@@ -50,6 +50,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:3002",
         "https://ai-trader-snowy.vercel.app",
         "https://ai-trader-scprimes-projects.vercel.app",
         "https://ai-trader-git-main-scprimes-projects.vercel.app",

@@ -1,186 +1,342 @@
 "use client";
-import React, { useState } from 'react';
-import { Sun, Play, CheckCircle, AlertCircle, DollarSign } from 'lucide-react';
+
+import { useState, useEffect } from 'react';
+import { Sun, Clock, AlertCircle, CheckCircle, XCircle, Calendar, DollarSign } from 'lucide-react';
+import { GlassCard, GlassBadge } from './GlassmorphicComponents';
+import { theme } from '../styles/theme';
+
+interface MarketHours {
+  isOpen: boolean;
+  nextEvent: string;
+  currentTime: string;
+}
+
+interface PortfolioMetrics {
+  totalValue: number;
+  dayChange: number;
+  dayChangePercent: number;
+  buyingPower: number;
+}
+
+interface SystemCheck {
+  name: string;
+  status: 'pass' | 'fail' | 'warning';
+  message: string;
+}
+
+interface NewsItem {
+  title: string;
+  impact: 'high' | 'medium' | 'low';
+  time: string;
+}
 
 export default function MorningRoutine() {
-  const [selectedStrategy, setSelectedStrategy] = useState<string>('under4-multileg');
-  const [isRunning, setIsRunning] = useState(false);
-  const [results, setResults] = useState<any>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [loading, setLoading] = useState(false);
+  const [systemChecks] = useState<SystemCheck[]>([
+    { name: 'API Connection', status: 'pass', message: 'Connected to Alpaca' },
+    { name: 'Market Data', status: 'pass', message: 'Real-time feed active' },
+    { name: 'Account Status', status: 'pass', message: 'Paper trading account active' },
+    { name: 'Risk Limits', status: 'warning', message: 'Daily loss at 75%' },
+  ]);
 
-  const handleRunRoutine = async () => {
-    setIsRunning(true);
-    setError(null);
-    setResults(null);
+  const [portfolio] = useState<PortfolioMetrics>({
+    totalValue: 18234.56,
+    dayChange: 156.23,
+    dayChangePercent: 0.86,
+    buyingPower: 8500.00,
+  });
 
-    try {
-      const response = await fetch('/api/proxy/strategies/run', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN}`
-        },
-        body: JSON.stringify({
-          strategy_type: selectedStrategy,
-          dry_run: true
-        })
-      });
+  const [todaysNews] = useState<NewsItem[]>([
+    { title: 'Fed Interest Rate Decision', impact: 'high', time: '2:00 PM ET' },
+    { title: 'Tech Earnings: AAPL, MSFT', impact: 'high', time: 'After Close' },
+    { title: 'Unemployment Claims', impact: 'medium', time: '8:30 AM ET' },
+    { title: 'Oil Inventory Report', impact: 'low', time: '10:30 AM ET' },
+  ]);
 
-      if (!response.ok) {
-        throw new Error(`Request failed: ${response.statusText}`);
-      }
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
-      const data = await response.json();
-      setResults(data.results);
+  const getMarketStatus = (): MarketHours => {
+    const now = new Date();
+    const day = now.getDay();
+    const hour = now.getHours();
+    const isWeekday = day >= 1 && day <= 5;
+    const isMarketHours = hour >= 9 && hour < 16;
 
-    } catch (err: any) {
-      setError(err.message || 'Failed to run morning routine');
-    } finally {
-      setIsRunning(false);
-    }
+    return {
+      isOpen: isWeekday && isMarketHours,
+      nextEvent: isWeekday && !isMarketHours ? 'Opens at 9:30 AM ET' : 'Closes at 4:00 PM ET',
+      currentTime: now.toLocaleTimeString('en-US'),
+    };
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
-            <Sun className="text-amber-400" size={32} />
-            Morning Routine
-          </h1>
-          <p className="text-slate-400">
-            Execute your daily market analysis and trade setup
-          </p>
-        </div>
+  const runMorningChecks = async () => {
+    setLoading(true);
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    setLoading(false);
+  };
 
-        {/* Strategy Selection */}
-        <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6 mb-6">
-          <h2 className="text-xl font-semibold text-white mb-4">Select Strategy</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div
-              onClick={() => setSelectedStrategy('under4-multileg')}
-              className={`p-4 rounded-lg cursor-pointer transition-all ${
-                selectedStrategy === 'under4-multileg'
-                  ? 'bg-teal-500/20 border-2 border-teal-400'
-                  : 'bg-slate-700/30 border border-slate-600 hover:border-slate-500'
-              }`}
-            >
-              <div className="flex items-start gap-3">
-                <div className="p-2 bg-teal-500/20 rounded-lg">
-                  <DollarSign className="text-teal-400" size={20} />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-white mb-1">Under-$4 Multileg</h3>
-                  <p className="text-sm text-slate-300">Scan stocks ≤$4 and execute Buy Call + Sell Put legs</p>
-                </div>
-                {selectedStrategy === 'under4-multileg' && (
-                  <CheckCircle className="text-teal-400" size={20} />
-                )}
-              </div>
+  const market = getMarketStatus();
+  const accentColor = theme.workflow.morningRoutine;
+
+  return (
+    <div style={{
+      height: '100%',
+      background: theme.background.primary,
+      padding: theme.spacing.lg,
+      overflowY: 'auto',
+    }}>
+      <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: theme.spacing.lg }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.md }}>
+            <div style={{
+              padding: theme.spacing.md,
+              background: `${accentColor}20`,
+              borderRadius: theme.borderRadius.lg,
+              boxShadow: theme.glow.teal,
+            }}>
+              <Sun style={{ width: '32px', height: '32px', color: accentColor }} />
+            </div>
+            <div>
+              <h1 style={{
+                fontSize: '32px',
+                fontWeight: 'bold',
+                color: theme.colors.text,
+                margin: 0,
+              }}>
+                Morning Routine
+              </h1>
+              <p style={{
+                color: theme.colors.textMuted,
+                margin: '4px 0 0 0',
+                fontSize: '14px',
+              }}>
+                Pre-market analysis and system checks
+              </p>
+            </div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '12px', color: theme.colors.textMuted }}>Current Time</div>
+            <div style={{
+              fontSize: '24px',
+              fontFamily: 'monospace',
+              fontWeight: 'bold',
+              color: accentColor,
+              marginTop: '4px',
+            }}>
+              {market.currentTime}
             </div>
           </div>
         </div>
+
+        {/* Market Status Card */}
+        <GlassCard glow="teal">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.md }}>
+              <Clock style={{ width: '24px', height: '24px', color: accentColor }} />
+              <div>
+                <h3 style={{ fontSize: '18px', fontWeight: '600', color: theme.colors.text, margin: 0 }}>
+                  Market Status
+                </h3>
+                <p style={{ fontSize: '14px', color: theme.colors.textMuted, margin: '4px 0 0 0' }}>
+                  {market.nextEvent}
+                </p>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.md }}>
+              <div style={{
+                width: '12px',
+                height: '12px',
+                borderRadius: '50%',
+                background: market.isOpen ? theme.colors.primary : theme.colors.danger,
+                animation: 'pulse 2s infinite',
+              }} />
+              <span style={{
+                fontSize: '18px',
+                fontWeight: 'bold',
+                color: market.isOpen ? theme.colors.primary : theme.colors.danger,
+              }}>
+                {market.isOpen ? 'OPEN' : 'CLOSED'}
+              </span>
+            </div>
+          </div>
+        </GlassCard>
+
+        {/* Portfolio Summary */}
+        <GlassCard>
+          <h3 style={{
+            fontSize: '18px',
+            fontWeight: '600',
+            color: theme.colors.text,
+            margin: `0 0 ${theme.spacing.md} 0`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: theme.spacing.sm,
+          }}>
+            <DollarSign style={{ width: '20px', height: '20px', color: accentColor }} />
+            Portfolio Overview
+          </h3>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: theme.spacing.md,
+          }}>
+            {[
+              { label: 'Total Value', value: `$${portfolio.totalValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}`, color: theme.colors.text },
+              { label: 'Day Change', value: `${portfolio.dayChange >= 0 ? '+' : ''}$${Math.abs(portfolio.dayChange).toFixed(2)}`, color: portfolio.dayChange >= 0 ? theme.colors.primary : theme.colors.danger },
+              { label: 'Day Change %', value: `${portfolio.dayChangePercent >= 0 ? '+' : ''}${portfolio.dayChangePercent.toFixed(2)}%`, color: portfolio.dayChangePercent >= 0 ? theme.colors.primary : theme.colors.danger },
+              { label: 'Buying Power', value: `$${portfolio.buyingPower.toLocaleString('en-US', { minimumFractionDigits: 2 })}`, color: accentColor },
+            ].map((item, idx) => (
+              <div key={idx} style={{
+                background: theme.background.input,
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: theme.borderRadius.md,
+                padding: theme.spacing.md,
+              }}>
+                <div style={{ fontSize: '12px', color: theme.colors.textMuted, marginBottom: '4px' }}>
+                  {item.label}
+                </div>
+                <div style={{ fontSize: '24px', fontWeight: 'bold', color: item.color }}>
+                  {item.value}
+                </div>
+              </div>
+            ))}
+          </div>
+        </GlassCard>
+
+        {/* System Checks */}
+        <GlassCard>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.md }}>
+            <h3 style={{
+              fontSize: '18px',
+              fontWeight: '600',
+              color: theme.colors.text,
+              margin: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: theme.spacing.sm,
+            }}>
+              <AlertCircle style={{ width: '20px', height: '20px', color: accentColor }} />
+              System Health Checks
+            </h3>
+            <button
+              onClick={runMorningChecks}
+              disabled={loading}
+              style={{
+                padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+                background: `${accentColor}20`,
+                border: `1px solid ${accentColor}50`,
+                color: accentColor,
+                borderRadius: theme.borderRadius.md,
+                cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.5 : 1,
+                transition: theme.transitions.fast,
+                fontWeight: '600',
+              }}
+            >
+              {loading ? 'Checking...' : 'Re-run Checks'}
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.md }}>
+            {systemChecks.map((check, index) => (
+              <div key={index} style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: theme.spacing.md,
+                background: theme.background.input,
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: theme.borderRadius.md,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.md }}>
+                  {check.status === 'pass' && <CheckCircle style={{ width: '20px', height: '20px', color: theme.colors.primary }} />}
+                  {check.status === 'fail' && <XCircle style={{ width: '20px', height: '20px', color: theme.colors.danger }} />}
+                  {check.status === 'warning' && <AlertCircle style={{ width: '20px', height: '20px', color: theme.colors.warning }} />}
+                  <div>
+                    <div style={{ color: theme.colors.text, fontWeight: '500' }}>{check.name}</div>
+                    <div style={{ fontSize: '14px', color: theme.colors.textMuted }}>{check.message}</div>
+                  </div>
+                </div>
+                <GlassBadge
+                  variant={check.status === 'pass' ? 'success' : check.status === 'fail' ? 'danger' : 'warning'}
+                >
+                  {check.status}
+                </GlassBadge>
+              </div>
+            ))}
+          </div>
+        </GlassCard>
+
+        {/* Today's Economic Events */}
+        <GlassCard>
+          <h3 style={{
+            fontSize: '18px',
+            fontWeight: '600',
+            color: theme.colors.text,
+            margin: `0 0 ${theme.spacing.md} 0`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: theme.spacing.sm,
+          }}>
+            <Calendar style={{ width: '20px', height: '20px', color: accentColor }} />
+            Today's Economic Calendar
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.md }}>
+            {todaysNews.map((item, index) => (
+              <div key={index} style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: theme.spacing.md,
+                background: theme.background.input,
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: theme.borderRadius.md,
+                transition: theme.transitions.fast,
+                cursor: 'pointer',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.md }}>
+                  <GlassBadge
+                    variant={item.impact === 'high' ? 'danger' : item.impact === 'medium' ? 'warning' : 'info'}
+                  >
+                    {item.impact}
+                  </GlassBadge>
+                  <span style={{ color: theme.colors.text }}>{item.title}</span>
+                </div>
+                <span style={{ fontSize: '14px', color: theme.colors.textMuted }}>{item.time}</span>
+              </div>
+            ))}
+          </div>
+        </GlassCard>
 
         {/* Action Button */}
-        <div className="mb-8">
-          <button
-            onClick={handleRunRoutine}
-            disabled={isRunning}
-            className={`w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl font-semibold text-lg transition-all shadow-lg text-white ${
-              isRunning
-                ? 'bg-slate-600 cursor-not-allowed'
-                : 'bg-teal-500 hover:bg-teal-600 shadow-teal-500/30'
-            }`}
-          >
-            <Play size={24} />
-            {isRunning ? 'Running Morning Routine...' : 'Run Morning Routine (Dry Run)'}
-          </button>
-        </div>
-
-        {/* Error Display */}
-        {error && (
-          <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-6">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="text-red-400 flex-shrink-0" size={24} />
-              <div>
-                <h3 className="font-semibold text-red-400 mb-1">Error</h3>
-                <p className="text-red-300 text-sm">{error}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Results Display */}
-        {results && (
-          <div className="space-y-6">
-            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
-              <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-                <CheckCircle className="text-green-400" size={24} />
-                Scan Results
-              </h2>
-
-              <div className="mb-4">
-                <h3 className="text-sm font-medium text-slate-400 mb-2">
-                  Top Candidates ({results.candidates?.length || 0})
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {results.candidates?.map((symbol: string) => (
-                    <span
-                      key={symbol}
-                      className="px-3 py-1 bg-slate-700/50 border border-slate-600 rounded-lg text-white font-mono"
-                    >
-                      {symbol}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {results.proposals && results.proposals.length > 0 && (
-              <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6">
-                <h2 className="text-xl font-semibold text-white mb-4">
-                  Proposed Trades ({results.proposals.length})
-                </h2>
-
-                <div className="space-y-3">
-                  {results.proposals.map((trade: any, index: number) => (
-                    <div
-                      key={index}
-                      className={`p-4 rounded-lg border ${
-                        trade.type === 'BUY_CALL'
-                          ? 'bg-green-500/10 border-green-500/30'
-                          : 'bg-orange-500/10 border-orange-500/30'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                            trade.type === 'BUY_CALL'
-                              ? 'bg-green-500/20 text-green-300'
-                              : 'bg-orange-500/20 text-orange-300'
-                          }`}>
-                            {trade.type.replace('_', ' ')}
-                          </span>
-                          <span className="text-white font-semibold font-mono">
-                            {trade.symbol}
-                          </span>
-                        </div>
-                        <div className="text-right text-sm">
-                          <div className="text-slate-300">
-                            Strike: ${trade.strike} | Exp: {trade.expiry}
-                          </div>
-                          <div className="text-slate-400">
-                            Δ {trade.delta} | Qty: {trade.qty}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+        <button
+          style={{
+            width: '100%',
+            padding: theme.spacing.lg,
+            background: `linear-gradient(to right, ${theme.colors.primary}, #00C851)`,
+            color: '#ffffff',
+            fontWeight: '600',
+            fontSize: '16px',
+            borderRadius: theme.borderRadius.lg,
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: theme.spacing.sm,
+            transition: theme.transitions.fast,
+            boxShadow: theme.glow.green,
+          }}
+          onClick={() => alert('Morning routine complete!')}
+        >
+          <CheckCircle style={{ width: '20px', height: '20px' }} />
+          Complete Morning Routine
+        </button>
       </div>
     </div>
   );

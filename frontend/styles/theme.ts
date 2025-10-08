@@ -6,29 +6,44 @@
 export const theme = {
   background: {
     primary: 'linear-gradient(135deg, #0f1828 0%, #1a2a3f 100%)',
-    card: 'rgba(26, 42, 63, 0.6)',
-    cardHover: 'rgba(26, 42, 63, 0.8)',
-    input: 'rgba(15, 24, 40, 0.8)',
+    card: 'rgba(30, 41, 59, 0.8)',
+    cardHover: 'rgba(30, 41, 59, 0.95)',
+    input: 'rgba(15, 24, 40, 0.9)',
     glass: 'rgba(30, 41, 59, 0.8)',
   },
   colors: {
     primary: '#10b981',      // Green accent
-    secondary: '#00ACC1',    // Teal (from radial menu)
+    secondary: '#00ACC1',    // Teal
     accent: '#7E57C2',       // Purple
     warning: '#FF8800',      // Orange
     danger: '#FF4444',       // Red
     info: '#00BCD4',         // Cyan
-    text: '#e5e7eb',         // Light gray
-    textMuted: '#94a3b8',    // Muted gray
+    text: '#f1f5f9',         // Bright light text
+    textMuted: '#cbd5e1',    // Muted text
     border: 'rgba(16, 185, 129, 0.3)',
     borderHover: 'rgba(16, 185, 129, 0.6)',
+  },
+  // Exact workflow colors from RadialMenu.tsx
+  workflow: {
+    morningRoutine: '#00ACC1',    // Teal
+    newsReview: '#7E57C2',        // Purple
+    proposals: '#0097A7',          // Dark Teal
+    activePositions: '#00C851',   // Green
+    pnl: '#FF8800',               // Orange
+    strategyBuilder: '#5E35B1',   // Purple
+    backtesting: '#00BCD4',       // Cyan
+    execute: '#FF4444',           // Red
+    research: '#F97316',          // Orange
+    settings: '#64748b',          // Slate Gray
   },
   glow: {
     green: '0 0 20px rgba(16, 185, 129, 0.3), 0 0 40px rgba(16, 185, 129, 0.15)',
     teal: '0 0 20px rgba(0, 172, 193, 0.3), 0 0 40px rgba(0, 172, 193, 0.15)',
     purple: '0 0 20px rgba(126, 87, 194, 0.3), 0 0 40px rgba(126, 87, 194, 0.15)',
+    darkPurple: '0 0 20px rgba(94, 53, 177, 0.3), 0 0 40px rgba(94, 53, 177, 0.15)',
     orange: '0 0 20px rgba(255, 136, 0, 0.3), 0 0 40px rgba(255, 136, 0, 0.15)',
     red: '0 0 20px rgba(255, 68, 68, 0.3), 0 0 40px rgba(255, 68, 68, 0.15)',
+    cyan: '0 0 20px rgba(0, 188, 212, 0.3), 0 0 40px rgba(0, 188, 212, 0.15)',
   },
   blur: {
     light: 'blur(10px)',

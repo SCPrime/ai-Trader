@@ -7,7 +7,6 @@ import RiskDashboard from './RiskDashboard';
 import SchedulerSettings from './SchedulerSettings';
 import ApprovalQueue from './ApprovalQueue';
 import { getCurrentUser, getUserAnalytics, clearUserData } from '../lib/userManagement';
-import type { User as UserType } from '../lib/userManagement';
 
 interface User {
   id: string;
@@ -61,19 +60,16 @@ interface SettingsProps {
 }
 
 export default function Settings({ isOpen, onClose }: SettingsProps) {
-  // Get current user from your auth system
   const currentUserData = getCurrentUser();
   const [currentUser] = useState({
     id: currentUserData?.userId || 'owner-001',
-    role: 'owner' as const // Set to 'owner' for admin access, or get from currentUserData
+    role: 'owner' as const
   });
   const isOwner = currentUser.role === 'owner';
   const isAdmin = currentUser.role === 'owner' || currentUser.role === 'admin';
 
-  // Tab state - show different tabs based on role
   const [activeTab, setActiveTab] = useState<'personal' | 'users' | 'theme' | 'permissions' | 'telemetry' | 'trading' | 'journal' | 'risk' | 'automation' | 'approvals'>('personal');
 
-  // Personal settings
   const [settings, setSettings] = useState<SettingsData>({
     defaultExecutionMode: 'requires_approval',
     enableSMSAlerts: true,
@@ -85,7 +81,6 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
     defaultMaxReprices: 4,
   });
 
-  // Admin data
   const [users, setUsers] = useState<User[]>([]);
   const [themeCustom, setThemeCustom] = useState<ThemeCustomization>({
     primaryColor: '#10b981',
@@ -98,17 +93,14 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
   const [telemetryEnabled, setTelemetryEnabled] = useState(true);
   const [telemetryData, setTelemetryData] = useState<TelemetryData[]>([]);
 
-  // UI state
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
 
-  // Load data on mount
   useEffect(() => {
     if (!isOpen) return;
 
-    // Load personal settings
     const savedSettings = localStorage.getItem('allessandra_settings');
     if (savedSettings) {
       try {
@@ -118,7 +110,6 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
       }
     }
 
-    // Load admin data if owner/admin
     if (isAdmin) {
       loadMockUsers();
       loadTelemetryData();
@@ -159,22 +150,6 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
         createdAt: '2025-09-15',
         lastLogin: '2025-10-05',
       },
-      {
-        id: 'alpha-001',
-        email: 'alpha.tester1@paid.com',
-        name: 'Alpha Tester 1',
-        role: 'alpha',
-        tradingMode: 'paper',
-        permissions: {
-          canTrade: false,
-          canBacktest: true,
-          canViewAnalytics: false,
-          canModifyStrategies: false,
-        },
-        status: 'active',
-        createdAt: '2025-10-01',
-        lastLogin: '2025-10-06',
-      },
     ]);
   };
 
@@ -187,22 +162,6 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
         component: 'ExecuteTradeForm',
         timestamp: new Date().toISOString(),
         metadata: { symbol: 'AAPL', side: 'buy', quantity: 10 },
-      },
-      {
-        sessionId: 'sess-002',
-        userId: 'alpha-001',
-        action: 'run_backtest',
-        component: 'Backtesting',
-        timestamp: new Date().toISOString(),
-        metadata: { strategy: 'MA Crossover', period: '1M' },
-      },
-      {
-        sessionId: 'sess-003',
-        userId: 'beta-001',
-        action: 'view_positions',
-        component: 'ActivePositions',
-        timestamp: new Date().toISOString(),
-        metadata: { portfolioValue: 50000 },
       },
     ];
     setTelemetryData(mockData);
@@ -218,10 +177,8 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
     setIsSaving(true);
     setSaveMessage('');
 
-    // Save personal settings
     localStorage.setItem('allessandra_settings', JSON.stringify(settings));
 
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1500));
 
     setIsSaving(false);
@@ -295,7 +252,6 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
 
   const analytics = currentUserData ? getUserAnalytics() : null;
 
-  // Define tabs based on role
   const tabs = [
     { id: 'personal', label: 'Personal Settings', icon: SettingsIcon, alwaysShow: true },
     { id: 'journal', label: 'Trading Journal', icon: BookOpen, alwaysShow: true },
@@ -310,19 +266,48 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
   ].filter(tab => tab.alwaysShow || (tab.adminOnly && isAdmin));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn overflow-y-auto">
-      <div className="bg-slate-800 border border-white/20 rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col my-8">
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      zIndex: 50,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '16px',
+      background: 'rgba(0, 0, 0, 0.7)',
+      backdropFilter: 'blur(10px)',
+      overflowY: 'auto',
+      color: '#e2e8f0',
+    }}>
+      <div style={{
+        background: 'rgba(30, 41, 59, 0.8)',
+        backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(16, 185, 129, 0.3)',
+        borderRadius: '20px',
+        boxShadow: '0 0 40px rgba(16, 185, 129, 0.15)',
+        maxWidth: '1200px',
+        width: '100%',
+        maxHeight: '90vh',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        margin: '32px 0',
+      }}>
         {/* Header */}
-        <div className="px-6 py-4 border-b border-white/10 bg-gradient-to-r from-cyan-500/20 to-purple-500/20">
-          <div className="flex items-center justify-between">
+        <div style={{
+          padding: '16px 24px',
+          borderBottom: '1px solid rgba(0, 172, 193, 0.2)',
+          background: 'linear-gradient(to right, rgba(0, 172, 193, 0.1), rgba(126, 87, 194, 0.1), rgba(0, 172, 193, 0.1))',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <div className="flex items-center gap-3">
-                <SettingsIcon size={28} className="text-cyan-400" />
-                <h2 className="text-2xl font-bold text-white">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <SettingsIcon size={28} style={{ color: '#00ACC1' }} />
+                <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: '#ffffff', margin: 0 }}>
                   {isOwner ? 'Master Control Panel' : 'Settings'}
                 </h2>
               </div>
-              <p className="text-sm text-slate-300 mt-1">
+              <p style={{ fontSize: '14px', color: '#cbd5e1', marginTop: '4px', marginBottom: 0 }}>
                 {isOwner
                   ? 'System-wide configuration and user management'
                   : 'Configure your trading preferences and automation'}
@@ -330,13 +315,20 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
             </div>
             <button
               onClick={onClose}
-              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-all"
+              style={{
+                padding: '8px 16px',
+                background: 'rgba(30, 41, 59, 0.8)',
+                border: '1px solid rgba(100, 116, 139, 0.5)',
+                color: '#ffffff',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
             >
               ✕ Close
             </button>
           </div>
 
-          {/* Owner Badge */}
           {isOwner && (
             <div className="mt-3 px-3 py-2 bg-purple-500/20 border border-purple-500/30 rounded flex items-center gap-2">
               <Shield size={16} className="text-purple-400" />
@@ -346,7 +338,6 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
             </div>
           )}
 
-          {/* Save Message */}
           {saveMessage && (
             <div className="mt-3 px-3 py-2 bg-green-500/20 border border-green-500/30 rounded flex items-center gap-2">
               <CheckCircle2 size={16} className="text-green-400" />
@@ -356,7 +347,7 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
         </div>
 
         {/* Tabs */}
-        <div className="px-6 py-3 border-b border-white/10 bg-slate-900/50 flex gap-2 overflow-x-auto">
+        <div className="px-6 py-3 border-b border-cyan-500/20 bg-slate-900/50 flex gap-2 overflow-x-auto">
           {tabs.map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -365,10 +356,10 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`
-                  px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-2 whitespace-nowrap
+                  px-4 py-2.5 rounded-lg font-medium text-sm transition-all flex items-center gap-2 whitespace-nowrap
                   ${isActive
-                    ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/50'
-                    : 'bg-slate-800/50 text-slate-300 hover:bg-slate-700/50 border border-white/10'
+                    ? 'bg-gradient-to-r from-cyan-500/20 to-purple-500/20 text-white border-2 border-cyan-400/50 shadow-lg shadow-cyan-500/10'
+                    : 'bg-slate-800/60 text-slate-400 hover:bg-slate-700/80 border-2 border-slate-700/30 hover:border-cyan-400/30'
                   }
                 `}
               >
@@ -380,20 +371,24 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {/* Personal Settings Tab */}
+        <div style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: '24px',
+          background: 'rgba(15, 23, 42, 0.2)',
+          color: '#e2e8f0',
+        }}>
           {activeTab === 'personal' && (
             <div className="space-y-6">
-              {/* User Info */}
               {currentUserData && (
-                <div className="bg-slate-900/60 border border-white/10 rounded-xl p-5">
+                <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5">
                   <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                     <span className="text-xl">👤</span>
                     User Information
                   </h3>
 
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between p-3 bg-slate-800/50 border border-white/10 rounded-lg">
+                    <div className="flex items-center justify-between p-3 bg-slate-900/40 border border-slate-700/30 rounded-lg">
                       <div>
                         <div className="text-xs text-slate-400 mb-1">Display Name</div>
                         <div className="text-sm font-medium text-white">{currentUserData.displayName}</div>
@@ -401,7 +396,7 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
                     </div>
 
                     {currentUserData.email && (
-                      <div className="flex items-center justify-between p-3 bg-slate-800/50 border border-white/10 rounded-lg">
+                      <div className="flex items-center justify-between p-3 bg-slate-900/40 border border-slate-700/30 rounded-lg">
                         <div>
                           <div className="text-xs text-slate-400 mb-1">Email</div>
                           <div className="text-sm font-medium text-white">{currentUserData.email}</div>
@@ -411,11 +406,11 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
 
                     {analytics && (
                       <div className="grid grid-cols-2 gap-3">
-                        <div className="p-3 bg-slate-800/50 border border-white/10 rounded-lg">
+                        <div className="p-3 bg-slate-900/40 border border-slate-700/30 rounded-lg">
                           <div className="text-xs text-slate-400 mb-1">Account Age</div>
                           <div className="text-sm font-semibold text-cyan-400">{analytics.accountAge}</div>
                         </div>
-                        <div className="p-3 bg-slate-800/50 border border-white/10 rounded-lg">
+                        <div className="p-3 bg-slate-900/40 border border-slate-700/30 rounded-lg">
                           <div className="text-xs text-slate-400 mb-1">Total Sessions</div>
                           <div className="text-sm font-semibold text-purple-400">{analytics.totalSessions}</div>
                         </div>
@@ -437,15 +432,14 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
                 </div>
               )}
 
-              {/* Trading Mode */}
-              <div className="bg-slate-900/60 border border-white/10 rounded-xl p-5">
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5">
                 <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                   <span className="text-xl">🤖</span>
                   Trading Mode
                 </h3>
 
                 <div className="space-y-3">
-                  <label className="flex items-start gap-3 p-4 bg-slate-800/50 border border-white/10 rounded-lg cursor-pointer hover:border-cyan-500/50 transition-all">
+                  <label className="flex items-start gap-3 p-4 bg-slate-900/40 border border-slate-700/30 rounded-lg cursor-pointer hover:border-cyan-500/50 transition-all">
                     <input
                       type="radio"
                       name="executionMode"
@@ -464,7 +458,7 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
                     </div>
                   </label>
 
-                  <label className="flex items-start gap-3 p-4 bg-slate-800/50 border border-white/10 rounded-lg cursor-pointer hover:border-purple-500/50 transition-all">
+                  <label className="flex items-start gap-3 p-4 bg-slate-900/40 border border-slate-700/30 rounded-lg cursor-pointer hover:border-purple-500/50 transition-all">
                     <input
                       type="radio"
                       name="executionMode"
@@ -485,8 +479,7 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
                 </div>
               </div>
 
-              {/* Notifications */}
-              <div className="bg-slate-900/60 border border-white/10 rounded-xl p-5">
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5">
                 <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                   <Bell size={20} />
                   Notifications
@@ -498,7 +491,7 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
                     { key: 'enableEmailAlerts', label: 'Email Alerts', desc: 'Email notifications for trades' },
                     { key: 'enablePushNotifications', label: 'Push Notifications', desc: 'Browser push notifications' },
                   ].map(({ key, label, desc }) => (
-                    <label key={key} className="flex items-center justify-between p-3 bg-slate-800/50 border border-white/10 rounded-lg cursor-pointer hover:border-cyan-500/50 transition-all">
+                    <label key={key} className="flex items-center justify-between p-3 bg-slate-900/40 border border-slate-700/30 rounded-lg cursor-pointer hover:border-cyan-500/30 transition-all">
                       <div>
                         <div className="text-sm font-medium text-white">{label}</div>
                         <div className="text-xs text-slate-400">{desc}</div>
@@ -514,8 +507,7 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
                 </div>
               </div>
 
-              {/* Risk Parameters */}
-              <div className="bg-slate-900/60 border border-white/10 rounded-xl p-5">
+              <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5">
                 <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                   <Lock size={20} />
                   Risk Parameters
@@ -533,7 +525,7 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
                       step="0.05"
                       value={settings.defaultSlippageBudget}
                       onChange={e => updateSetting('defaultSlippageBudget', Number(e.target.value))}
-                      className="w-full px-4 py-2 bg-slate-800 border border-white/20 rounded-lg text-white outline-none focus:ring-2 focus:ring-cyan-500/50"
+                      className="w-full px-4 py-3 bg-slate-900/60 border border-slate-700/50 rounded-lg text-white outline-none focus:ring-2 focus:ring-cyan-500/50"
                     />
                   </div>
 
@@ -547,7 +539,7 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
                       max="10"
                       value={settings.defaultMaxReprices}
                       onChange={e => updateSetting('defaultMaxReprices', Number(e.target.value))}
-                      className="w-full px-4 py-2 bg-slate-800 border border-white/20 rounded-lg text-white outline-none focus:ring-2 focus:ring-cyan-500/50"
+                      className="w-full px-4 py-3 bg-slate-900/60 border border-slate-700/50 rounded-lg text-white outline-none focus:ring-2 focus:ring-cyan-500/50"
                     />
                   </div>
                 </div>
@@ -555,31 +547,18 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
             </div>
           )}
 
-          {/* Trading Journal Tab */}
-          {activeTab === 'journal' && (
-            <TradingJournal />
-          )}
-
-          {/* Risk Control Tab */}
-          {activeTab === 'risk' && (
-            <RiskDashboard />
-          )}
-
-          {/* Automation Tab */}
+          {activeTab === 'journal' && <TradingJournal />}
+          {activeTab === 'risk' && <RiskDashboard />}
           {activeTab === 'automation' && (
             <div className="min-h-[500px]">
               <SchedulerSettings />
             </div>
           )}
-
-          {/* Approvals Tab */}
           {activeTab === 'approvals' && (
             <div className="min-h-[500px]">
               <ApprovalQueue />
             </div>
           )}
-
-          {/* Admin Tabs (remaining content truncated for space - see next message) */}
 
           {activeTab === 'users' && isAdmin && (
             <UserManagementTab
@@ -629,24 +608,61 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-white/10 bg-slate-900/50 flex items-center justify-between">
+        <div style={{
+          padding: '16px 24px',
+          borderTop: '1px solid rgba(0, 172, 193, 0.2)',
+          background: 'rgba(15, 23, 42, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}>
           <button
             onClick={handleReset}
-            className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-all text-sm"
+            style={{
+              padding: '8px 16px',
+              background: 'rgba(30, 41, 59, 0.8)',
+              border: '1px solid rgba(100, 116, 139, 0.5)',
+              color: '#ffffff',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+              fontSize: '14px',
+            }}
           >
             Reset to Defaults
           </button>
-          <div className="flex gap-3">
+          <div style={{ display: 'flex', gap: '12px' }}>
             <button
               onClick={onClose}
-              className="px-5 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-all"
+              style={{
+                padding: '8px 20px',
+                background: 'rgba(30, 41, 59, 0.8)',
+                border: '1px solid rgba(100, 116, 139, 0.5)',
+                color: '#ffffff',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
             >
               Cancel
             </button>
             <button
               onClick={handleSaveSettings}
               disabled={isSaving}
-              className="px-5 py-2 bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600 text-white font-semibold rounded-lg transition-all disabled:opacity-50 flex items-center gap-2"
+              style={{
+                padding: '8px 20px',
+                background: 'linear-gradient(to right, #00ACC1, #7E57C2)',
+                color: '#ffffff',
+                fontWeight: '600',
+                borderRadius: '8px',
+                border: 'none',
+                cursor: isSaving ? 'not-allowed' : 'pointer',
+                opacity: isSaving ? 0.5 : 1,
+                transition: 'all 0.15s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
             >
               <Save size={18} />
               {isSaving ? 'Saving...' : hasUnsavedChanges ? 'Save Changes' : '✓ Saved'}
@@ -658,7 +674,6 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
   );
 }
 
-// Sub-components for admin tabs
 function UserManagementTab({ users, isOwner, currentUserId, onToggleStatus }: any) {
   return (
     <div className="space-y-4">
@@ -668,7 +683,7 @@ function UserManagementTab({ users, isOwner, currentUserId, onToggleStatus }: an
       </h3>
 
       {users.map((user: User) => (
-        <div key={user.id} className="p-4 bg-slate-900/60 border border-white/10 rounded-xl">
+        <div key={user.id} className="p-4 bg-slate-800/50 border border-slate-700/50 rounded-xl">
           <div className="flex justify-between items-start mb-3">
             <div>
               <div className="flex items-center gap-2 mb-1">
@@ -745,13 +760,13 @@ function ThemeCustomizationTab({ themeCustom, onUpdate }: any) {
                 type="color"
                 value={value as string}
                 onChange={(e) => onUpdate(key, e.target.value)}
-                className="w-16 h-10 rounded border border-white/20 cursor-pointer"
+                className="w-16 h-10 rounded border border-slate-700/50 cursor-pointer"
               />
               <input
                 type="text"
                 value={value as string}
                 onChange={(e) => onUpdate(key, e.target.value)}
-                className="flex-1 px-3 py-2 bg-slate-800 border border-white/20 rounded text-white"
+                className="flex-1 px-3 py-2 bg-slate-900/60 border border-slate-700/50 rounded text-white"
               />
             </div>
           </div>
@@ -777,7 +792,7 @@ function PermissionsTab({ users, isOwner, onUpdatePermission }: any) {
       </h3>
 
       {users.map((user: User) => (
-        <div key={user.id} className="p-4 bg-slate-900/60 border border-white/10 rounded-xl">
+        <div key={user.id} className="p-4 bg-slate-800/50 border border-slate-700/50 rounded-xl">
           <h4 className="text-white font-semibold mb-3">{user.name} ({user.role})</h4>
 
           <div className="grid grid-cols-2 gap-3">
@@ -820,7 +835,7 @@ function TelemetryTab({ enabled, data, users, onToggle, onExport }: any) {
           className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
             enabled
               ? 'bg-green-500/20 text-green-400 border border-green-500/50'
-              : 'bg-slate-700 text-slate-400 border border-white/10'
+              : 'bg-slate-800/80 text-slate-400 border border-slate-700/50'
           }`}
         >
           {enabled ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
@@ -828,29 +843,21 @@ function TelemetryTab({ enabled, data, users, onToggle, onExport }: any) {
         </button>
       </div>
 
-      {enabled && (
+      {enabled && data.length > 0 && (
         <>
-          <div className="p-3 bg-cyan-500/10 border border-cyan-500/30 rounded flex items-center gap-2">
-            <Database size={16} className="text-cyan-400" />
-            <span className="text-sm text-cyan-400">
-              Collecting data from {users.filter((u: User) => u.role === 'alpha' || u.role === 'beta').length} testers
-            </span>
-          </div>
-
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-white/10">
+                <tr className="border-b border-slate-700/50">
                   <th className="px-3 py-2 text-left text-xs text-slate-400 font-semibold">Time</th>
                   <th className="px-3 py-2 text-left text-xs text-slate-400 font-semibold">User</th>
                   <th className="px-3 py-2 text-left text-xs text-slate-400 font-semibold">Component</th>
                   <th className="px-3 py-2 text-left text-xs text-slate-400 font-semibold">Action</th>
-                  <th className="px-3 py-2 text-left text-xs text-slate-400 font-semibold">Details</th>
                 </tr>
               </thead>
               <tbody>
                 {data.map((log: TelemetryData, i: number) => (
-                  <tr key={i} className="border-b border-white/5">
+                  <tr key={i} className="border-b border-slate-700/30">
                     <td className="px-3 py-2 text-sm text-white">
                       {new Date(log.timestamp).toLocaleTimeString()}
                     </td>
@@ -862,9 +869,6 @@ function TelemetryTab({ enabled, data, users, onToggle, onExport }: any) {
                       <span className="px-2 py-1 bg-cyan-500/20 text-cyan-400 rounded text-xs font-semibold">
                         {log.action}
                       </span>
-                    </td>
-                    <td className="px-3 py-2 text-sm text-slate-400">
-                      {JSON.stringify(log.metadata)}
                     </td>
                   </tr>
                 ))}
@@ -903,7 +907,7 @@ function TradingControlTab({ users, isOwner, currentUserId, onToggleTradingMode 
       )}
 
       {users.map((user: User) => (
-        <div key={user.id} className="p-4 bg-slate-900/60 border border-white/10 rounded-xl">
+        <div key={user.id} className="p-4 bg-slate-800/50 border border-slate-700/50 rounded-xl">
           <div className="flex justify-between items-center">
             <div>
               <h4 className="text-white font-semibold">{user.name}</h4>
