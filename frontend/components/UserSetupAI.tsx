@@ -136,21 +136,41 @@ export default function UserSetupAI({ onComplete }: UserSetupAIProps) {
         }}
       >
         <div style={{ maxWidth: '800px', width: '100%' }}>
-          {/* Logo */}
+          {/* Centered Header with 3 lines */}
           <div style={{ textAlign: 'center', marginBottom: theme.spacing.xl }}>
+            {/* Line 1: Main Title with Gradient */}
             <div
               style={{
-                fontSize: '48px',
+                fontSize: '52px',
                 fontWeight: 'bold',
                 background: `linear-gradient(135deg, ${theme.colors.primary} 0%, ${theme.colors.secondary} 100%)`,
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 marginBottom: theme.spacing.sm,
+                letterSpacing: '-0.02em',
+                textShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
               }}
             >
               Welcome to PaiD
             </div>
-            <p style={{ color: theme.colors.textMuted, fontSize: '18px' }}>
+
+            {/* Line 2: Primary Subtitle */}
+            <p style={{
+              color: theme.colors.textMuted,
+              fontSize: '18px',
+              marginBottom: theme.spacing.xs,
+              fontWeight: '500',
+            }}>
+              Personal Artificial Intelligence Dashboard
+            </p>
+
+            {/* Line 3: Secondary Subtitle */}
+            <p style={{
+              color: theme.colors.textMuted,
+              fontSize: '14px',
+              opacity: 0.8,
+              margin: 0,
+            }}>
               Let's set up your trading account
             </p>
           </div>

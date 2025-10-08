@@ -21,7 +21,7 @@ import TradingJournal from '../components/TradingJournal';
 import RiskDashboard from '../components/RiskDashboard';
 import MarketScanner from '../components/MarketScanner';
 import { isUserLoggedIn, initializeSession } from '../lib/userManagement';
-import AIChat, { AILogoTrigger } from '../components/AIChat';
+import AIChat from '../components/AIChat';
 
 export default function Dashboard() {
   const [selectedWorkflow, setSelectedWorkflow] = useState<string>('');
@@ -213,43 +213,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Top Logo Bar - absolute positioned */}
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            background: 'rgba(15, 24, 40, 0.95)',
-            backdropFilter: 'blur(10px)',
-            borderBottom: '1px solid rgba(126, 87, 194, 0.2)',
-            padding: '16px 24px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            zIndex: 10
-          }}>
-            {/* PaiD Logo with AI trigger */}
-            <AILogoTrigger onClick={() => setAiChatOpen(true)} />
-
-            {/* System Status */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              color: '#10b981',
-              fontSize: '14px'
-            }}>
-              <span style={{
-                width: '8px',
-                height: '8px',
-                borderRadius: '50%',
-                background: '#10b981',
-                display: 'inline-block',
-                animation: 'pulse 2s infinite'
-              }} />
-              System Ready
-            </div>
-          </div>
 
           {/* Bottom Info Bar - absolute positioned */}
           <div style={{
