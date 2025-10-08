@@ -3,6 +3,7 @@ import Split from 'react-split';
 import RadialMenu, { workflows, Workflow } from '../components/RadialMenu';
 import PositionsTable from '../components/PositionsTable';
 import MorningRoutine from '../components/MorningRoutine';
+import MorningRoutineAI from '../components/MorningRoutineAI';
 import ExecuteTradeForm from '../components/ExecuteTradeForm';
 import ResearchDashboardSimple from '../components/ResearchDashboardSimple';
 import AIRecommendations from '../components/AIRecommendations';
@@ -71,7 +72,7 @@ export default function Dashboard() {
     if (selectedWorkflow) {
       switch (selectedWorkflow) {
         case 'morning-routine':
-          return <MorningRoutine />;
+          return <MorningRoutineAI />;
 
         case 'active-positions':
           return <ActivePositions />;
