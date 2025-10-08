@@ -17,6 +17,17 @@ export interface User {
     defaultExecutionMode: 'requires_approval' | 'autopilot';
     enableNotifications: boolean;
   };
+  // Onboarding profile data
+  onboarding?: {
+    financialGoals?: string;
+    investmentHorizon?: string;
+    availableCapital?: string;
+    currentAssets?: string;
+    riskTolerance?: string;
+    tradingExperience?: string;
+    preferredStrategy?: string;
+    completedAt?: string;
+  };
 }
 
 export interface Session {
@@ -56,7 +67,8 @@ export function generateSessionId(): string {
 export function createUser(
   displayName: string,
   email?: string,
-  testGroup?: string
+  testGroup?: string,
+  onboardingData?: User['onboarding']
 ): User {
   const now = new Date().toISOString();
 
@@ -72,6 +84,7 @@ export function createUser(
       defaultExecutionMode: 'requires_approval',
       enableNotifications: true,
     },
+    onboarding: onboardingData ? { ...onboardingData, completedAt: now } : undefined,
   };
 
   // Save to localStorage
@@ -81,6 +94,7 @@ export function createUser(
   console.log('User created:', {
     userId: user.userId,
     testGroup: user.testGroup,
+    onboarding: user.onboarding,
     timestamp: now,
   });
 
