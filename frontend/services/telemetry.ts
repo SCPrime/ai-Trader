@@ -8,7 +8,7 @@ interface TelemetryEvent {
   action: string;
   timestamp: string;
   metadata: Record<string, any>;
-  userRole: 'admin' | 'beta' | 'alpha' | 'user';
+  userRole: 'admin' | 'beta' | 'alpha' | 'user' | 'owner';
 }
 
 interface TelemetryConfig {
