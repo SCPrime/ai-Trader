@@ -12,6 +12,7 @@ import UserSetup from '../components/UserSetup';
 import NewsReview from '../components/NewsReview';
 import ActivePositions from '../components/ActivePositions';
 import StrategyBuilder from '../components/StrategyBuilder';
+import StrategyBuilderAI from '../components/StrategyBuilderAI';
 import Backtesting from '../components/Backtesting';
 import Analytics from '../components/Analytics';
 import TradingJournal from '../components/TradingJournal';
@@ -94,7 +95,7 @@ export default function Dashboard() {
 
 
         case 'strategy-builder':
-          return <StrategyBuilder />;
+          return <StrategyBuilderAI />;
 
         case 'backtesting':
           return <Backtesting />;
