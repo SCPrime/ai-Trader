@@ -18,6 +18,7 @@ import TradingJournal from '../components/TradingJournal';
 import RiskDashboard from '../components/RiskDashboard';
 import MarketScanner from '../components/MarketScanner';
 import { isUserLoggedIn, initializeSession } from '../lib/userManagement';
+import AIChat, { AILogoTrigger } from '../components/AIChat';
 
 export default function Dashboard() {
   const [selectedWorkflow, setSelectedWorkflow] = useState<string>('');
@@ -25,6 +26,7 @@ export default function Dashboard() {
   const [showSettings, setShowSettings] = useState(false);
   const [isUserSetup, setIsUserSetup] = useState(true); // TEMP: Skip UserSetup for testing
   const [isLoading, setIsLoading] = useState(true);
+  const [aiChatOpen, setAiChatOpen] = useState(false);
 
   // Check if user is set up on mount
   useEffect(() => {
@@ -202,21 +204,24 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Bottom Info Bar - absolute positioned */}
+          {/* Top Logo Bar - absolute positioned */}
           <div style={{
             position: 'absolute',
-            bottom: 0,
+            top: 0,
             left: 0,
             right: 0,
             background: 'rgba(15, 24, 40, 0.95)',
             backdropFilter: 'blur(10px)',
-            borderTop: '1px solid rgba(16, 185, 129, 0.2)',
+            borderBottom: '1px solid rgba(126, 87, 194, 0.2)',
             padding: '16px 24px',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
             zIndex: 10
           }}>
+            {/* PaiD Logo with AI trigger */}
+            <AILogoTrigger onClick={() => setAiChatOpen(true)} />
+
             {/* System Status */}
             <div style={{
               display: 'flex',
@@ -235,6 +240,25 @@ export default function Dashboard() {
               }} />
               System Ready
             </div>
+          </div>
+
+          {/* Bottom Info Bar - absolute positioned */}
+          <div style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            background: 'rgba(15, 24, 40, 0.95)',
+            backdropFilter: 'blur(10px)',
+            borderTop: '1px solid rgba(16, 185, 129, 0.2)',
+            padding: '16px 24px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            zIndex: 10
+          }}>
+            {/* Empty left space for symmetry */}
+            <div></div>
 
             {/* Keyboard Hints */}
             <div style={{
@@ -423,6 +447,13 @@ export default function Dashboard() {
 
       {/* Settings Modal */}
       <Settings isOpen={showSettings} onClose={() => setShowSettings(false)} />
+
+      {/* AI Chat Modal */}
+      <AIChat
+        isOpen={aiChatOpen}
+        onClose={() => setAiChatOpen(false)}
+        initialMessage="Hi! I'm your PaiD AI assistant. I can help you with trading strategies, build custom workflows, analyze market data, or adjust your preferences. What would you like to know?"
+      />
     </>
   );
 }
