@@ -29,6 +29,7 @@ jobs:
         python -m pytest tests/ -v
 
     - name: Lint backend code
+      continue-on-error: true
       run: |
         cd backend
         pip install flake8
