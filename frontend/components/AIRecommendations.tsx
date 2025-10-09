@@ -26,58 +26,19 @@ export default function AIRecommendations() {
       const res = await fetch("/api/proxy/ai/recommendations");
 
       if (!res.ok) {
-        // Fallback to mock data if backend not available
-        console.warn('Backend not available, using mock data');
-        setRecommendations(getMockRecommendations());
-        setLoading(false);
-        return;
+        throw new Error(`Failed to fetch recommendations: ${res.status}`);
       }
 
       const data = await res.json();
       setRecommendations(data.recommendations || []);
     } catch (err: any) {
-      // Fallback to mock data on error
-      console.warn('Error fetching recommendations, using mock data:', err);
-      setRecommendations(getMockRecommendations());
+      console.error('Error fetching recommendations:', err);
+      setError(err.message || 'Failed to load AI recommendations. Please ensure backend is running.');
+      setRecommendations([]);
     } finally {
       setLoading(false);
     }
   };
-
-  const getMockRecommendations = (): Recommendation[] => [
-    {
-      symbol: "AAPL",
-      action: "BUY",
-      confidence: 87.5,
-      reason: "Strong bullish momentum with breakout above 200-day MA. Positive earnings surprise expected.",
-      targetPrice: 195.50,
-      currentPrice: 182.30,
-    },
-    {
-      symbol: "TSLA",
-      action: "SELL",
-      confidence: 72.3,
-      reason: "Overbought conditions on multiple timeframes. RSI divergence suggests weakening momentum.",
-      targetPrice: 220.00,
-      currentPrice: 238.90,
-    },
-    {
-      symbol: "NVDA",
-      action: "BUY",
-      confidence: 91.2,
-      reason: "Semiconductor sector showing strength. AI chip demand accelerating with strong volume.",
-      targetPrice: 525.00,
-      currentPrice: 485.20,
-    },
-    {
-      symbol: "SPY",
-      action: "HOLD",
-      confidence: 65.8,
-      reason: "Market at key resistance level. Mixed signals from economic data. Wait for clearer direction.",
-      targetPrice: 462.00,
-      currentPrice: 458.20,
-    },
-  ];
 
   const getActionColor = (action: string) => {
     switch (action) {

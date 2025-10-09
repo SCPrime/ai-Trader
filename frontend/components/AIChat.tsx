@@ -20,7 +20,7 @@ export function AIChat({
   isOpen,
   onClose,
   systemPrompt,
-  initialMessage = "Hi! I'm your PaiD AI assistant. I can help you with trading strategies, analyze market data, or adjust your preferences. What would you like to know?",
+  initialMessage = "Hi! I'm your PaiiD AI assistant. I can help you with trading strategies, analyze market data, or adjust your preferences. What would you like to know?",
   onResponse,
 }: AIChatProps) {
   const [messages, setMessages] = useState<AIMessage[]>([
@@ -99,7 +99,7 @@ export function AIChat({
           <div
             className="px-6 py-4 border-b"
             style={{
-              background: `linear-gradient(135deg, ${theme.colors.secondary} 0%, ${theme.colors.accent} 100%)`,
+              background: `linear-gradient(135deg, #7E57C2 0%, #0097A7 100%)`,
               borderColor: 'rgba(255, 255, 255, 0.1)',
             }}
           >
@@ -110,7 +110,7 @@ export function AIChat({
                   <Sparkles className="absolute -top-1 -right-1 w-3 h-3 text-yellow-300" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-white">PaiD AI Assistant</h2>
+                  <h2 className="text-lg font-semibold text-white">PaiiD AI Assistant</h2>
                   <p className="text-xs text-white/80">
                     Powered by Claude Sonnet 4.5
                   </p>
@@ -196,7 +196,7 @@ export function AIChat({
 
 /**
  * AI Chat Trigger Button
- * Click the "ai" in "PaiD" logo to open chat
+ * Click the "ai" in "PaiiD" logo to open chat
  */
 interface AILogoTriggerProps {
   onClick: () => void;

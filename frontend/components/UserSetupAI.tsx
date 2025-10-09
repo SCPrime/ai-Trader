@@ -3,7 +3,7 @@
  * Conversational onboarding with Claude AI
  */
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Brain,
   Sparkles,
@@ -20,6 +20,7 @@ import {
 import { theme } from '../styles/theme';
 import { claudeAI, UserPreferences } from '../lib/aiAdapter';
 import { createUser } from '../lib/userManagement';
+import { useChat } from './ChatContext';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -31,6 +32,7 @@ interface UserSetupAIProps {
 }
 
 export default function UserSetupAI({ onComplete }: UserSetupAIProps) {
+  const { openChat } = useChat();
   const [setupMethod, setSetupMethod] = useState<'manual' | 'ai' | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -38,6 +40,19 @@ export default function UserSetupAI({ onComplete }: UserSetupAIProps) {
   const [extractedPrefs, setExtractedPrefs] = useState<Partial<UserPreferences> | null>(null);
   const [showReview, setShowReview] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Generate consistent particle positions (fixes hydration)
+  const particles = useMemo(() => {
+    return Array.from({ length: 20 }, (_, i) => ({
+      id: i,
+      left: Math.random() * 100,
+      top: Math.random() * 100,
+      duration: 3 + Math.random() * 4,
+      delay: Math.random() * 2,
+      translateX: Math.random() * 50 - 25,
+      translateY: Math.random() * 50 - 25,
+    }));
+  }, []);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -69,18 +84,8 @@ export default function UserSetupAI({ onComplete }: UserSetupAIProps) {
       const prefs = await claudeAI.extractSetupPreferences(userMessage);
       setExtractedPrefs(prefs);
 
-      // Generate confirmation message
-      const responseMessage = `Great! Based on what you told me, here's what I understood:\n\n${
-        prefs.investmentAmount?.value
-          ? `💰 Investment Amount: $${prefs.investmentAmount.value.toLocaleString()}`
-          : prefs.investmentAmount?.mode === 'unlimited'
-          ? '💰 Investment Amount: Unlimited'
-          : ''
-      }\n${prefs.riskTolerance ? `🛡️ Risk Tolerance: ${prefs.riskTolerance}` : ''}\n${
-        prefs.tradingStyle ? `📈 Trading Style: ${prefs.tradingStyle}` : ''
-      }\n${prefs.instruments ? `🎯 Instruments: ${prefs.instruments.join(', ')}` : ''}\n${
-        prefs.watchlist ? `👀 Watchlist: ${prefs.watchlist.join(', ')}` : ''
-      }\n\nDoes this look correct? You can review and make changes on the next screen.`;
+      // Generate confirmation message listing all extracted preferences
+      const responseMessage = `Perfect! I've extracted your trading preferences. Let me show you what I understood so you can verify everything is correct.`;
 
       setMessages((prev) => [...prev, { role: 'assistant', content: responseMessage }]);
       setShowReview(true);
@@ -101,11 +106,11 @@ export default function UserSetupAI({ onComplete }: UserSetupAIProps) {
   const handleComplete = () => {
     if (!extractedPrefs) return;
 
-    // Create user with AI-extracted preferences
+    // Create user with ONLY AI-extracted preferences (NO personal info)
     const user = createUser(
-      'Trader', // Default name, can be customized later
-      undefined,
-      undefined,
+      undefined, // No name collection
+      undefined, // No email collection
+      undefined, // No test group
       {
         setupMethod: 'ai-guided',
         aiConversation: messages.map((m) => ({ role: m.role, content: m.content })),
@@ -113,11 +118,12 @@ export default function UserSetupAI({ onComplete }: UserSetupAIProps) {
         preferredStrategy: extractedPrefs.tradingStyle,
         investmentAmount: extractedPrefs.investmentAmount,
         investmentTypes: extractedPrefs.instruments,
+        watchlist: extractedPrefs.watchlist,
         completedAt: new Date().toISOString(),
       }
     );
 
-    console.log('[UserSetupAI] User created:', user);
+    console.log('[UserSetupAI] User created with preferences only:', user);
     onComplete();
   };
 
@@ -135,44 +141,157 @@ export default function UserSetupAI({ onComplete }: UserSetupAIProps) {
           padding: theme.spacing.lg,
         }}
       >
-        <div style={{ maxWidth: '800px', width: '100%' }}>
-          {/* Centered Header with 3 lines */}
-          <div style={{ textAlign: 'center', marginBottom: theme.spacing.xl }}>
-            {/* Line 1: Main Title with Gradient */}
-            <div
+        <div style={{ maxWidth: '800px', width: '100%', position: 'relative' }}>
+          {/* Particle Background for "aii" area */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              overflow: 'hidden',
+              pointerEvents: 'none',
+              opacity: 0.3,
+            }}
+          >
+            {particles.map((particle) => (
+              <div
+                key={particle.id}
+                style={{
+                  position: 'absolute',
+                  width: '2px',
+                  height: '2px',
+                  backgroundColor: '#45f0c0',
+                  borderRadius: '50%',
+                  left: `${particle.left}%`,
+                  top: `${particle.top}%`,
+                  animation: `float-${particle.id} ${particle.duration}s ease-in-out infinite`,
+                  animationDelay: `${particle.delay}s`,
+                  boxShadow: '0 0 4px rgba(69, 240, 192, 0.8)',
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Centered Enhanced Logo Header - 96px */}
+          <div
+            style={{
+              textAlign: 'center',
+              marginBottom: theme.spacing.xl,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '20px',
+              position: 'relative',
+            }}
+          >
+            {/* Line 1: Large PaiiD Logo (96px) */}
+            <h1
               style={{
-                fontSize: '52px',
+                fontSize: '96px',
                 fontWeight: 'bold',
-                background: `linear-gradient(135deg, ${theme.colors.primary} 0%, ${theme.colors.secondary} 100%)`,
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                marginBottom: theme.spacing.sm,
-                letterSpacing: '-0.02em',
-                textShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+                margin: 0,
+                letterSpacing: '4px',
+                lineHeight: '1',
               }}
             >
-              Welcome to PaiD
-            </div>
+              <span
+                style={{
+                  background: 'linear-gradient(135deg, #1a7560 0%, #0d5a4a 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                  filter: 'drop-shadow(0 4px 8px rgba(26, 117, 96, 0.4))',
+                }}
+              >
+                P
+              </span>
+              <span
+                onClick={openChat}
+                style={{
+                  color: '#45f0c0',
+                  textShadow: '0 0 25px rgba(69, 240, 192, 0.9), 0 0 50px rgba(69, 240, 192, 0.6)',
+                  animation: 'breathe-glow 3s ease-in-out infinite',
+                  fontStyle: 'italic',
+                  cursor: 'pointer',
+                  display: 'inline-block',
+                  position: 'relative',
+                  transition: 'all 0.3s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.1) translateY(-4px)';
+                  e.currentTarget.style.textShadow =
+                    '0 0 35px rgba(69, 240, 192, 1), 0 0 70px rgba(69, 240, 192, 0.8), 0 0 100px rgba(69, 240, 192, 0.4)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1) translateY(0)';
+                  e.currentTarget.style.textShadow =
+                    '0 0 25px rgba(69, 240, 192, 0.9), 0 0 50px rgba(69, 240, 192, 0.6)';
+                }}
+              >
+                aii
+              </span>
+              <span
+                style={{
+                  background: 'linear-gradient(135deg, #1a7560 0%, #0d5a4a 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                  filter: 'drop-shadow(0 4px 8px rgba(26, 117, 96, 0.4))',
+                }}
+              >
+                D
+              </span>
+            </h1>
 
-            {/* Line 2: Primary Subtitle */}
-            <p style={{
-              color: theme.colors.textMuted,
-              fontSize: '18px',
-              marginBottom: theme.spacing.xs,
-              fontWeight: '500',
-            }}>
-              Personal Artificial Intelligence Dashboard
+            {/* Line 2: Primary Subtitle (22px) */}
+            <p
+              style={{
+                fontSize: '22px',
+                color: '#cbd5e1',
+                margin: 0,
+                letterSpacing: '1px',
+                fontWeight: '500',
+              }}
+            >
+              Personal{' '}
+              <span
+                style={{
+                  color: '#45f0c0',
+                  fontStyle: 'italic',
+                  textShadow: '0 0 8px rgba(69, 240, 192, 0.5)',
+                }}
+              >
+                artificial intelligence
+              </span>
+              /investment Dashboard
             </p>
 
-            {/* Line 3: Secondary Subtitle */}
-            <p style={{
-              color: theme.colors.textMuted,
-              fontSize: '14px',
-              opacity: 0.8,
-              margin: 0,
-            }}>
+            {/* Line 3: Secondary Subtitle (16px) */}
+            <p
+              style={{
+                fontSize: '16px',
+                color: '#94a3b8',
+                margin: 0,
+                letterSpacing: '0.5px',
+              }}
+            >
               Let's set up your trading account
             </p>
+
+            {/* Hint about clicking "aii" */}
+            <div
+              style={{
+                fontSize: '13px',
+                color: '#64748b',
+                fontStyle: 'italic',
+                marginTop: '8px',
+                opacity: 0.7,
+              }}
+            >
+              💡 Click <span style={{ color: '#45f0c0', fontWeight: 'bold' }}>aii</span> anytime to chat with AI assistant
+            </div>
           </div>
 
           {/* Method Cards */}
@@ -583,6 +702,42 @@ export default function UserSetupAI({ onComplete }: UserSetupAIProps) {
     );
   }
 
-  // Manual setup fallback (use existing UserSetup)
-  return null;
+  // Manual setup - use the full UserSetup component
+  if (setupMethod === 'manual') {
+    const UserSetup = require('./UserSetup').default;
+    return <UserSetup onComplete={onComplete} />;
+  }
+
+  return (
+    <>
+      {null}
+      {/* CSS Animations */}
+      <style jsx>{`
+        @keyframes breathe-glow {
+          0%, 100% {
+            text-shadow: 0 0 20px rgba(69, 240, 192, 0.8), 0 0 40px rgba(69, 240, 192, 0.5);
+            transform: scale(1);
+          }
+          50% {
+            text-shadow: 0 0 30px rgba(69, 240, 192, 1), 0 0 60px rgba(69, 240, 192, 0.8),
+              0 0 90px rgba(69, 240, 192, 0.4);
+            transform: scale(1.05);
+          }
+        }
+
+        ${particles.map((particle) => `
+          @keyframes float-${particle.id} {
+            0%, 100% {
+              transform: translate(0, 0) scale(1);
+              opacity: 0.3;
+            }
+            50% {
+              transform: translate(${particle.translateX}px, ${particle.translateY}px) scale(1.5);
+              opacity: 0.8;
+            }
+          }
+        `).join('\n')}
+      `}</style>
+    </>
+  );
 }

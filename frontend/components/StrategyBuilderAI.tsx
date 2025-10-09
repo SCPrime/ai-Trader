@@ -20,9 +20,12 @@ import {
 } from 'lucide-react';
 import { GlassCard, GlassButton, GlassInput, GlassBadge } from './GlassmorphicComponents';
 import { theme } from '../styles/theme';
-import { claudeAI, Strategy } from '../lib/aiAdapter';
+import { claudeAI } from '../lib/aiAdapter';
+interface Strategy {
+  id?: string;  name: string;  entry: string[];  exit: string[];  riskManagement: string[];  code?: string;}
 
 interface SavedStrategy extends Strategy {
+  id: string;
   backtestResults?: {
     winRate: number;
     totalTrades: number;

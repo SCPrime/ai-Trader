@@ -33,10 +33,51 @@ export default function RadialMenu({ onWorkflowSelect, onWorkflowHover, selected
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [hoveredWorkflow, setHoveredWorkflow] = useState<Workflow | null>(null);
-  const [marketData] = useState({
-    nasdaq: { value: 18234.56, change: 1.2 },
-    nyse: { value: 16890.34, change: -0.3 }
+  const [showAIChat, setShowAIChat] = useState(false);
+  const [marketData, setMarketData] = useState({
+    dow: { value: 0, change: 0, symbol: 'DJI' },
+    nasdaq: { value: 0, change: 0, symbol: 'COMP' }
   });
+
+  // Fetch live market data from backend
+  useEffect(() => {
+    const fetchMarketData = async () => {
+      try {
+        const apiToken = process.env.NEXT_PUBLIC_API_TOKEN || 'rnd_bDRqi1TvLvd3rC78yvUSgDraH2Kl';
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_API_BASE_URL || 'http://127.0.0.1:8001';
+
+        const response = await fetch(`${backendUrl}/api/market/indices`, {
+          headers: {
+            'Authorization': `Bearer ${apiToken}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+
+          setMarketData({
+            dow: {
+              value: data.dow?.last || 0,
+              change: data.dow?.changePercent || 0,
+              symbol: 'DJI'
+            },
+            nasdaq: {
+              value: data.nasdaq?.last || 0,
+              change: data.nasdaq?.changePercent || 0,
+              symbol: 'COMP'
+            }
+          });
+        }
+      } catch (error) {
+        console.error('[RadialMenu] Failed to fetch market data:', error);
+      }
+    };
+
+    fetchMarketData();
+    const interval = setInterval(fetchMarketData, 60000); // Refresh every minute
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Debug logging for Fast Refresh loop detection
   useEffect(() => {
@@ -356,44 +397,44 @@ export default function RadialMenu({ onWorkflowSelect, onWorkflowHover, selected
       .attr('dur', '2s')
       .attr('repeatCount', 'indefinite');
 
-    // ====== CENTER LOGO (PaiD) ======
+    // ====== CENTER LOGO (PaiiD) ======
     // Note: Logo rendered as HTML overlay for CSS animation compatibility
 
     // ====== MARKET DATA ======
-    const nasdaq = centerGroup.append('g')
+    const dow = centerGroup.append('g')
       .attr('transform', 'translate(0, -15)');
 
-    nasdaq.append('text')
+    dow.append('text')
       .attr('text-anchor', 'middle')
-      .attr('font-size', '12px')
+      .attr('font-size', '11px')
       .attr('font-weight', '800')
       .attr('fill', '#cbd5e1')
-      .attr('letter-spacing', '3px')
+      .attr('letter-spacing', '2px')
       .style('pointer-events', 'none')
-      .text('NASDAQ');
+      .text('DOW JONES INDUSTRIAL');
 
-    nasdaq.append('text')
+    dow.append('text')
       .attr('text-anchor', 'middle')
-      .attr('dy', '22')
-      .attr('font-size', '24px')
+      .attr('dy', '20')
+      .attr('font-size', '22px')
       .attr('font-weight', '900')
       .attr('fill', '#f1f5f9')
       .style('text-shadow', '0 2px 6px rgba(0, 0, 0, 0.6)')
       .style('pointer-events', 'none')
-      .text(marketData.nasdaq.value.toLocaleString('en-US', { minimumFractionDigits: 2 }));
+      .text(marketData.dow.value.toLocaleString('en-US', { minimumFractionDigits: 2 }));
 
-    const nasdaqChange = nasdaq.append('text')
+    const dowChange = dow.append('text')
       .attr('text-anchor', 'middle')
-      .attr('dy', '40')
-      .attr('font-size', '14px')
+      .attr('dy', '38')
+      .attr('font-size', '13px')
       .attr('font-weight', '800')
-      .attr('fill', marketData.nasdaq.change >= 0 ? '#10b981' : '#ef4444')
-      .style('text-shadow', '0 0 10px ' + (marketData.nasdaq.change >= 0 ? 'rgba(16, 185, 129, 0.5)' : 'rgba(239, 68, 68, 0.5)'))
+      .attr('fill', marketData.dow.change >= 0 ? '#10b981' : '#ef4444')
+      .style('text-shadow', '0 0 10px ' + (marketData.dow.change >= 0 ? 'rgba(16, 185, 129, 0.5)' : 'rgba(239, 68, 68, 0.5)'))
       .style('pointer-events', 'none')
-      .text(`${marketData.nasdaq.change >= 0 ? '▲' : '▼'} ${Math.abs(marketData.nasdaq.change)}%`);
+      .text(`${marketData.dow.change >= 0 ? '▲' : '▼'} ${Math.abs(marketData.dow.change).toFixed(2)}%`);
 
     // Animate market data
-    nasdaqChange
+    dowChange
       .transition()
       .duration(1000)
       .style('opacity', 0.7)
@@ -411,40 +452,40 @@ export default function RadialMenu({ onWorkflowSelect, onWorkflowHover, selected
           .on('end', repeat);
       });
 
-    const nyse = centerGroup.append('g')
+    const nasdaqGroup = centerGroup.append('g')
       .attr('transform', 'translate(0, 45)');
 
-    nyse.append('text')
+    nasdaqGroup.append('text')
       .attr('text-anchor', 'middle')
-      .attr('font-size', '12px')
+      .attr('font-size', '11px')
       .attr('font-weight', '800')
       .attr('fill', '#cbd5e1')
-      .attr('letter-spacing', '3px')
+      .attr('letter-spacing', '2px')
       .style('pointer-events', 'none')
-      .text('NYSE');
+      .text('NASDAQ COMPOSITE');
 
-    nyse.append('text')
+    nasdaqGroup.append('text')
       .attr('text-anchor', 'middle')
-      .attr('dy', '22')
-      .attr('font-size', '24px')
+      .attr('dy', '20')
+      .attr('font-size', '22px')
       .attr('font-weight', '900')
       .attr('fill', '#f1f5f9')
       .style('text-shadow', '0 2px 6px rgba(0, 0, 0, 0.6)')
       .style('pointer-events', 'none')
-      .text(marketData.nyse.value.toLocaleString('en-US', { minimumFractionDigits: 2 }));
+      .text(marketData.nasdaq.value.toLocaleString('en-US', { minimumFractionDigits: 2 }));
 
-    const nyseChange = nyse.append('text')
+    const nasdaqChange = nasdaqGroup.append('text')
       .attr('text-anchor', 'middle')
-      .attr('dy', '40')
-      .attr('font-size', '14px')
+      .attr('dy', '38')
+      .attr('font-size', '13px')
       .attr('font-weight', '800')
-      .attr('fill', marketData.nyse.change >= 0 ? '#10b981' : '#ef4444')
-      .style('text-shadow', '0 0 10px ' + (marketData.nyse.change >= 0 ? 'rgba(16, 185, 129, 0.5)' : 'rgba(239, 68, 68, 0.5)'))
+      .attr('fill', marketData.nasdaq.change >= 0 ? '#10b981' : '#ef4444')
+      .style('text-shadow', '0 0 10px ' + (marketData.nasdaq.change >= 0 ? 'rgba(16, 185, 129, 0.5)' : 'rgba(239, 68, 68, 0.5)'))
       .style('pointer-events', 'none')
-      .text(`${marketData.nyse.change >= 0 ? '▲' : '▼'} ${Math.abs(marketData.nyse.change)}%`);
+      .text(`${marketData.nasdaq.change >= 0 ? '▲' : '▼'} ${Math.abs(marketData.nasdaq.change).toFixed(2)}%`);
 
     // Animate market data
-    nyseChange
+    nasdaqChange
       .transition()
       .duration(1000)
       .delay(500)
@@ -494,27 +535,58 @@ export default function RadialMenu({ onWorkflowSelect, onWorkflowHover, selected
       {/* Title Header - only show in full screen mode */}
       {!compact && (
         <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-          <div style={{ fontSize: '145px', fontWeight: '900', fontStyle: 'italic', lineHeight: '1', marginBottom: '10px' }}>
-            <span style={{ color: '#1a7560' }}>P</span>
+          {/* Main Logo */}
+          <div style={{ fontSize: '145px', fontWeight: '900', lineHeight: '1', marginBottom: '16px' }}>
             <span style={{
-              fontFamily: 'Georgia, serif',
-              color: '#45f0c0',
-              textShadow: '0 0 20px #45f0c0, 0 0 40px #45f0c0',
-              animation: 'glow-a 3s ease-in-out infinite'
-            }}>a</span>
+              background: 'linear-gradient(135deg, #1a7560 0%, #0d5a4a 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              filter: 'drop-shadow(0 4px 12px rgba(26, 117, 96, 0.4))'
+            }}>P</span>
+            <span
+              onClick={() => setShowAIChat(true)}
+              style={{
+                background: 'linear-gradient(135deg, #1a7560 0%, #0d5a4a 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                textShadow: '0 0 20px rgba(16, 185, 129, 0.8), 0 0 40px rgba(16, 185, 129, 0.5)',
+                animation: 'glow-ai 3s ease-in-out infinite',
+                cursor: 'pointer',
+                transition: 'transform 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'scale(1.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
+            >aii</span>
             <span style={{
-              fontFamily: 'Georgia, serif',
-              color: '#58ffda',
-              textShadow: '0 0 25px #58ffda, 0 0 50px #58ffda',
-              animation: 'glow-i 3s ease-in-out infinite 0.75s'
-            }}>i</span>
-            <span style={{ color: '#0d5a4a' }}>D</span>
+              background: 'linear-gradient(135deg, #1a7560 0%, #0d5a4a 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              filter: 'drop-shadow(0 4px 12px rgba(26, 117, 96, 0.4))'
+            }}>D</span>
           </div>
+
+          {/* Line 1: Personal Artificial Intelligence Dashboard */}
           <div style={{
-            fontSize: '28px',
+            fontSize: '22px',
             fontWeight: '600',
+            color: '#cbd5e1',
+            letterSpacing: '3px',
+            marginBottom: '12px',
+            textShadow: '0 2px 8px rgba(0, 0, 0, 0.6)'
+          }}>
+            Personal Artificial Intelligence Dashboard
+          </div>
+
+          {/* Line 2: 10 Stage Workflow */}
+          <div style={{
+            fontSize: '18px',
+            fontWeight: '500',
             color: '#94a3b8',
-            letterSpacing: '4px',
+            letterSpacing: '2px',
             textTransform: 'uppercase',
             textShadow: '0 2px 10px rgba(0, 0, 0, 0.5)'
           }}>
@@ -527,56 +599,63 @@ export default function RadialMenu({ onWorkflowSelect, onWorkflowHover, selected
       <div style={{ position: 'relative' }}>
         <svg ref={svgRef} className="drop-shadow-2xl" />
 
-        {/* Center Logo Overlay - exact copy of top logo styling */}
+        {/* Center Logo Overlay - matches top logo styling */}
         <div style={{
           position: 'absolute',
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          pointerEvents: 'none',
+          pointerEvents: 'auto',
           marginTop: '-70px' // Adjust to position above market data
         }}>
           <div style={{
             fontSize: '42px',
             fontWeight: '900',
-            fontStyle: 'italic',
             lineHeight: '1',
             whiteSpace: 'nowrap'
           }}>
-            <span style={{ color: '#1a7560' }}>P</span>
             <span style={{
-              fontFamily: 'Georgia, serif',
-              color: '#45f0c0',
-              textShadow: '0 0 20px #45f0c0, 0 0 40px #45f0c0',
-              animation: 'glow-a 3s ease-in-out infinite'
-            }}>a</span>
+              background: 'linear-gradient(135deg, #1a7560 0%, #0d5a4a 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              filter: 'drop-shadow(0 4px 12px rgba(26, 117, 96, 0.4))'
+            }}>P</span>
+            <span
+              onClick={() => setShowAIChat(true)}
+              style={{
+                background: 'linear-gradient(135deg, #1a7560 0%, #0d5a4a 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                textShadow: '0 0 20px rgba(16, 185, 129, 0.8), 0 0 40px rgba(16, 185, 129, 0.5)',
+                animation: 'glow-ai 3s ease-in-out infinite',
+                cursor: 'pointer',
+                transition: 'transform 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'scale(1.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
+            >aii</span>
             <span style={{
-              fontFamily: 'Georgia, serif',
-              color: '#58ffda',
-              textShadow: '0 0 25px #58ffda, 0 0 50px #58ffda',
-              animation: 'glow-i 3s ease-in-out infinite 0.75s'
-            }}>i</span>
-            <span style={{ color: '#0d5a4a', marginLeft: '4px' }}>D</span>
+              background: 'linear-gradient(135deg, #1a7560 0%, #0d5a4a 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              filter: 'drop-shadow(0 4px 12px rgba(26, 117, 96, 0.4))'
+            }}>D</span>
           </div>
         </div>
       </div>
 
       {/* CSS Animations */}
       <style jsx>{`
-        @keyframes glow-a {
+        @keyframes glow-ai {
           0%, 100% {
-            text-shadow: 0 0 10px #45f0c0, 0 0 20px #45f0c0;
+            text-shadow: 0 0 15px rgba(16, 185, 129, 0.6), 0 0 30px rgba(16, 185, 129, 0.4);
           }
           50% {
-            text-shadow: 0 0 25px #45f0c0, 0 0 50px #45f0c0, 0 0 75px #45f0c0;
-          }
-        }
-        @keyframes glow-i {
-          0%, 100% {
-            text-shadow: 0 0 12px #58ffda, 0 0 24px #58ffda;
-          }
-          50% {
-            text-shadow: 0 0 28px #58ffda, 0 0 56px #58ffda, 0 0 84px #58ffda;
+            text-shadow: 0 0 25px rgba(16, 185, 129, 0.9), 0 0 50px rgba(16, 185, 129, 0.6), 0 0 75px rgba(16, 185, 129, 0.3);
           }
         }
       `}</style>

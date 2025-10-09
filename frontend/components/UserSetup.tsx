@@ -66,7 +66,7 @@ export default function UserSetup({ onComplete }: UserSetupProps) {
 
   const onboardingPages: OnboardingPage[] = [
     {
-      title: 'Welcome to PaiD',
+      title: 'Welcome to PaiiD',
       subtitle: 'Let\'s get started with your profile',
       fields: [
         {
@@ -1030,29 +1030,70 @@ export default function UserSetup({ onComplete }: UserSetupProps) {
         <GlassCard glow="teal">
           {/* Header */}
           {currentPage === 0 && (
-            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-              <div style={{
+            <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+              {/* Main Logo */}
+              <h1 style={{
                 fontSize: '48px',
-                fontWeight: '900',
-                fontStyle: 'italic',
-                lineHeight: '1',
-                marginBottom: '12px',
+                fontWeight: 'bold',
+                margin: '0 0 12px 0',
+                letterSpacing: '2px',
               }}>
-                <span style={{ color: '#1a7560' }}>P</span>
                 <span style={{
-                  fontFamily: 'Georgia, serif',
-                  color: '#45f0c0',
-                  textShadow: '0 0 20px #45f0c0',
-                }}>a</span>
+                  background: 'linear-gradient(135deg, #1a7560 0%, #0d5a4a 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}>
+                  P
+                </span>
                 <span style={{
-                  fontFamily: 'Georgia, serif',
-                  color: '#58ffda',
-                  textShadow: '0 0 25px #58ffda',
-                }}>i</span>
-                <span style={{ color: '#0d5a4a' }}>D</span>
-              </div>
-              <p style={{ color: theme.colors.textMuted, fontSize: '13px', margin: 0 }}>
-                AI-Powered Options Trading Platform
+                  background: 'linear-gradient(135deg, #1a7560 0%, #0d5a4a 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}>
+                  a
+                </span>
+                <span
+                  style={{
+                    background: 'linear-gradient(135deg, #1a7560 0%, #0d5a4a 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                    textShadow: '0 0 20px rgba(16, 185, 129, 0.8), 0 0 40px rgba(16, 185, 129, 0.5)',
+                    animation: 'glow-ai 3s ease-in-out infinite',
+                    fontStyle: 'italic',
+                  }}
+                >
+                  aii
+                </span>
+                <span style={{
+                  background: 'linear-gradient(135deg, #1a7560 0%, #0d5a4a 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}>
+                  D
+                </span>
+              </h1>
+
+              {/* Subtitle */}
+              <p style={{
+                fontSize: '16px',
+                color: '#94a3b8',
+                margin: '0 0 8px 0',
+                letterSpacing: '0.5px',
+              }}>
+                Personal <span style={{ color: '#45f0c0', fontStyle: 'italic' }}>artificial intelligence</span>/investment Dashboard
+              </p>
+
+              {/* Sub-subtitle */}
+              <p style={{
+                fontSize: '14px',
+                color: '#64748b',
+                margin: 0,
+              }}>
+                Let's set up your trading account
               </p>
             </div>
           )}
@@ -1312,6 +1353,18 @@ export default function UserSetup({ onComplete }: UserSetupProps) {
           ))}
         </div>
       </div>
+
+      {/* CSS Animations */}
+      <style jsx>{`
+        @keyframes glow-ai {
+          0%, 100% {
+            text-shadow: 0 0 15px rgba(16, 185, 129, 0.6), 0 0 30px rgba(16, 185, 129, 0.4);
+          }
+          50% {
+            text-shadow: 0 0 25px rgba(16, 185, 129, 0.9), 0 0 50px rgba(16, 185, 129, 0.6), 0 0 75px rgba(16, 185, 129, 0.3);
+          }
+        }
+      `}</style>
     </div>
   );
 }

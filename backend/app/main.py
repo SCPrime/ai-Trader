@@ -16,7 +16,7 @@ print(f"===========================\n", flush=True)
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .core.config import settings
-from .routers import health, settings as settings_router, portfolio, orders, stream, screening, market, ai, telemetry, strategies, scheduler
+from .routers import health, settings as settings_router, portfolio, orders, stream, screening, market, ai, telemetry, strategies, scheduler, claude, market_data, news
 from .scheduler import init_scheduler
 import atexit
 
@@ -24,7 +24,11 @@ print(f"\n===== SETTINGS LOADED =====")
 print(f"settings.API_TOKEN: {settings.API_TOKEN}")
 print(f"===========================\n", flush=True)
 
-app = FastAPI(title="AI Trader Backend", version="0.1.0")
+app = FastAPI(
+    title="PaiiD Trading API",
+    description="Personal Artificial Intelligence Investment Dashboard",
+    version="1.0.0"
+)
 
 # Initialize scheduler on startup
 @app.on_event("startup")
@@ -52,9 +56,9 @@ app.add_middleware(
         "http://localhost:3000",
         "http://localhost:3001",
         "http://localhost:3002",
-        "https://ai-trader-snowy.vercel.app",
-        "https://ai-trader-scprimes-projects.vercel.app",
-        "https://ai-trader-git-main-scprimes-projects.vercel.app",
+        "https://paiid-snowy.vercel.app",
+        "https://paiid-scprimes-projects.vercel.app",
+        "https://paiid-git-main-scprimes-projects.vercel.app",
         settings.ALLOW_ORIGIN
     ] if settings.ALLOW_ORIGIN else ["*"],
     allow_credentials=True,
@@ -69,7 +73,10 @@ app.include_router(orders.router, prefix="/api")
 app.include_router(stream.router, prefix="/api")
 app.include_router(screening.router, prefix="/api")
 app.include_router(market.router, prefix="/api")
+app.include_router(market_data.router, prefix="/api", tags=["market-data"])
+app.include_router(news.router, prefix="/api", tags=["news"])
 app.include_router(ai.router, prefix="/api")
+app.include_router(claude.router, prefix="/api")
 app.include_router(strategies.router, prefix="/api")
 app.include_router(scheduler.router, prefix="/api")
 app.include_router(telemetry.router)

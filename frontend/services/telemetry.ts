@@ -25,11 +25,14 @@ class TelemetryService {
   private sessionId: string;
 
   constructor(config: Partial<TelemetryConfig> = {}) {
+    const telemetryEnabled = typeof window !== 'undefined' &&
+      process.env.NEXT_PUBLIC_TELEMETRY_ENABLED !== 'false';
+
     this.config = {
       endpoint: config.endpoint || '/api/telemetry',
       batchSize: config.batchSize || 50,
       flushInterval: config.flushInterval || 10000, // 10 seconds
-      enabled: config.enabled !== false,
+      enabled: config.enabled !== false && telemetryEnabled,
     };
 
     this.sessionId = this.generateSessionId();

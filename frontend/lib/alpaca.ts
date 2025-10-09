@@ -197,7 +197,7 @@ class AlpacaClient {
    * Get all open positions
    */
   async getPositions(): Promise<AlpacaPosition[]> {
-    return this.request<AlpacaPosition[]>('/api/portfolio/positions');
+    return this.request<AlpacaPosition[]>('/api/positions');
   }
 
   /**

@@ -24,7 +24,7 @@ export default function PositionsTable() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/proxy/api/portfolio/positions", {
+      const res = await fetch("/api/proxy/api/positions", {
         method: "GET",
         headers: { "cache-control": "no-store" },
       });

@@ -39,7 +39,7 @@ export default function TestRadial() {
           🎯 AI Trading Platform
         </h1>
         <p style={{ color: '#94a3b8', fontSize: '1rem' }}>
-          8-Stage Workflow Navigation - Phase 1 Test
+          10 Stage Workflow Navigation - Phase 1 Test
         </p>
       </div>
 

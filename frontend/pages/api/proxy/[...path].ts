@@ -15,6 +15,15 @@ const ALLOW_GET = new Set<string>([
   "market/conditions",
   "market/indices",
   "market/sectors",
+  // Live market data endpoints
+  "market/quote",
+  "market/quotes",
+  "market/scanner/under4",
+  "market/bars",
+  // News endpoints
+  "news/providers",
+  "news/company",
+  "news/market",
   // Alpaca endpoints
   "account",
   "positions",

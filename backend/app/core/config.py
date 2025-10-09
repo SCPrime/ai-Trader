@@ -15,4 +15,9 @@ class Settings(BaseModel):
     LIVE_TRADING: bool = os.getenv("LIVE_TRADING", "false").lower() == "true"
     IDMP_TTL_SECONDS: int = int(os.getenv("IDMP_TTL_SECONDS", "600"))
 
+    # Alpaca API credentials
+    ALPACA_API_KEY: str = os.getenv("ALPACA_PAPER_API_KEY", "")
+    ALPACA_SECRET_KEY: str = os.getenv("ALPACA_PAPER_SECRET_KEY", "")
+    ALPACA_BASE_URL: str = "https://paper-api.alpaca.markets"
+
 settings = Settings()

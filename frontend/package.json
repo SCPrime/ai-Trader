@@ -1,5 +1,5 @@
 {
-  "name": "ai-trader-frontend",
+  "name": "paiid-frontend",
   "private": true,
   "scripts": {
     "dev": "next dev",

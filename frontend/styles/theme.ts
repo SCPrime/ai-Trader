@@ -1,5 +1,5 @@
 /**
- * PaiD Trading Platform - Global Theme System
+ * PaiiD Trading Platform - Global Theme System
  * Matches the radial menu glassmorphic design
  */
 

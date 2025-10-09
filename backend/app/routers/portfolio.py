@@ -3,22 +3,12 @@ from pydantic import BaseModel
 from typing import Optional, Literal
 from ..core.auth import require_bearer
 from ..core.config import settings
-import requests
-import os
+from ..services.tradier_client import get_tradier_client
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-# Alpaca API configuration
-ALPACA_API_KEY = os.getenv("APCA_API_KEY_ID") or os.getenv("ALPACA_API_KEY")
-ALPACA_SECRET_KEY = os.getenv("APCA_API_SECRET_KEY") or os.getenv("ALPACA_SECRET_KEY")
-ALPACA_BASE_URL = os.getenv("APCA_API_BASE_URL") or "https://paper-api.alpaca.markets"  # Paper trading
-
-def get_alpaca_headers():
-    """Get headers for Alpaca API requests"""
-    return {
-        "APCA-API-KEY-ID": ALPACA_API_KEY,
-        "APCA-API-SECRET-KEY": ALPACA_SECRET_KEY,
-    }
 
 class AlpacaAccount(BaseModel):
     """Alpaca account information"""
@@ -49,54 +39,59 @@ class AlpacaAccount(BaseModel):
     long_market_value_change: Optional[str] = None
     short_market_value_change: Optional[str] = None
 
-@router.get("/account", response_model=AlpacaAccount)
+@router.get("/account")
 def get_account(_=Depends(require_bearer)):
-    """Get real Alpaca account information"""
+    """Get Tradier account information"""
+    logger.info("🎯 ACCOUNT ENDPOINT - Tradier Production")
+
     try:
-        response = requests.get(
-            f"{ALPACA_BASE_URL}/v2/account",
-            headers=get_alpaca_headers(),
-            timeout=10
-        )
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.RequestException as e:
+        client = get_tradier_client()
+        account_data = client.get_account()
+
+        logger.info("✅ Tradier account data retrieved successfully")
+        return account_data
+
+    except Exception as e:
+        logger.error(f"❌ Tradier account request failed: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to fetch Alpaca account: {str(e)}"
+            detail=f"Failed to fetch Tradier account: {str(e)}"
         )
 
 @router.get("/positions")
 def get_positions(_=Depends(require_bearer)):
-    """Get real Alpaca positions"""
+    """Get Tradier positions"""
     try:
-        response = requests.get(
-            f"{ALPACA_BASE_URL}/v2/positions",
-            headers=get_alpaca_headers(),
-            timeout=10
-        )
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.RequestException as e:
+        client = get_tradier_client()
+        positions = client.get_positions()
+        logger.info(f"✅ Retrieved {len(positions)} positions from Tradier")
+        return positions
+
+    except Exception as e:
+        logger.error(f"❌ Tradier positions request failed: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to fetch Alpaca positions: {str(e)}"
+            detail=f"Failed to fetch Tradier positions: {str(e)}"
         )
 
 @router.get("/positions/{symbol}")
 def get_position(symbol: str, _=Depends(require_bearer)):
     """Get a specific position by symbol"""
     try:
-        response = requests.get(
-            f"{ALPACA_BASE_URL}/v2/positions/{symbol}",
-            headers=get_alpaca_headers(),
-            timeout=10
-        )
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.RequestException as e:
-        if hasattr(e, 'response') and e.response.status_code == 404:
-            raise HTTPException(status_code=404, detail=f"No position found for {symbol}")
+        client = get_tradier_client()
+        positions = client.get_positions()
+
+        # Find position by symbol
+        for position in positions:
+            if position.get("symbol") == symbol.upper():
+                return position
+
+        raise HTTPException(status_code=404, detail=f"No position found for {symbol}")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Failed to fetch position for {symbol}: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to fetch position for {symbol}: {str(e)}"

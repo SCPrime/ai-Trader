@@ -33,19 +33,13 @@ export default function Dashboard() {
 
   // Check if user is set up on mount
   useEffect(() => {
-    // Clear localStorage to force fresh start
+    // FOR TESTING: Always clear and show onboarding
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('ai_trader_user');
-      localStorage.removeItem('ai_trader_strategies');
+      localStorage.clear();
     }
 
-    const userExists = isUserLoggedIn();
+    const userExists = false; // Force onboarding for testing
     setIsUserSetup(userExists);
-
-    if (userExists) {
-      // Initialize or restore session
-      initializeSession();
-    }
 
     setIsLoading(false);
   }, []);
@@ -301,25 +295,69 @@ export default function Dashboard() {
         cursor="col-resize"
         className="split"
       >
-        {/* Left panel - radial menu */}
+        {/* Left panel - radial menu with header */}
         <div style={{
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          overflow: 'hidden',
+          flexDirection: 'column',
           height: '100vh',
           background: 'linear-gradient(135deg, #0f1828 0%, #1a2a3f 100%)',
+          overflow: 'hidden',
         }}>
+          {/* Header Logo */}
           <div style={{
-            transform: 'scale(0.5)',
-            transformOrigin: 'center center'
+            textAlign: 'center',
+            paddingTop: '20px',
+            paddingBottom: '10px',
           }}>
-            <RadialMenu
-              onWorkflowSelect={setSelectedWorkflow}
-              onWorkflowHover={setHoveredWorkflow}
-              selectedWorkflow={selectedWorkflow}
-              compact={true}
-            />
+            <div style={{ fontSize: '48px', fontWeight: '900', lineHeight: '1', marginBottom: '8px' }}>
+              <span style={{
+                background: 'linear-gradient(135deg, #1a7560 0%, #0d5a4a 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                filter: 'drop-shadow(0 4px 12px rgba(26, 117, 96, 0.4))'
+              }}>P</span>
+              <span style={{
+                background: 'linear-gradient(135deg, #1a7560 0%, #0d5a4a 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                textShadow: '0 0 20px rgba(16, 185, 129, 0.6), 0 0 40px rgba(16, 185, 129, 0.4)',
+                animation: 'glow-ai 3s ease-in-out infinite'
+              }}>aii</span>
+              <span style={{
+                background: 'linear-gradient(135deg, #1a7560 0%, #0d5a4a 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                filter: 'drop-shadow(0 4px 12px rgba(26, 117, 96, 0.4))'
+              }}>D</span>
+            </div>
+            <div style={{
+              fontSize: '12px',
+              fontWeight: '500',
+              color: '#94a3b8',
+              letterSpacing: '1px',
+            }}>
+              10 Stage Workflow
+            </div>
+          </div>
+
+          {/* Radial Menu */}
+          <div style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <div style={{
+              transform: 'scale(0.5)',
+              transformOrigin: 'center center'
+            }}>
+              <RadialMenu
+                onWorkflowSelect={setSelectedWorkflow}
+                onWorkflowHover={setHoveredWorkflow}
+                selectedWorkflow={selectedWorkflow}
+                compact={true}
+              />
+            </div>
           </div>
         </div>
 
@@ -380,6 +418,15 @@ export default function Dashboard() {
           to {
             opacity: 1;
             transform: translateX(0);
+          }
+        }
+
+        @keyframes glow-ai {
+          0%, 100% {
+            text-shadow: 0 0 15px rgba(16, 185, 129, 0.4), 0 0 30px rgba(16, 185, 129, 0.2);
+          }
+          50% {
+            text-shadow: 0 0 25px rgba(16, 185, 129, 0.6), 0 0 50px rgba(16, 185, 129, 0.4), 0 0 75px rgba(16, 185, 129, 0.2);
           }
         }
 
@@ -465,7 +512,7 @@ export default function Dashboard() {
       <AIChat
         isOpen={aiChatOpen}
         onClose={() => setAiChatOpen(false)}
-        initialMessage="Hi! I'm your PaiD AI assistant. I can help you with trading strategies, build custom workflows, analyze market data, or adjust your preferences. What would you like to know?"
+        initialMessage="Hi! I'm your PaiiD AI assistant. I can help you with trading strategies, build custom workflows, analyze market data, or adjust your preferences. What would you like to know?"
       />
     </>
   );

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { paidTheme } from '../../../styles/paid-theme';
+import { paidTheme } from '../../../styles/paiid-theme';
 
 interface MarketHours {
   isOpen: boolean;

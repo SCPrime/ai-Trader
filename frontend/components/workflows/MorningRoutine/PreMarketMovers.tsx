@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { paidTheme } from '../../../styles/paid-theme';
+import { paidTheme } from '../../../styles/paiid-theme';
 
 interface Stock {
   symbol: string;

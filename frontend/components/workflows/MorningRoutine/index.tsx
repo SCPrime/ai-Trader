@@ -1,5 +1,5 @@
 import React from 'react';
-import { paidTheme } from '../../../styles/paid-theme';
+import { paidTheme } from '../../../styles/paiid-theme';
 import { MarketStatus } from './MarketStatus';
 import { PortfolioSummary } from './PortfolioSummary';
 import { TodaySchedule } from './TodaySchedule';

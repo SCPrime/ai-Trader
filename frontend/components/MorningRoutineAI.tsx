@@ -1,6 +1,7 @@
 /**
- * Morning Routine with AI Scheduler
+ * Morning Routine with AI Scheduler + Run Now Feature
  * Schedule custom morning trading routines with AI assistance
+ * Includes "Run Now" button to execute routines on-demand
  */
 
 import { useState, useEffect } from 'react';
@@ -21,11 +22,13 @@ import {
   Bell,
   Loader2,
   Brain,
+  Zap,
 } from 'lucide-react';
 import { GlassCard, GlassButton, GlassBadge } from './GlassmorphicComponents';
 import { theme } from '../styles/theme';
-import { claudeAI, MorningRoutine as MorningRoutineType } from '../lib/aiAdapter';
+import { claudeAI } from '../lib/aiAdapter';
 import { getCurrentUser, updateUser } from '../lib/userManagement';
+import { fetchUnder4Scanner } from '../lib/marketData';
 
 interface PortfolioMetrics {
   totalValue: number;
@@ -46,10 +49,85 @@ interface NewsItem {
   time: string;
 }
 
+// Helper function to fetch real market data
+async function fetchLiveMarketData() {
+  try {
+    console.log('[MorningRoutine] 🔴 Fetching LIVE market data...');
+    const scanner = await fetchUnder4Scanner();
+
+    console.log('[MorningRoutine] ✅ Received live data:', scanner);
+
+    return {
+      candidates: scanner.candidates || [],
+      count: scanner.count || 0,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    console.error('[MorningRoutine] ❌ Failed to fetch live market data:', error);
+    return null;
+  }
+}
+
+// Helper function to format live data into markdown
+function formatLiveMarketData(data: any) {
+  if (!data || data.count === 0) {
+    return `# ❌ No Live Data Available
+
+Unable to fetch real-time market data from backend.
+
+**Troubleshooting:**
+- Check backend is running on port 8001
+- Verify /api/market/scanner/under4 endpoint
+- Check browser console for errors
+`;
+  }
+
+  return `# 🔴 LIVE MARKET DATA
+
+## Stocks Under $4 Scanner (Real-Time)
+
+**Found ${data.count} candidates meeting criteria:**
+
+${data.candidates.map((stock: any, idx: number) => `
+### ${idx + 1}. ${stock.symbol} - **$${stock.price.toFixed(2)}**
+
+| Metric | Value |
+|--------|-------|
+| **Bid** | $${stock.bid.toFixed(2)} |
+| **Ask** | $${stock.ask.toFixed(2)} |
+| **Spread** | $${(stock.ask - stock.bid).toFixed(3)} (${(((stock.ask - stock.bid) / stock.ask) * 100).toFixed(2)}%) |
+
+**Next Steps:**
+- [ ] Check options chain liquidity (OI > 500)
+- [ ] Verify bid-ask spread on options < 10%
+- [ ] Check earnings date (avoid if within 2 weeks)
+- [ ] Analyze technical setup (support/resistance)
+
+---
+`).join('\n')}
+
+**🕐 Last Updated:** ${new Date(data.timestamp).toLocaleTimeString()} ET
+
+---
+
+## ⚠️ Trading Notes
+
+- All prices are LIVE from Alpaca Paper Trading API
+- Spreads indicate liquidity (tighter = better)
+- Under $4 stocks carry higher risk - use defined-risk strategies
+- Always verify options liquidity before entering positions
+`;
+}
+
 export default function MorningRoutineAI() {
   const [view, setView] = useState<'dashboard' | 'scheduler'>('dashboard');
   const [currentTime, setCurrentTime] = useState(new Date());
   const [loading, setLoading] = useState(false);
+
+  // "Run Now" feature state
+  const [isRunning, setIsRunning] = useState(false);
+  const [executionLog, setExecutionLog] = useState<string[]>([]);
+  const [showExecutionLog, setShowExecutionLog] = useState(false);
 
   // Dashboard data
   const [systemChecks] = useState<SystemCheck[]>([
@@ -59,11 +137,11 @@ export default function MorningRoutineAI() {
     { name: 'Risk Limits', status: 'warning', message: 'Daily loss at 75%' },
   ]);
 
-  const [portfolio] = useState<PortfolioMetrics>({
-    totalValue: 18234.56,
-    dayChange: 156.23,
-    dayChangePercent: 0.86,
-    buyingPower: 8500.0,
+  const [portfolio, setPortfolio] = useState<PortfolioMetrics>({
+    totalValue: 0,
+    dayChange: 0,
+    dayChangePercent: 0,
+    buyingPower: 0,
   });
 
   const [todaysNews] = useState<NewsItem[]>([
@@ -102,6 +180,53 @@ export default function MorningRoutineAI() {
       if (routine.recommendations) setSelectedSteps((prev) => [...prev, 'recommendations']);
       if (routine.portfolioReview) setSelectedSteps((prev) => [...prev, 'portfolio']);
     }
+  }, []);
+
+  // Load portfolio data from user profile or API
+  useEffect(() => {
+    const loadPortfolioData = async () => {
+      try {
+        // Try to get real account data from API first
+        const response = await fetch('/api/proxy/api/account', {
+          headers: {
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN || 'rnd_bDRqi1TvLvd3rC78yvUSgDraH2Kl'}`,
+          },
+        });
+
+        if (response.ok) {
+          const accountData = await response.json();
+          setPortfolio({
+            totalValue: parseFloat(accountData.portfolio_value || accountData.equity || '0'),
+            dayChange: parseFloat(accountData.equity || '0') - parseFloat(accountData.last_equity || '0'),
+            dayChangePercent: accountData.equity && accountData.last_equity
+              ? ((parseFloat(accountData.equity) - parseFloat(accountData.last_equity)) / parseFloat(accountData.last_equity)) * 100
+              : 0,
+            buyingPower: parseFloat(accountData.buying_power || accountData.cash || '0'),
+          });
+          console.log('[MorningRoutine] ✅ Loaded real portfolio data from API');
+        } else {
+          // Fallback to user profile if API fails
+          const user = getCurrentUser();
+          if (user?.onboarding?.investmentAmount) {
+            const amount = typeof user.onboarding.investmentAmount === 'object'
+              ? user.onboarding.investmentAmount.value || 0
+              : user.onboarding.investmentAmount;
+
+            setPortfolio({
+              totalValue: amount,
+              dayChange: 0,
+              dayChangePercent: 0,
+              buyingPower: amount,
+            });
+            console.log('[MorningRoutine] ✅ Loaded portfolio data from user profile');
+          }
+        }
+      } catch (error) {
+        console.error('[MorningRoutine] Failed to load portfolio data:', error);
+      }
+    };
+
+    loadPortfolioData();
   }, []);
 
   const getMarketStatus = () => {
@@ -152,23 +277,165 @@ export default function MorningRoutineAI() {
     setError(null);
 
     try {
-      const routine = await claudeAI.generateMorningRoutine(aiInput);
+      console.log('[MorningRoutine] Generating routine from input:', aiInput);
+      const response = await claudeAI.generateMorningRoutine({ wakeTime: '7:00 AM', marketOpen: true, checkNews: true, reviewPositions: true, aiRecommendations: true });
+      console.log('[MorningRoutine] Raw AI response:', response);
 
-      // Map AI-generated routine to schedule settings
-      setScheduleTime(routine.schedule.startTime);
-      setScheduleFrequency(routine.schedule.frequency);
+      // Try to parse JSON from the response
+      let routine: any = null;
+      let parsed = response.trim();
+
+      // Remove markdown code blocks if present
+      parsed = parsed.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+      // Try to extract JSON object
+      const jsonMatch = parsed.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          routine = JSON.parse(jsonMatch[0]);
+          console.log('[MorningRoutine] Successfully parsed JSON:', routine);
+        } catch (parseError) {
+          console.error('[MorningRoutine] JSON parse error:', parseError);
+        }
+      }
+
+      // If we couldn't parse JSON, create a simple routine from the response
+      if (!routine) {
+        console.log('[MorningRoutine] Could not parse JSON, using fallback with defaults');
+        // Just use default values and keep the selected steps
+        alert('AI generated a routine suggestion. Using default schedule settings.');
+        setShowAIBuilder(false);
+        setAiInput('');
+        return;
+      }
+
+      // Map AI-generated routine to schedule settings with fallbacks
+      if (routine.schedule?.startTime) {
+        console.log('[MorningRoutine] Setting schedule time:', routine.schedule.startTime);
+        setScheduleTime(routine.schedule.startTime);
+      }
+
+      if (routine.schedule?.frequency) {
+        console.log('[MorningRoutine] Setting frequency:', routine.schedule.frequency);
+        setScheduleFrequency(routine.schedule.frequency);
+      }
 
       // Extract step types from AI routine
-      const stepTypes = routine.steps.map((step) => step.type);
-      setSelectedSteps(stepTypes);
+      if (routine.steps && Array.isArray(routine.steps)) {
+        const stepTypes = routine.steps.map((step: any) => step.type).filter((type: string) =>
+          availableSteps.some(s => s.id === type)
+        );
+        console.log('[MorningRoutine] Setting step types:', stepTypes);
+        if (stepTypes.length > 0) {
+          setSelectedSteps(stepTypes);
+        }
+      }
 
       setShowAIBuilder(false);
       setAiInput('');
-      alert(`AI generated routine: "${routine.name}"`);
+      alert(`AI generated routine: "${routine.name || 'Custom Routine'}"`);
+      console.log('[MorningRoutine] ✅ Routine generated successfully');
     } catch (err: any) {
-      setError(err.message || 'Failed to generate routine');
+      console.error('[MorningRoutine] Error generating routine:', err);
+      setError(err.message || 'Failed to generate routine. Please try again.');
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  /**
+   * Run Now Feature - Execute the "Under-$4 Multileg Workflow" routine
+   */
+  const handleRunNow = async () => {
+    setIsRunning(true);
+    setShowExecutionLog(true);
+    setExecutionLog([]);
+
+    const addLog = (message: string) => {
+      setExecutionLog((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${message}`]);
+    };
+
+    try {
+      addLog('🚀 Starting Morning Routine: Under-$4 Multileg Workflow');
+      addLog('');
+
+      // Step 1: Market Briefing
+      addLog('📊 Step 1: Market Briefing');
+      addLog('Analyzing pre-market conditions...');
+
+      const briefingPrompt = `Provide a concise pre-market briefing for today. Include:
+1. S&P 500 futures direction
+2. Key market movers
+3. Important economic events today
+4. Overall market sentiment
+
+Keep it brief and actionable for a day trader.`;
+
+      const briefingResponse = await claudeAI.chat(briefingPrompt);
+      addLog('✅ Market Briefing Complete');
+      addLog(briefingResponse);
+      addLog('');
+
+      // Step 2: Under-$4 Multileg Scan (LIVE DATA)
+      addLog('🔍 Step 2: Scanning for Under-$4 Multileg Opportunities');
+      addLog('🔴 Fetching LIVE market data from Alpaca API...');
+
+      // Fetch REAL market data
+      const liveData = await fetchLiveMarketData();
+
+      if (liveData) {
+        addLog(`✅ Retrieved ${liveData.count} stocks with real-time prices`);
+        addLog(`Prices as of: ${new Date(liveData.timestamp).toLocaleTimeString()}`);
+      } else {
+        addLog('⚠️ Live data fetch failed - check backend connection');
+      }
+
+      const scanResult = formatLiveMarketData(liveData);
+      addLog('✅ Scan Complete');
+      addLog(scanResult);
+      addLog('');
+
+      // Step 3: Portfolio Review
+      addLog('💼 Step 3: Portfolio Review');
+      addLog('Checking overnight changes and open positions...');
+
+      const portfolioPrompt = `Review this portfolio status:
+- Total Value: $${portfolio.totalValue.toLocaleString()}
+- Day Change: ${portfolio.dayChange >= 0 ? '+' : ''}$${portfolio.dayChange.toFixed(2)} (${portfolio.dayChangePercent.toFixed(2)}%)
+- Buying Power: $${portfolio.buyingPower.toLocaleString()}
+
+Provide:
+1. Any recommended actions for existing positions
+2. Risk assessment
+3. Available capital for new trades`;
+
+      const portfolioResponse = await claudeAI.chat(portfolioPrompt);
+      addLog('✅ Portfolio Review Complete');
+      addLog(portfolioResponse);
+      addLog('');
+
+      // Step 4: AI Recommendations
+      addLog('🤖 Step 4: AI Trade Recommendations');
+      addLog('Generating personalized trade ideas...');
+
+      const recommendationsPrompt = `Based on the market briefing and under-$4 scan, recommend 2-3 specific multileg option trades for today. For each:
+- Entry strategy (exact legs and strikes)
+- Max risk and max profit
+- Exit plan
+- Why this trade makes sense today`;
+
+      const recommendationsResponse = await claudeAI.chat(recommendationsPrompt);
+      addLog('✅ Recommendations Generated');
+      addLog(recommendationsResponse);
+      addLog('');
+
+      addLog('🎉 Morning Routine Complete!');
+      addLog('Ready to trade. Good luck today! 🚀');
+    } catch (err: any) {
+      addLog(`❌ Error: ${err.message}`);
+      addLog('Routine execution failed. Please try again.');
+    } finally {
+      setIsRunning(false);
     }
   };
 
@@ -236,11 +503,73 @@ export default function MorningRoutineAI() {
               </div>
             </div>
 
-            <GlassButton onClick={() => setView('scheduler')} variant="workflow" workflowColor="morningRoutine">
-              <Calendar style={{ width: '18px', height: '18px' }} />
-              Schedule Routine
-            </GlassButton>
+            <div style={{ display: 'flex', gap: theme.spacing.sm }}>
+              {/* Run Now Button - Prominent with gradient */}
+              <GlassButton
+                onClick={handleRunNow}
+                disabled={isRunning}
+                style={{
+                  background: isRunning
+                    ? theme.colors.border
+                    : `linear-gradient(135deg, ${theme.workflow.morningRoutine} 0%, ${theme.workflow.strategyBuilder} 100%)`,
+                  boxShadow: isRunning ? 'none' : `${theme.glow.teal}, ${theme.glow.purple}`,
+                  border: 'none',
+                  fontWeight: '600',
+                }}
+              >
+                {isRunning ? (
+                  <>
+                    <Loader2 className="animate-spin" style={{ width: '18px', height: '18px' }} />
+                    Running...
+                  </>
+                ) : (
+                  <>
+                    <Zap style={{ width: '18px', height: '18px' }} />
+                    Run Now
+                  </>
+                )}
+              </GlassButton>
+
+              <GlassButton onClick={() => setView('scheduler')} variant="workflow" workflowColor="morningRoutine">
+                <Calendar style={{ width: '18px', height: '18px' }} />
+                Schedule
+              </GlassButton>
+            </div>
           </div>
+
+          {/* Execution Log - Show when running or completed */}
+          {showExecutionLog && executionLog.length > 0 && (
+            <GlassCard>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.md }}>
+                <h3 style={{ fontSize: '18px', fontWeight: '600', color: theme.colors.text, margin: 0 }}>
+                  Routine Execution Log
+                </h3>
+                <GlassButton onClick={() => setShowExecutionLog(false)} variant="secondary">
+                  Hide
+                </GlassButton>
+              </div>
+              <div
+                style={{
+                  maxHeight: '400px',
+                  overflowY: 'auto',
+                  padding: theme.spacing.md,
+                  background: theme.background.input,
+                  borderRadius: theme.borderRadius.md,
+                  fontFamily: 'monospace',
+                  fontSize: '13px',
+                  lineHeight: '1.6',
+                  color: theme.colors.text,
+                  whiteSpace: 'pre-wrap',
+                }}
+              >
+                {executionLog.map((log, idx) => (
+                  <div key={idx} style={{ marginBottom: '4px' }}>
+                    {log}
+                  </div>
+                ))}
+              </div>
+            </GlassCard>
+          )}
 
           {/* Market Status */}
           <GlassCard glow="teal">

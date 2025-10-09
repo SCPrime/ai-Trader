@@ -48,11 +48,11 @@ export default function Analytics() {
     setLoading(true);
 
     try {
-      // In production, this would fetch from your analytics API
-      // For now, we'll generate sample data based on actual account state
+      // Fetch real account data from Alpaca
       const account = await alpaca.getAccount();
 
-      // Generate mock performance data
+      // Note: Alpaca paper trading API doesn't provide historical P&L data
+      // Calculate current metrics from real account data
       const mockMetrics: PerformanceMetrics = {
         totalReturn: parseFloat(account.equity) - 100000,
         totalReturnPercent: ((parseFloat(account.equity) - 100000) / 100000) * 100,

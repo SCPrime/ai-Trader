@@ -1,11 +1,11 @@
-# AI Trading Platform
+# PaiiD Trading Platform
 
-A full-stack AI-powered trading platform with an intuitive radial workflow interface, real-time market data, and intelligent trade execution.
+**Personal Artificial Intelligence Investment Dashboard** - A full-stack AI-powered trading platform with an intuitive 10-stage radial workflow interface, real-time market data, and intelligent trade execution.
 
 ## 🚀 Live Deployment
 
-- **Frontend**: https://ai-trader-snowy.vercel.app
-- **Backend API**: https://ai-trader-86a1.onrender.com
+- **Frontend**: https://paiid-snowy.vercel.app
+- **Backend API**: https://paiid-86a1.onrender.com
 
 ## 📊 Current Project State (Commit 5855bb5)
 
@@ -74,7 +74,7 @@ A full-stack AI-powered trading platform with an intuitive radial workflow inter
 Frontend routes all backend requests through `/api/proxy/[...path]` to avoid CORS issues:
 ```
 Frontend: /api/proxy/api/health
-Backend:  https://ai-trader-86a1.onrender.com/api/health
+Backend:  https://paiid-86a1.onrender.com/api/health
 ```
 
 ## 🛠️ Local Development Setup
@@ -122,7 +122,7 @@ ALPACA_BASE_URL=https://paper-api.alpaca.markets  # or live
 ## 📁 Project Structure
 
 ```
-ai-Trader/
+PaiiD/
 ├── frontend/
 │   ├── components/
 │   │   ├── RadialMenu.tsx          # D3.js radial navigation (8 segments)
@@ -159,7 +159,7 @@ ai-Trader/
    - **Output Directory**: `.next`
 3. Deploy automatically on every push to `main`
 
-**Deployment URL**: https://ai-trader-snowy.vercel.app
+**Deployment URL**: https://paiid-snowy.vercel.app
 
 ### Backend (Render)
 
@@ -171,7 +171,7 @@ ai-Trader/
    - **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
 4. Add environment variables (Alpaca API keys)
 
-**API URL**: https://ai-trader-86a1.onrender.com
+**API URL**: https://paiid-86a1.onrender.com
 
 ## 🐛 Troubleshooting
 
