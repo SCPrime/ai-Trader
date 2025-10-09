@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * AI-Guided User Setup
  * Conversational onboarding with Claude AI

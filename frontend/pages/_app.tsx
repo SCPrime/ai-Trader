@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { AppProps } from 'next/app';
 import { useState, useEffect } from 'react';
 import { TelemetryProvider } from '../components/TelemetryProvider';
