@@ -8,18 +8,27 @@ from datetime import datetime, timedelta
 
 router = APIRouter()
 
-# Initialize Alpaca data client
-data_client = StockHistoricalDataClient(
-    api_key=os.getenv("APCA_API_KEY_ID") or os.getenv("ALPACA_API_KEY"),
-    secret_key=os.getenv("APCA_API_SECRET_KEY") or os.getenv("ALPACA_SECRET_KEY")
-)
+# Initialize Alpaca data client (lazy to avoid CI failures)
+data_client = None
+
+def get_data_client():
+    """Lazy initialization of Alpaca client"""
+    global data_client
+    if data_client is None:
+        api_key = os.getenv("APCA_API_KEY_ID") or os.getenv("ALPACA_API_KEY")
+        secret_key = os.getenv("APCA_API_SECRET_KEY") or os.getenv("ALPACA_SECRET_KEY")
+        if not api_key or not secret_key:
+            raise HTTPException(status_code=500, detail="Alpaca API credentials not configured")
+        data_client = StockHistoricalDataClient(api_key=api_key, secret_key=secret_key)
+    return data_client
 
 @router.get("/market/quote/{symbol}")
 async def get_quote(symbol: str):
     """Get real-time quote for a symbol"""
     try:
+        client = get_data_client()
         request = StockLatestQuoteRequest(symbol_or_symbols=symbol)
-        quotes = data_client.get_stock_latest_quote(request)
+        quotes = client.get_stock_latest_quote(request)
 
         quote = quotes[symbol]
         return {
@@ -37,9 +46,10 @@ async def get_quote(symbol: str):
 async def get_quotes(symbols: str):
     """Get quotes for multiple symbols (comma-separated)"""
     try:
+        client = get_data_client()
         symbol_list = symbols.upper().split(',')
         request = StockLatestQuoteRequest(symbol_or_symbols=symbol_list)
-        quotes = data_client.get_stock_latest_quote(request)
+        quotes = client.get_stock_latest_quote(request)
 
         result = {}
         for symbol in symbol_list:
@@ -70,13 +80,14 @@ async def get_bars(symbol: str, timeframe: str = "1Day", limit: int = 100):
 
         tf = tf_map.get(timeframe, TimeFrame.Day)
 
+        client = get_data_client()
         request = StockBarsRequest(
             symbol_or_symbols=symbol,
             timeframe=tf,
             limit=limit
         )
 
-        bars = data_client.get_stock_bars(request)
+        bars = client.get_stock_bars(request)
 
         result = []
         for bar in bars[symbol]:
@@ -103,8 +114,9 @@ async def scan_under_4():
             "BTG", "GOLD", "SIRI", "TLRY", "SNAP", "BBD"
         ]
 
+        client = get_data_client()
         request = StockLatestQuoteRequest(symbol_or_symbols=candidates)
-        quotes = data_client.get_stock_latest_quote(request)
+        quotes = client.get_stock_latest_quote(request)
 
         results = []
         for symbol in candidates:
@@ -132,9 +144,10 @@ async def scan_under_4():
 async def get_indices():
     """Get major market indices (SPY, QQQ, DIA, IWM)"""
     try:
+        client = get_data_client()
         symbols = ["SPY", "QQQ", "DIA", "IWM"]
         request = StockLatestQuoteRequest(symbol_or_symbols=symbols)
-        quotes = data_client.get_stock_latest_quote(request)
+        quotes = client.get_stock_latest_quote(request)
 
         result = {}
         for symbol in symbols:
@@ -148,7 +161,7 @@ async def get_indices():
                     timeframe=TimeFrame.Day,
                     limit=2
                 )
-                bars = data_client.get_stock_bars(bars_request)
+                bars = client.get_stock_bars(bars_request)
 
                 prev_close = float(bars[symbol][0].close) if len(bars[symbol]) > 0 else price
                 pct_change = ((price - prev_close) / prev_close) * 100
